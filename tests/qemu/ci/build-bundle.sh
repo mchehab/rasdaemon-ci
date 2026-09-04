@@ -52,7 +52,6 @@ mkdir -p "$context/rasdaemon-ci/harness/guest"
 	--ref "$qemu_ref" --output "$qemu_dir"
 "$script_dir/build-kernel.sh" --repository "$kernel_repository" \
 	--ref "$resolved_kernel_ref" \
-	--fragment "$project_dir/tests/qemu/kernel/x86_64.config" \
 	--output "$kernel_dir"
 if test -n "$base_sha512"; then
 	"$script_dir/build-guest.sh" --kernel "$kernel_dir" \
