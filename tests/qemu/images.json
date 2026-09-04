@@ -1,0 +1,80 @@
+{
+  "format_version": 1,
+  "architectures": {
+    "x86_64": {
+      "qemu_binary": "qemu-system-x86_64",
+      "machine": "q35",
+      "cpu": {
+        "kvm": "host",
+        "tcg": "max"
+      },
+      "memory_mb": 2048,
+      "cpus": 2,
+      "firmware": {
+        "pairs": [
+          {
+            "code": "/usr/share/OVMF/OVMF_CODE.fd",
+            "vars": "/usr/share/OVMF/OVMF_VARS.fd"
+          },
+          {
+            "code": "/usr/share/edk2/ovmf/OVMF_CODE.fd",
+            "vars": "/usr/share/edk2/ovmf/OVMF_VARS.fd"
+          }
+        ]
+      },
+      "image": {
+        "filename": "rasdaemon-guest-x86_64.qcow2",
+        "sha256": "",
+        "source": ""
+      }
+    },
+    "aarch64": {
+      "qemu_binary": "qemu-system-aarch64",
+      "machine": "virt,gic-version=max",
+      "cpu": {
+        "kvm": "host",
+        "tcg": "max"
+      },
+      "memory_mb": 2048,
+      "cpus": 2,
+      "firmware": {
+        "pairs": [
+          {
+            "code": "/usr/share/AAVMF/AAVMF_CODE.fd",
+            "vars": "/usr/share/AAVMF/AAVMF_VARS.fd"
+          },
+          {
+            "code": "/usr/share/edk2/aarch64/QEMU_EFI-pflash.raw",
+            "vars": "/usr/share/edk2/aarch64/QEMU_EFI-qemuvars-pflash.raw"
+          }
+        ]
+      },
+      "image": {
+        "filename": "rasdaemon-guest-aarch64.qcow2",
+        "sha256": "",
+        "source": ""
+      }
+    },
+    "riscv64": {
+      "qemu_binary": "qemu-system-riscv64",
+      "machine": "virt",
+      "cpu": {
+        "kvm": "host",
+        "tcg": "max"
+      },
+      "memory_mb": 2048,
+      "cpus": 2,
+      "firmware": {
+        "bios": [
+          "/usr/lib/riscv64-linux-gnu/opensbi/generic/fw_jump.elf",
+          "/usr/share/opensbi/lp64/generic/firmware/fw_jump.elf"
+        ]
+      },
+      "image": {
+        "filename": "rasdaemon-guest-riscv64.qcow2",
+        "sha256": "",
+        "source": ""
+      }
+    }
+  }
+}

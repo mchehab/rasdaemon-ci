@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+name: Sync rasdaemon source lock
+
+on:
+  schedule:
+    - cron: '43 1 * * 1,3,5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-rasdaemon
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve upstream master
+        id: sync
+        run: |
+          before=$(python3 -c 'import json; print(json.load(open("rasdaemon.lock.json"))["commit"])')
+          python3 tests/qemu/source_refs.py sync-rasdaemon \
+            --lock rasdaemon.lock.json --update > sync-result.json
+          after=$(python3 -c 'import json; print(json.load(open("rasdaemon.lock.json"))["commit"])')
+          echo "changed=$([ "$before" != "$after" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "commit=$after" >> "$GITHUB_OUTPUT"
+      - name: Validate updated source
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          COMMIT: ${{ steps.sync.outputs.commit }}
+        run: |
+          repository=$(python3 -c 'import json; print(json.load(open("rasdaemon.lock.json"))["repository"])')
+          git clone --filter=blob:none --no-checkout "$repository" candidate
+          git -C candidate fetch --depth=1 origin "$COMMIT"
+          git -C candidate checkout --detach FETCH_HEAD
+          sudo apt-get update
+          sudo apt-get install -y build-essential meson ninja-build pkg-config \
+            libtraceevent-dev libsqlite3-dev libpci-dev
+          meson setup candidate-build candidate -Dsqlite3=enabled \
+            -Dmysql=disabled -Dpostgresql=disabled -Dpcie-edpc=disabled
+          ninja -C candidate-build
+      - name: Create or update sync pull request
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT: ${{ steps.sync.outputs.commit }}
+        run: |
+          branch=automation/sync-rasdaemon
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git checkout -B "$branch"
+          git add rasdaemon.lock.json
+          git commit -m "ci: sync rasdaemon source lock"
+          git push --force-with-lease origin "$branch"
+          gh pr view "$branch" >/dev/null 2>&1 || \
+            gh pr create --base "$GITHUB_REF_NAME" --head "$branch" \
+              --title "ci: sync rasdaemon source lock" \
+              --body "Update the pinned rasdaemon master commit to \`$COMMIT\`."

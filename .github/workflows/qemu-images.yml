@@ -1,0 +1,161 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+name: Build QEMU test bundle
+
+on:
+  schedule:
+    # Linux releases land Sunday evening Pacific time; QEMU stable updates
+    # commonly land Tuesday through Thursday in Europe.
+    - cron: '23 2 * * 1,3,5'
+  workflow_dispatch:
+    inputs:
+      kernel_channel:
+        description: Linux source channel
+        type: choice
+        options: [release, rc, custom]
+        default: release
+      kernel_ref:
+        description: Required only for a custom Linux ref
+        type: string
+      qemu_ref:
+        description: QEMU branch, tag, or commit
+        type: string
+        default: rasdaemon_tests
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: qemu-bundle-${{ github.event_name }}-${{ inputs.kernel_channel || 'release' }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bundle builders
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential git meson ninja-build \
+            pkg-config python3 python3-venv libglib2.0-dev libpixman-1-dev \
+            libslirp-dev libfdt-dev libaio-dev liburing-dev libcap-ng-dev \
+            libseccomp-dev libgnutls28-dev libudev-dev flex bison bc \
+            libelf-dev libssl-dev dwarves libguestfs-tools qemu-utils
+
+      - name: Select source channel
+        id: source
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_CHANNEL: ${{ inputs.kernel_channel }}
+          INPUT_KERNEL_REF: ${{ inputs.kernel_ref }}
+          INPUT_QEMU_REF: ${{ inputs.qemu_ref }}
+        run: |
+          channel=release
+          qemu_ref=rasdaemon_tests
+          kernel_ref=
+          if test "$EVENT_NAME" = workflow_dispatch; then
+            channel=${INPUT_CHANNEL:-release}
+            qemu_ref=${INPUT_QEMU_REF:-rasdaemon_tests}
+            kernel_ref=$INPUT_KERNEL_REF
+          fi
+          if test "$channel" = custom && test -z "$kernel_ref"; then
+            echo 'custom channel requires kernel_ref' >&2
+            exit 2
+          fi
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+          echo "kernel_ref=$kernel_ref" >> "$GITHUB_OUTPUT"
+          echo "qemu_ref=$qemu_ref" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve immutable bundle identity
+        id: bundle
+        env:
+          CHANNEL: ${{ steps.source.outputs.channel }}
+          KERNEL_REF: ${{ steps.source.outputs.kernel_ref }}
+          QEMU_REF: ${{ steps.source.outputs.qemu_ref }}
+        run: |
+          qemu=$(python3 tests/qemu/source_refs.py resolve-git \
+            --repository https://gitlab.com/mchehab_kernel/qemu.git \
+            --ref "$QEMU_REF")
+          if test -n "$KERNEL_REF"; then
+            kernel=$(python3 tests/qemu/source_refs.py resolve-kernel \
+              --channel "$CHANNEL" --ref "$KERNEL_REF")
+          else
+            kernel=$(python3 tests/qemu/source_refs.py resolve-kernel \
+              --channel "$CHANNEL")
+          fi
+          qemu_sha=$(printf '%s' "$qemu" | python3 -c 'import json,sys; print(json.load(sys.stdin)["commit"][:12])')
+          kernel_sha=$(printf '%s' "$kernel" | python3 -c 'import json,sys; print(json.load(sys.stdin)["commit"][:12])')
+          debian_full=$(curl --fail --location --retry 3 \
+            https://cloud.debian.org/images/cloud/trixie/latest/SHA512SUMS | \
+            awk '$2 == "debian-13-genericcloud-amd64.qcow2" {print $1; exit}')
+          debian_sha=$(printf '%s' "$debian_full" | cut -c1-12)
+          test -n "$debian_sha"
+          recipe_sha=$(git ls-files tests/qemu/ci tests/qemu/guest \
+            tests/qemu/kernel tests/qemu/oci tests/qemu/ras_qemu.py | \
+            sort | xargs sha256sum | sha256sum | cut -c1-12)
+          owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          image="ghcr.io/$owner/rasdaemon-ci"
+          tag="x86_64-q${qemu_sha}-k${kernel_sha}-d${debian_sha}-r${recipe_sha}"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "debian_sha512=$debian_full" >> "$GITHUB_OUTPUT"
+          if docker manifest inspect "$image:$tag" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build bundle
+        if: steps.bundle.outputs.exists != 'true'
+        env:
+          ARCH: ${{ matrix.arch }}
+          CHANNEL: ${{ steps.source.outputs.channel }}
+          KERNEL_REF: ${{ steps.source.outputs.kernel_ref }}
+          QEMU_REF: ${{ steps.source.outputs.qemu_ref }}
+        run: |
+          test "$ARCH" = x86_64
+          if test -n "$KERNEL_REF"; then
+            tests/qemu/ci/build-bundle.sh --channel "$CHANNEL" \
+              --kernel-ref "$KERNEL_REF" --qemu-ref "$QEMU_REF" \
+              --base-sha512 "${{ steps.bundle.outputs.debian_sha512 }}" \
+              --tag "${{ steps.bundle.outputs.image }}:${{ steps.bundle.outputs.tag }}"
+          else
+            tests/qemu/ci/build-bundle.sh --channel "$CHANNEL" \
+              --qemu-ref "$QEMU_REF" \
+              --base-sha512 "${{ steps.bundle.outputs.debian_sha512 }}" \
+              --tag "${{ steps.bundle.outputs.image }}:${{ steps.bundle.outputs.tag }}"
+          fi
+
+      - name: Smoke-test embedded harness
+        if: steps.bundle.outputs.exists != 'true'
+        env:
+          CHANNEL: ${{ steps.source.outputs.channel }}
+        run: |
+          docker run --rm \
+            "${{ steps.bundle.outputs.image }}:${{ steps.bundle.outputs.tag }}" \
+            probe --arch x86_64
+      - name: Publish immutable and channel tags
+        if: steps.bundle.outputs.exists != 'true'
+        env:
+          CHANNEL: ${{ steps.source.outputs.channel }}
+        run: |
+          image=${{ steps.bundle.outputs.image }}
+          tag=${{ steps.bundle.outputs.tag }}
+          docker push "$image:$tag"
+          docker tag "$image:$tag" "$image:$CHANNEL"
+          docker push "$image:$CHANNEL"
