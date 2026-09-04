@@ -3,8 +3,7 @@
 name: Sync rasdaemon source lock
 
 on:
-  schedule:
-    - cron: '43 1 * * 1,3,5'
+  # TODO: restore the sync schedule after the first end-to-end job succeeds.
   workflow_dispatch:
 
 permissions:

@@ -20,6 +20,8 @@ done
 
 test -d "$kernel" || { echo "--kernel must name a build directory: $kernel" >&2; exit 2; }
 test -n "$output" || { echo "--output is required" >&2; exit 2; }
+kernel=$(realpath "$kernel")
+output=$(realpath -m "$output")
 command -v virt-customize >/dev/null || {
 	echo "virt-customize is not installed" >&2
 	exit 1

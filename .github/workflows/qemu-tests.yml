@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+name: rasdaemon QEMU functional test
+
+on:
+  workflow_run:
+    workflows: [Build QEMU test image]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  qemu-tcg:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check out pinned rasdaemon source
+        env:
+          LOCK_FILE: rasdaemon.lock.json
+        run: |
+          repository=$(python3 -c 'import json; print(json.load(open("rasdaemon.lock.json"))["repository"])')
+          commit=$(python3 -c 'import json; print(json.load(open("rasdaemon.lock.json"))["commit"])')
+          git clone --filter=blob:none --no-checkout "$repository" rasdaemon-source
+          git -C rasdaemon-source fetch --depth=1 origin "$commit"
+          git -C rasdaemon-source checkout --detach FETCH_HEAD
+      - name: Download image artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p build/image
+          image_run=$(gh run list --workflow qemu-image.yml --branch main \
+            --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          test -n "$image_run"
+          gh run download "$image_run" --name rasdaemon-qemu-image-x86_64 --dir build/image
+          docker load --input build/image/rasdaemon-ci-x86_64.tar
+      - name: Run functional tests under TCG
+        env:
+          TEST_ARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p build/qemu-results/$TEST_ARCH
+          docker run --rm \
+            -v "$PWD/rasdaemon-source:/workspace:ro" \
+            -v "$PWD/build/qemu-results/$TEST_ARCH:/results" \
+            rasdaemon-ci:x86_64 run --arch "$TEST_ARCH" --accelerator tcg \
+            --profile injection --timeout 3600
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rasdaemon-qemu-results-${{ matrix.arch }}
+          path: build/qemu-results/${{ matrix.arch }}
+          if-no-files-found: error

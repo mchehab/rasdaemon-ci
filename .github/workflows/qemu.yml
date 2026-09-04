@@ -1,62 +1,38 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
-name: rasdaemon QEMU functional test
+name: Build QEMU artifact
 
 on:
-  workflow_run:
-    workflows: [Build QEMU test bundle]
-    types: [completed]
+  push:
     branches: [main]
+  # TODO: restore the release-check schedule after the first end-to-end job succeeds.
   workflow_dispatch:
-    inputs:
-      bundle_tag:
-        description: Published bundle tag to run
-        type: string
-        default: release
 
 permissions:
   contents: read
-  packages: read
 
 jobs:
-  qemu-tcg:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+  qemu:
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
         arch: [x86_64]
     steps:
       - uses: actions/checkout@v6
-      - name: Check out pinned rasdaemon source
-        env:
-          LOCK_FILE: rasdaemon.lock.json
+      - name: Install QEMU builders
         run: |
-          repository=$(python3 -c 'import json; print(json.load(open("rasdaemon.lock.json"))["repository"])')
-          commit=$(python3 -c 'import json; print(json.load(open("rasdaemon.lock.json"))["commit"])')
-          git clone --filter=blob:none --no-checkout "$repository" rasdaemon-source
-          git -C rasdaemon-source fetch --depth=1 origin "$commit"
-          git -C rasdaemon-source checkout --detach FETCH_HEAD
-      - name: Run functional tests under TCG
-        env:
-          BUNDLE_TAG: ${{ inputs.bundle_tag || 'release' }}
-          TEST_ARCH: ${{ matrix.arch }}
+          sudo apt-get update
+          sudo apt-get install -y build-essential git meson ninja-build pkg-config \
+            python3 python3-venv libglib2.0-dev libpixman-1-dev libslirp-dev \
+            libfdt-dev libaio-dev liburing-dev libcap-ng-dev libseccomp-dev \
+            libgnutls28-dev libudev-dev
+      - name: Build QEMU
         run: |
-          owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
-          image="ghcr.io/$owner/rasdaemon-ci:$BUNDLE_TAG"
-          mkdir -p build/qemu-results/$TEST_ARCH
-          docker pull "$image"
-          docker run --rm \
-            -v "$PWD/rasdaemon-source:/workspace:ro" \
-            -v "$PWD/build/qemu-results/$TEST_ARCH:/results" \
-            "$image" run --arch "$TEST_ARCH" --accelerator tcg \
-            --profile injection --timeout 3600
+          tests/qemu/ci/build-qemu.sh --ref rasdaemon_tests --output build/qemu
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
           name: rasdaemon-qemu-${{ matrix.arch }}
-          path: build/qemu-results/${{ matrix.arch }}
+          path: build/qemu
           if-no-files-found: error

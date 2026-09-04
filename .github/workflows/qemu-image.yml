@@ -1,0 +1,66 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+name: Build QEMU test image
+
+on:
+  workflow_run:
+    workflows: [Build Linux kernel artifact, Build QEMU artifact]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  image:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install image builders
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential git meson ninja-build pkg-config \
+            python3 python3-venv libglib2.0-dev libpixman-1-dev libslirp-dev \
+            libfdt-dev libaio-dev liburing-dev libcap-ng-dev libseccomp-dev \
+            libgnutls28-dev libudev-dev flex bison bc libelf-dev libssl-dev \
+            dwarves libguestfs-tools qemu-utils python3-tomli
+      - name: Download latest successful kernel and QEMU artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p build/kernel build/qemu
+          kernel_run=$(gh run list --workflow qemu-images.yml --branch main \
+            --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          qemu_run=$(gh run list --workflow qemu.yml --branch main \
+            --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          test -n "$kernel_run" -a -n "$qemu_run"
+          gh run download "$kernel_run" --name rasdaemon-kernel-x86_64 --dir build/kernel
+          gh run download "$qemu_run" --name rasdaemon-qemu-x86_64 --dir build/qemu
+      - name: Resolve Debian base image checksum
+        id: base
+        run: |
+          sha=$(curl --fail --location --retry 3 \
+            https://cloud.debian.org/images/cloud/trixie/latest/SHA512SUMS | \
+            awk '$2 == "debian-13-genericcloud-amd64.qcow2" {print $1; exit}')
+          test -n "$sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Build image
+        run: |
+          tests/qemu/ci/build-bundle.sh --channel release \
+            --kernel-dir build/kernel --qemu-dir build/qemu \
+            --kernel-json build/kernel/metadata/kernel.json \
+            --base-sha512 '${{ steps.base.outputs.sha }}' \
+            --tag rasdaemon-ci:x86_64
+          mkdir -p build/image
+          docker save rasdaemon-ci:x86_64 -o build/image/rasdaemon-ci-x86_64.tar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rasdaemon-qemu-image-x86_64
+          path: build/image
+          if-no-files-found: error

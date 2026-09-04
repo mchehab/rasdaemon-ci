@@ -17,6 +17,7 @@ done
 
 test -n "$ref" || { echo "--ref is required" >&2; exit 2; }
 test -n "$output" || { echo "--output is required" >&2; exit 2; }
+output=$(realpath -m "$output")
 
 work=$(mktemp -d "${TMPDIR:-/tmp}/ras-kernel-build.XXXXXX")
 trap 'rm -rf "$work"' EXIT HUP INT TERM

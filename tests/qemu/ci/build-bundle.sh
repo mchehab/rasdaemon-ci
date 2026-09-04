@@ -33,6 +33,7 @@ while test $# -gt 0; do
 done
 
 mkdir -p "$output"
+output=$(realpath "$output")
 if test -n "$kernel_json"; then
 	kernel_json=$(cat "$kernel_json")
 elif test -n "$kernel_ref"; then
@@ -49,6 +50,8 @@ resolved_kernel_ref=$(printf '%s' "$kernel_json" | \
 
 test -n "$qemu_dir" || qemu_dir="$output/qemu"
 test -n "$kernel_dir" || kernel_dir="$output/kernel"
+qemu_dir=$(realpath -m "$qemu_dir")
+kernel_dir=$(realpath -m "$kernel_dir")
 context="$output/context"
 rm -rf "$context"
 mkdir -p "$context/rasdaemon-ci/kernel"
