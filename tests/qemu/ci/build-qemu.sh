@@ -18,6 +18,7 @@ while test $# -gt 0; do
 done
 
 test -n "$output" || { echo "--output is required" >&2; exit 2; }
+output=$(realpath -m "$output")
 work=$(mktemp -d "${TMPDIR:-/tmp}/ras-qemu-build.XXXXXX")
 trap 'rm -rf "$work"' EXIT HUP INT TERM
 
