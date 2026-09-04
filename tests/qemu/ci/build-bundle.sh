@@ -11,6 +11,9 @@ qemu_ref=rasdaemon_tests
 output=build/rasdaemon-ci
 tag=rasdaemon-ci:local
 base_sha512=
+qemu_dir=
+kernel_dir=
+kernel_json=
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 project_dir=$(realpath "$script_dir/../../..")
 
@@ -24,12 +27,17 @@ while test $# -gt 0; do
 	--output) output=$2; shift 2 ;;
 	--tag) tag=$2; shift 2 ;;
 	--base-sha512) base_sha512=$2; shift 2 ;;
+	--qemu-dir) qemu_dir=$2; shift 2 ;;
+	--kernel-dir) kernel_dir=$2; shift 2 ;;
+	--kernel-json) kernel_json=$2; shift 2 ;;
 	*) echo "Unknown argument: $1" >&2; exit 2 ;;
 	esac
 done
 
 mkdir -p "$output"
-if test -n "$kernel_ref"; then
+if test -n "$kernel_json"; then
+	kernel_json=$(cat "$kernel_json")
+elif test -n "$kernel_ref"; then
 	kernel_json=$(python3 "$project_dir/tests/qemu/source_refs.py" \
 		resolve-kernel --repository "$kernel_repository" \
 		--channel "$channel" --ref "$kernel_ref")
@@ -41,18 +49,22 @@ fi
 resolved_kernel_ref=$(printf '%s' "$kernel_json" | \
 	python3 -c 'import json,sys; print(json.load(sys.stdin)["commit"])')
 
-qemu_dir="$output/qemu"
-kernel_dir="$output/kernel"
+test -n "$qemu_dir" || qemu_dir="$output/qemu"
+test -n "$kernel_dir" || kernel_dir="$output/kernel"
 context="$output/context"
-rm -rf "$qemu_dir" "$kernel_dir" "$context"
+rm -rf "$context"
 mkdir -p "$context/rasdaemon-ci/kernel"
 mkdir -p "$context/rasdaemon-ci/harness/guest"
 
-"$script_dir/build-qemu.sh" --repository "$qemu_repository" \
-	--ref "$qemu_ref" --output "$qemu_dir"
-"$script_dir/build-kernel.sh" --repository "$kernel_repository" \
-	--ref "$resolved_kernel_ref" \
-	--output "$kernel_dir"
+if test ! -f "$qemu_dir/metadata/qemu.json"; then
+	"$script_dir/build-qemu.sh" --repository "$qemu_repository" \
+		--ref "$qemu_ref" --output "$qemu_dir"
+fi
+if test ! -f "$kernel_dir/metadata/kernel.json"; then
+	"$script_dir/build-kernel.sh" --repository "$kernel_repository" \
+		--ref "$resolved_kernel_ref" \
+		--output "$kernel_dir"
+fi
 if test -n "$base_sha512"; then
 	"$script_dir/build-guest.sh" --kernel "$kernel_dir" \
 		--base-sha512 "$base_sha512" \
