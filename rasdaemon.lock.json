@@ -1,5 +1,5 @@
 {
-  "repository": "https://github.com/mchehab/rasdaemon.git",
+  "commit": "9587c45d22f05ab98c6d72467e02e19b48ee10cb",
   "ref": "refs/heads/master",
-  "commit": "2829bcd5d184db5f640e5746a4dcf2ad97d1821f"
+  "repository": "https://github.com/mchehab/rasdaemon.git"
 }
