@@ -20,15 +20,25 @@ while test $# -gt 0; do
 	esac
 done
 
-test -d "$kernel" || { echo "--kernel must name a build directory" >&2; exit 2; }
+test -d "$kernel" || { echo "--kernel must name a build directory: $kernel" >&2; exit 2; }
 test -n "$output" || { echo "--output is required" >&2; exit 2; }
-command -v virt-customize >/dev/null
-command -v virt-sparsify >/dev/null
+command -v virt-customize >/dev/null || {
+	echo "virt-customize is not installed" >&2
+	exit 1
+}
+command -v virt-sparsify >/dev/null || {
+	echo "virt-sparsify is not installed" >&2
+	exit 1
+}
 
 release=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["release"])' \
 	"$kernel/metadata/kernel.json")
 module_dir="$kernel/modules/lib/modules/$release"
-test -d "$module_dir"
+test -d "$module_dir" || {
+	echo "kernel modules directory is missing: $module_dir" >&2
+	find "$kernel" -maxdepth 5 -type d -print >&2
+	exit 1
+}
 
 work=$(mktemp -d "${TMPDIR:-/tmp}/ras-guest-build.XXXXXX")
 trap 'rm -rf "$work"' EXIT HUP INT TERM
