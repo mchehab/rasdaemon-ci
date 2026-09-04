@@ -1,7 +1,5 @@
-#!/bin/sh
+#!/bin/bash -eux
 # SPDX-License-Identifier: GPL-2.0-only
-
-set -eu
 
 kernel=
 output=

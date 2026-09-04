@@ -1,7 +1,5 @@
-#!/bin/sh
+#!/bin/bash -eux
 # SPDX-License-Identifier: GPL-2.0-only
-
-set -eu
 
 repository=https://gitlab.com/mchehab_kernel/qemu.git
 ref=rasdaemon_tests

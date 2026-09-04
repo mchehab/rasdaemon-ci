@@ -1,7 +1,5 @@
-#!/bin/sh
+#!/bin/bash -eux
 # SPDX-License-Identifier: GPL-2.0-only
-
-set -eu
 
 mount_dir=/run/rasdaemon-payload
 mkdir -p "$mount_dir"

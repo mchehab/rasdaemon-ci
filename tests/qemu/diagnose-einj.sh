@@ -1,7 +1,5 @@
-#!/bin/sh
+#!/bin/bash -eux
 # SPDX-License-Identifier: GPL-2.0-only
-
-set -eu
 
 result_dir=${1:-build/qemu-results/x86_64}
 result_json=$result_dir/result.json

@@ -1,7 +1,5 @@
-#!/bin/bash
+#!/bin/bash -eux
 # SPDX-License-Identifier: GPL-2.0-only
-
-set -eu
 
 repository=https://github.com/torvalds/linux.git
 ref=
