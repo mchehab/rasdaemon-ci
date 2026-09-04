@@ -1,0 +1,166 @@
+[
+  {
+    "name": "ghes-memory",
+    "event": "ras/mc_event",
+    "table": "mc_event",
+    "producer": "ghes-memory"
+  },
+  {
+    "name": "ghes-arm",
+    "event": "ras/arm_event",
+    "table": "arm_event",
+    "helper": [
+      "arm",
+      "--severity",
+      "corrected"
+    ]
+  },
+  {
+    "name": "ghes-pci-bus",
+    "event": "ras/non_standard_event",
+    "table": "non_standard_event",
+    "helper": [
+      "pci-bus"
+    ]
+  },
+  {
+    "name": "ghes-unknown",
+    "event": "ras/non_standard_event",
+    "table": "non_standard_event",
+    "producer": "ghes-unknown"
+  },
+  {
+    "name": "ghes-aer",
+    "event": "ras/aer_event",
+    "table": "aer_event",
+    "producer": "ghes-aer"
+  },
+  {
+    "name": "cxl-media",
+    "event": "cxl/cxl_general_media",
+    "table": "cxl_general_media_event",
+    "qmp": "cxl-inject-general-media-event",
+    "arguments": {
+      "path": "/machine/peripheral/ras-cxl",
+      "log": "warning",
+      "flags": 0,
+      "dpa": 4096,
+      "descriptor": 1,
+      "type": 1,
+      "transaction-type": 1,
+      "sub-type": 0
+    }
+  },
+  {
+    "name": "cxl-dram",
+    "event": "cxl/cxl_dram",
+    "table": "cxl_dram_event",
+    "qmp": "cxl-inject-dram-event",
+    "arguments": {
+      "path": "/machine/peripheral/ras-cxl",
+      "log": "warning",
+      "flags": 0,
+      "dpa": 8192,
+      "descriptor": 1,
+      "type": 1,
+      "transaction-type": 1,
+      "sub-type": 0,
+      "channel": 1,
+      "rank": 2,
+      "bank": 3,
+      "row": 42
+    }
+  },
+  {
+    "name": "cxl-module",
+    "event": "cxl/cxl_memory_module",
+    "table": "cxl_memory_module_event",
+    "qmp": "cxl-inject-memory-module-event",
+    "arguments": {
+      "path": "/machine/peripheral/ras-cxl",
+      "log": "warning",
+      "flags": 0,
+      "type": 1,
+      "health-status": 1,
+      "media-status": 1,
+      "additional-status": 0,
+      "life-used": 10,
+      "temperature": 40,
+      "dirty-shutdown-count": 0,
+      "corrected-volatile-error-count": 1,
+      "corrected-persistent-error-count": 0,
+      "sub-type": 0
+    }
+  },
+  {
+    "name": "cxl-poison",
+    "event": "cxl/cxl_poison",
+    "table": "cxl_poison_event",
+    "qmp": "cxl-inject-poison",
+    "arguments": {
+      "path": "/machine/peripheral/ras-cxl",
+      "start": 4096,
+      "length": 64
+    }
+  },
+  {
+    "name": "cxl-overflow",
+    "event": "cxl/cxl_overflow",
+    "table": "cxl_overflow_event",
+    "producer": "cxl-overflow"
+  },
+  {
+    "name": "cxl-aer-ce",
+    "event": "cxl/cxl_aer_correctable_error",
+    "table": "cxl_aer_ce_event",
+    "qmp": "cxl-inject-correctable-error",
+    "arguments": {
+      "path": "/machine/peripheral/ras-cxl",
+      "type": "mem-data-ecc"
+    }
+  },
+  {
+    "name": "cxl-aer-ue",
+    "event": "cxl/cxl_aer_uncorrectable_error",
+    "table": "cxl_aer_ue_event",
+    "qmp": "cxl-inject-uncorrectable-errors",
+    "arguments": {
+      "path": "/machine/peripheral/ras-cxl",
+      "errors": [
+        {
+          "type": "mem-data-parity",
+          "header": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "memory-failure",
+    "event": "ras/memory_failure_event",
+    "table": "memory_failure_event",
+    "producer": "hwpoison"
+  },
+  {
+    "name": "memory-sigbus",
+    "event": "signal/signal_generate",
+    "table": "signal_event",
+    "producer": "hwpoison"
+  }
+]

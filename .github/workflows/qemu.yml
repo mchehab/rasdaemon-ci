@@ -1,0 +1,111 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+name: Build QEMU
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *" # Every day at 00:00 UTC
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  check:
+    name: Check QEMU revision
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+      exists: ${{ steps.artifact.outputs.exists }}
+      build_changed: ${{ steps.changes.outputs.build_changed }}
+
+    steps:
+      - uses: actions/checkout@v7
+        if: github.event_name == 'push'
+        with:
+          fetch-depth: 0
+
+      - name: Check build inputs changed on push
+        id: changes
+        if: github.event_name == 'push'
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -x
+          changed=false
+
+          if ! git diff --quiet "$BEFORE" "$AFTER" -- \
+              tests/qemu/ci/build-qemu.sh .github/workflows/qemu.yml; then
+            changed=true
+          fi
+
+          echo "build_changed=$changed" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve QEMU revision
+        id: source
+        env:
+          QEMU_REPOSITORY: https://gitlab.com/mchehab_kernel/qemu.git
+          QEMU_REF: refs/heads/rasdaemon_tests
+        run: |
+          sha=$(git ls-remote --refs "$QEMU_REPOSITORY" "$QEMU_REF" |
+              awk 'NR == 1 { print $1 }')
+          if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "Unable to resolve $QEMU_REF" >&2
+              exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Check for matching QEMU artifact
+        id: artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NAME: rasdaemon-qemu-x86_64-${{ steps.source.outputs.sha }}
+        run: |
+          id=$(gh api \
+              "/repos/$GITHUB_REPOSITORY/actions/artifacts?name=$NAME" \
+              --jq '.artifacts[] |
+                  select(.expired == false and .name == env.NAME) |
+                  .id' |
+              head -n 1)
+          if [ -n "$id" ]; then
+              echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+              echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: Build QEMU
+    needs: check
+    if: needs.check.outputs.exists != 'true' || needs.check.outputs.build_changed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install QEMU builders
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential git meson ninja-build pkg-config \
+            python3 python3-venv libglib2.0-dev libpixman-1-dev libslirp-dev \
+            libfdt-dev libaio-dev liburing-dev libcap-ng-dev libseccomp-dev \
+            libgnutls28-dev libudev-dev
+
+      - name: Build QEMU
+        run: |
+          tests/qemu/ci/build-qemu.sh \
+            --ref "${{ needs.check.outputs.sha }}" \
+            --output build/qemu
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rasdaemon-qemu-${{ matrix.arch }}-${{ needs.check.outputs.sha }}
+          path: build/qemu
+          retention-days: 30
+          if-no-files-found: error

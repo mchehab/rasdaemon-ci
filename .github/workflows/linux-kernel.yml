@@ -1,0 +1,110 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+name: Build Linux
+
+on:
+  push:
+    branches: [main]
+
+  schedule:
+    - cron: "0 0 * * *" # Daily at 00:00 UTC
+
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    outputs:
+      ref: ${{ steps.source.outputs.ref }}
+      short: ${{ steps.source.outputs.short }}
+      exists: ${{ steps.artifact.outputs.exists }}
+      build_changed: ${{ steps.changes.outputs.build_changed }}
+
+    steps:
+      - uses: actions/checkout@v7
+        name: Checkout
+        with:
+          fetch-depth: 0
+
+      - name: Check build inputs changed on push
+        id: changes
+        if: github.event_name == 'push'
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -x
+          changed=false
+
+          if ! git diff --quiet "$BEFORE" "$AFTER" -- \
+              tests/qemu/ci/build-kernel.sh .github/workflows/linux-kernel.yml; then
+            changed=true
+          fi
+
+          echo "build_changed=$changed" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve latest Linux release
+        id: source
+        run: |
+          # Stable releases only; excludes -rc tags.
+          # To use release candidates instead, use --channel rc below.
+
+          python3 tests/qemu/source_refs.py \
+            resolve-kernel \
+            --repository git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git \
+            --channel release > kernel.json
+
+          ref=$(python3 -c \
+            'import json; print(json.load(open("kernel.json"))["commit"])')
+
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "short=${ref:0:12}" >> "$GITHUB_OUTPUT"
+
+      - name: Check for existing kernel artifact
+        id: artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NAME: rasdaemon-kernel-x86_64-${{ steps.source.outputs.short }}
+        run: |
+          id=$(gh api --paginate \
+            "/repos/$GITHUB_REPOSITORY/actions/artifacts?name=$NAME" \
+            --jq '.artifacts[] |
+              select(.expired == false and .name == env.NAME) |
+              .id' | head -n 1)
+          echo "exists=$([ -n "$id" ] && echo true || echo false)" \
+            >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build Linux kernel
+    needs: check
+    if: needs.check.outputs.exists != 'true' || needs.check.outputs.build_changed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64]
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install kernel builders
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bc bison flex dwarves \
+            libelf-dev libssl-dev git
+      - name: Build kernel
+        run: |
+          tests/qemu/ci/build-kernel.sh \
+            --ref '${{ needs.check.outputs.ref }}' \
+            --output build/kernel
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rasdaemon-kernel-${{ matrix.arch }}-${{ needs.check.outputs.short }}
+          path: build/kernel
+          retention-days: 30
+          if-no-files-found: error

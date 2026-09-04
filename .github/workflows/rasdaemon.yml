@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+name: Build RAS Daemon
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 0 * * *" # Daily at 00:00 UTC
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  check:
+    name: Check rasdaemon revision
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+      exists: ${{ steps.artifact.outputs.exists }}
+    steps:
+      - name: Resolve rasdaemon revision
+        id: source
+        env:
+          RASDAEMON_REPOSITORY: https://github.com/mchehab/rasdaemon.git
+          RASDAEMON_REF: refs/heads/master
+        run: |
+          sha=$(git ls-remote --refs "$RASDAEMON_REPOSITORY" "$RASDAEMON_REF" |
+            awk 'NR == 1 { print $1 }')
+          if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Unable to resolve $RASDAEMON_REF" >&2
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Check for matching rasdaemon artifact
+        id: artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NAME: rasdaemon-x86_64-${{ steps.source.outputs.sha }}
+        run: |
+          id=$(gh api \
+            "/repos/$GITHUB_REPOSITORY/actions/artifacts?name=$NAME" \
+            --jq '.artifacts[] |
+              select(.expired == false and .name == env.NAME) |
+              .id' | head -n 1)
+          echo "exists=$([ -n "$id" ] && echo true || echo false)" \
+            >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build RAS Daemon
+    needs: check
+    if: needs.check.outputs.exists != 'true'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64]
+    steps:
+      - name: Check out rasdaemon source
+        uses: actions/checkout@v7
+        with:
+          repository: mchehab/rasdaemon
+          ref: ${{ needs.check.outputs.sha }}
+          path: rasdaemon-source
+
+      - name: Install rasdaemon builders
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential meson ninja-build pkg-config \
+            libtraceevent-dev libsqlite3-dev libpci-dev
+      - name: Build RAS Daemon
+        run: |
+          meson setup build/rasdaemon rasdaemon-source -Dsqlite3=enabled \
+            -Dmysql=disabled -Dpostgresql=disabled -Dpcie-edpc=disabled
+          ninja -C build/rasdaemon
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rasdaemon-${{ matrix.arch }}-${{ needs.check.outputs.sha }}
+          path: build/rasdaemon
+          retention-days: 30
+          if-no-files-found: error

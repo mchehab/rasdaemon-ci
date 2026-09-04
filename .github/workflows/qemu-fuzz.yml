@@ -1,0 +1,83 @@
+# SPDX-License-Identifier: GPL-2.0-only
+name: Fuzzy logic stress tests
+
+on:
+  schedule:
+    - cron: "0 4 * * 0" # Sunday, 04:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qemu-fuzz-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  fuzz:
+    name: Fuzz ${{ matrix.mode }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [random, zero, boundaries]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: mchehab/rasdaemon
+          ref: master
+          path: rasdaemon-source
+
+      - name: Record tested rasdaemon revision
+        env:
+          FUZZ_MODE: ${{ matrix.mode }}
+        run: |
+          set -eux
+
+          mkdir -p "build/fuzz/$FUZZ_MODE"
+          git -C rasdaemon-source rev-parse HEAD \
+            > "build/fuzz/$FUZZ_MODE/rasdaemon-source-revision"
+
+      - name: Run isolated fuzz VM
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/rasdaemon-ci:x86_64
+          FUZZ_MODE: ${{ matrix.mode }}
+          FUZZ_SEED: ${{ github.run_number }}
+        run: |
+          set -euxo pipefail
+          docker pull "$IMAGE"
+          mkdir -p "build/fuzz/$FUZZ_MODE"
+          docker_args=(--rm)
+
+          if test -r /dev/kvm && test -w /dev/kvm; then
+            docker_args+=(--device /dev/kvm)
+          fi
+
+          docker run "${docker_args[@]}" \
+            -v "$PWD/rasdaemon-source:/workspace:ro" \
+            -v "$PWD/build/fuzz/$FUZZ_MODE:/results" \
+            "$IMAGE" run --arch x86_64 --accelerator auto \
+            --profile fuzz --fuzz-mode "$FUZZ_MODE" --fuzz-seed "$FUZZ_SEED" \
+            --timeout 3600
+
+      - name: Publish status table
+        if: always()
+        env:
+          FUZZ_MODE: ${{ matrix.mode }}
+        run: |
+          set -eux
+
+          if test -f "build/fuzz/$FUZZ_MODE/summary.md"; then
+            cat "build/fuzz/$FUZZ_MODE/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '🔴 Infrastructure failure: no VM result table was produced.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: kernel-rasdaemon-fuzz-${{ matrix.mode }}-${{ github.run_number }}
+          path: build/fuzz/${{ matrix.mode }}
+          if-no-files-found: error
+          retention-days: 90

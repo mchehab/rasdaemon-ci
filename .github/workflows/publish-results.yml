@@ -1,0 +1,216 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+name: Publish media CI results
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches: [main]
+
+  workflow_run:
+    workflows:
+      - Build QEMU test image
+      - Fuzzy logic stress tests
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rasdaemon-ci-pages
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    name: Prepare latest reports
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download latest daily and weekly results
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+
+          download_artifact()
+          {
+            artifact_id=$1
+            destination=$2
+            archive=$(mktemp)
+
+            gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id/zip" \
+              > "$archive"
+            mkdir -p "$destination"
+            unzip -q "$archive" -d "$destination"
+            rm -f "$archive"
+          }
+
+          find_daily()
+          {
+            runs=$(gh api \
+              "/repos/$GITHUB_REPOSITORY/actions/workflows/qemu-image.yml/runs?branch=main&status=completed&per_page=100")
+
+            for run_id in $(printf '%s' "$runs" | jq -r \
+              '.workflow_runs | sort_by(.id) | reverse | .[].id'); do
+              artifacts=$(gh api \
+                "/repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts?per_page=100")
+              artifact_id=$(printf '%s' "$artifacts" | jq -r '
+                [.artifacts[] | select(.expired == false and
+                  .name == "rasdaemon-qemu-results-x86_64")]
+                | max_by(.created_at) | .id // empty')
+
+              if test -n "$artifact_id"; then
+                rm -rf build/candidate
+                download_artifact "$artifact_id" build/candidate
+
+                revision=$(cat build/candidate/rasdaemon-source-revision 2>/dev/null || true)
+                if [[ "$revision" =~ ^[0-9a-f]{40}$ ]] &&
+                   jq -e '.component_totals' build/candidate/result.json >/dev/null; then
+                  mkdir -p build/results/daily
+                  mv build/candidate build/results/daily/x86_64
+                  printf '%s' "$runs" | jq -r --argjson id "$run_id" \
+                    '.workflow_runs[] | select(.id == $id) |
+                     [.html_url, .conclusion] | @tsv' \
+                    > build/results/daily/run
+                  return
+                fi
+              fi
+            done
+
+            echo "No compatible daily functional-test artifact was found"
+          }
+
+          find_weekly()
+          {
+            runs=$(gh api \
+              "/repos/$GITHUB_REPOSITORY/actions/workflows/qemu-fuzz.yml/runs?branch=main&status=completed&per_page=100")
+
+            for run_id in $(printf '%s' "$runs" | jq -r \
+              '.workflow_runs | sort_by(.id) | reverse | .[].id'); do
+              artifacts=$(gh api \
+                "/repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts?per_page=100")
+              artifact_rows=$(printf '%s' "$artifacts" | jq -r '
+                .artifacts[] | select(.expired == false and
+                  (.name | startswith("kernel-rasdaemon-fuzz-"))) |
+                [.id, .name] | @tsv')
+
+              if test -n "$artifact_rows"; then
+                rm -rf build/candidate
+                compatible=true
+
+                while IFS=$'\t' read -r artifact_id artifact_name; do
+                  mode=${artifact_name#kernel-rasdaemon-fuzz-}
+                  mode=${mode%-*}
+
+                  case "$mode" in
+                    random|zero|boundaries) ;;
+                    *) echo "Unexpected fuzz artifact: $artifact_name" >&2; exit 1 ;;
+                  esac
+
+                  destination="build/candidate/$mode"
+                  download_artifact "$artifact_id" "$destination"
+                  revision=$(cat "$destination/rasdaemon-source-revision" \
+                    2>/dev/null || true)
+                  if ! [[ "$revision" =~ ^[0-9a-f]{40}$ ]] ||
+                     ! jq -e '.component_totals' "$destination/result.json" \
+                       >/dev/null; then
+                    compatible=false
+                  fi
+                done <<< "$artifact_rows"
+
+                if $compatible; then
+                  mkdir -p build/results
+                  mv build/candidate build/results/weekly
+                  printf '%s' "$runs" | jq -r --argjson id "$run_id" \
+                    '.workflow_runs[] | select(.id == $id) |
+                     [.html_url, .conclusion] | @tsv' \
+                    > build/results/weekly/run
+                  return
+                fi
+              fi
+            done
+
+            echo "No compatible weekly fuzz-test artifact was found"
+          }
+
+          find_daily
+          find_weekly
+
+      - name: Build Pages site
+        run: |
+          set -eux
+
+          daily_url=https://github.com/mchehab/rasdaemon-ci/actions/workflows/qemu-image.yml
+          daily_conclusion=unavailable
+          weekly_url=https://github.com/mchehab/rasdaemon-ci/actions/workflows/qemu-fuzz.yml
+          weekly_conclusion=unavailable
+          daily_results=()
+          weekly_results=()
+
+          if test -f build/results/daily/run; then
+            IFS=$'\t' read -r daily_url daily_conclusion \
+              < build/results/daily/run
+            daily_results+=(--result x86_64=build/results/daily/x86_64)
+          fi
+
+          if test -f build/results/weekly/run; then
+            IFS=$'\t' read -r weekly_url weekly_conclusion \
+              < build/results/weekly/run
+          fi
+
+          for mode in random zero boundaries; do
+            if test -d "build/results/weekly/$mode"; then
+              weekly_results+=(--result "$mode=build/results/weekly/$mode")
+            fi
+          done
+
+          python3 tests/qemu/publish_results.py \
+            --title "Daily media CI tests" \
+            --site build/pages/daily \
+            --run-url "$daily_url" \
+            --conclusion "$daily_conclusion" \
+            --source-repository https://github.com/mchehab/rasdaemon \
+            "${daily_results[@]}"
+
+          python3 tests/qemu/publish_results.py \
+            --title "Weekly media CI tests" \
+            --site build/pages/weekly \
+            --run-url "$weekly_url" \
+            --conclusion "$weekly_conclusion" \
+            --source-repository https://github.com/mchehab/rasdaemon \
+            "${weekly_results[@]}"
+
+          cat > build/pages/index.html <<'EOF'
+          <!doctype html><meta charset="utf-8"><title>rasdaemon media CI</title>
+          <style>body{font:16px sans-serif;margin:2em;max-width:70em}li{margin:.8em}</style>
+          <h1>rasdaemon media CI</h1>
+          <p>Latest published kernel and rasdaemon test results:</p>
+          <ul><li><a href="daily/">Daily functional tests</a></li>
+          <li><a href="weekly/">Weekly fuzz tests</a></li></ul>
+          EOF
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: build/pages
+
+  deploy:
+    name: Publish latest reports
+    needs: prepare
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      pages: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
