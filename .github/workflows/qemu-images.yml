@@ -3,6 +3,8 @@
 name: Build QEMU test bundle
 
 on:
+  push:
+    branches: [main]
   schedule:
     # Linux releases land Sunday evening Pacific time; QEMU stable updates
     # commonly land Tuesday through Thursday in Europe.
