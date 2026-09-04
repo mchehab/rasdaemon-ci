@@ -48,7 +48,8 @@ jobs:
             pkg-config python3 python3-venv libglib2.0-dev libpixman-1-dev \
             libslirp-dev libfdt-dev libaio-dev liburing-dev libcap-ng-dev \
             libseccomp-dev libgnutls28-dev libudev-dev flex bison bc \
-            libelf-dev libssl-dev dwarves libguestfs-tools qemu-utils
+            libelf-dev libssl-dev dwarves libguestfs-tools qemu-utils \
+            python3-tomli
 
       - name: Select source channel
         id: source
