@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+[Unit]
+Description=rasdaemon QEMU regression test agent
+After=local-fs.target
+ConditionPathExists=/dev/virtio-ports/org.rasdaemon.test.0
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/ras-qemu-agent
+StandardOutput=journal+console
+StandardError=journal+console
+TimeoutStartSec=75min
+
+[Install]
+WantedBy=multi-user.target

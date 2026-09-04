@@ -1,0 +1,8 @@
+prep/
+build/
+*~
+update.sh
+monitor_actions.py
+**/__pycache__
+qemu-results/
+tmp/

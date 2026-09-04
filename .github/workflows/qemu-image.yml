@@ -1,0 +1,271 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+name: Build QEMU test image
+
+on:
+  push:
+    branches: [main]
+
+  workflow_run:
+    workflows:
+      - Build Linux
+      - Build QEMU
+      - Build RAS Daemon
+
+    types: [completed]
+
+    branches: [main]
+
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+  packages: write
+
+concurrency:
+  group: qemu-image-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check source artifacts
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-22.04
+    outputs:
+      build: ${{ steps.changed.outputs.build }}
+    steps:
+      - name: Wait completed workflows
+        if: github.event_name != 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          for attempt in $(seq 1 120); do
+            runs=$(gh api \
+              "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$HEAD_SHA&per_page=100")
+
+            kernel=$(printf '%s' "$runs" | jq -r '
+              [.workflow_runs[] | select(.name == "Build Linux")]
+              | sort_by(.created_at) | last
+              | if . then "\(.status):\(.conclusion)" else "missing" end')
+            qemu=$(printf '%s' "$runs" | jq -r '
+              [.workflow_runs[] | select(.name == "Build QEMU")]
+              | sort_by(.created_at) | last
+              | if . then "\(.status):\(.conclusion)" else "missing" end')
+            rasdaemon=$(printf '%s' "$runs" | jq -r '
+              [.workflow_runs[] | select(.name == "Build RAS Daemon")]
+              | sort_by(.created_at) | last
+              | if . then "\(.status):\(.conclusion)" else "missing" end')
+
+            echo "kernel=$kernel qemu=$qemu rasdaemon=$rasdaemon"
+            if [[ "$kernel" == "completed:success" &&
+                  "$qemu" == "completed:success" &&
+                  "$rasdaemon" == "completed:success" ]]; then
+              exit 0
+            fi
+            sleep 60
+          done
+
+          echo "Timed out waiting for source workflows" >&2
+          exit 1
+
+      - name: Check changes
+        id: changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          artifacts=$(gh api --paginate \
+            "/repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100")
+
+          kernel=$(printf '%s' "$artifacts" | jq -r '
+            [.artifacts[] | select(.expired == false and
+              (.name | startswith("rasdaemon-kernel-x86_64-")))]
+            | max_by(.created_at) | .created_at // empty')
+          qemu=$(printf '%s' "$artifacts" | jq -r '
+            [.artifacts[] | select(.expired == false and
+              (.name | startswith("rasdaemon-qemu-x86_64-")))]
+            | max_by(.created_at) | .created_at // empty')
+          rasdaemon=$(printf '%s' "$artifacts" | jq -r '
+            [.artifacts[] | select(.expired == false and
+              (.name | startswith("rasdaemon-x86_64-")))]
+            | max_by(.created_at) | .created_at // empty')
+          image=$(printf '%s' "$artifacts" | jq -r '
+            [.artifacts[] | select(.expired == false and
+              .name == ("rasdaemon-qemu-image-x86_64-" + env.HEAD_SHA))]
+            | max_by(.created_at) | .created_at // empty')
+
+          if [[ "$EVENT_NAME" == "push" ||
+                "$EVENT_NAME" == "workflow_dispatch" || -z "$image" ||
+                "$kernel" > "$image" ||
+                "$qemu" > "$image" || "$rasdaemon" > "$image" ]]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: Build QEMU image
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    outputs:
+      image: ${{ steps.publish.outputs.image }}
+    # Keep image construction on the stable 22.04 runner.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v7
+        name: Checkout
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential git meson ninja-build pkg-config \
+            python3 python3-venv libglib2.0-dev libpixman-1-dev libslirp-dev \
+            libfdt-dev libaio-dev liburing-dev libcap-ng-dev libseccomp-dev \
+            libgnutls28-dev libudev-dev flex bison bc libelf-dev libssl-dev \
+            dwarves qemu-system-x86 qemu-utils cloud-image-utils e2fsprogs \
+            python3-tomli jq unzip
+
+      - name: Download Linux, QEMU and RAS Daemon
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          api() {
+            curl --fail --location --silent --show-error \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com$1"
+          }
+          mkdir -p build/kernel build/qemu
+          download_artifact() {
+            name=$1
+            destination=$2
+            artifact_id=$(api "/repos/$GITHUB_REPOSITORY/actions/artifacts?name=$name" |
+              jq -r '.artifacts[] | select(.expired == false) | .id' | head -n 1)
+            test -n "$artifact_id" || {
+              echo "artifact not available: $name" >&2
+              return 1
+            }
+            archive=$(mktemp)
+            api "/repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id/zip" > "$archive"
+            unzip -q "$archive" -d "$destination"
+            rm -f "$archive"
+          }
+          artifact_name() {
+            prefix=$1
+            api "/repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" |
+              jq -r ".artifacts[] | select(.name | startswith(\"$prefix\")) | select(.expired == false) | .name" |
+              head -n 1
+          }
+          for attempt in $(seq 1 120); do
+            kernel_name=$(artifact_name rasdaemon-kernel-x86_64-)
+            qemu_name=$(artifact_name rasdaemon-qemu-x86_64-)
+            if test -n "$kernel_name" && test -n "$qemu_name"; then
+              break
+            fi
+            echo "Waiting for kernel and QEMU artifacts (attempt $attempt/120; kernel=${kernel_name:-missing}, qemu=${qemu_name:-missing})"
+            sleep 60
+          done
+          test -n "$kernel_name" && test -n "$qemu_name" || {
+            echo "Timed out waiting for non-expired kernel and QEMU artifacts" >&2
+            exit 1
+          }
+          download_artifact "$kernel_name" build/kernel
+          download_artifact "$qemu_name" build/qemu
+
+      - name: Check Debian base checksum
+        id: base
+        run: |
+          sha=$(curl --fail --location --retry 3 \
+            https://cloud.debian.org/images/cloud/trixie/latest/SHA512SUMS | \
+            awk '$2 == "debian-13-genericcloud-amd64.qcow2" {print $1; exit}')
+          test -n "$sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Build image
+        run: |
+          tests/qemu/ci/build-bundle.sh --channel release \
+            --kernel-dir build/kernel --qemu-dir build/qemu \
+            --kernel-json build/kernel/metadata/kernel.json \
+            --base-sha512 '${{ steps.base.outputs.sha }}' \
+            --tag rasdaemon-ci:x86_64
+          mkdir -p build/image
+          docker save rasdaemon-ci:x86_64 -o build/image/rasdaemon-ci-x86_64.tar
+
+      - name: Publish image
+        id: publish
+        env:
+          REGISTRY_IMAGE: ghcr.io/${{ github.repository_owner }}/rasdaemon-ci
+        run: |
+          owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          echo "${{ github.token }}" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker tag rasdaemon-ci:x86_64 "ghcr.io/$owner/rasdaemon-ci:x86_64"
+          docker push "ghcr.io/$owner/rasdaemon-ci:x86_64"
+          image=$(docker inspect --format '{{index .RepoDigests 0}}' \
+            "ghcr.io/$owner/rasdaemon-ci:x86_64")
+          case "$image" in
+            *@sha256:*) ;;
+            *) echo "published image digest was not available: $image" >&2; exit 1 ;;
+          esac
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rasdaemon-qemu-image-diagnostics-x86_64
+          path: build/rasdaemon-ci/**/*.console.log
+          retention-days: 90
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v7
+        id: image-artifact
+        with:
+          name: rasdaemon-qemu-image-x86_64-${{ github.event.workflow_run.head_sha || github.sha }}
+          path: build/image
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Keep only the latest QEMU image artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE_ARTIFACT_ID: ${{ steps.image-artifact.outputs.artifact-id }}
+        run: |
+          set -euxo pipefail
+
+          # Verify the replacement before deleting any older image archives.
+          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/$IMAGE_ARTIFACT_ID" |
+            jq -e --argjson current "$IMAGE_ARTIFACT_ID" '
+              .id == $current and .expired == false and
+              (.name | test("^rasdaemon-qemu-image-x86_64-[0-9a-f]{40}$"))'
+
+          # Collect every page before deletion changes pagination. Never delete
+          # newer IDs: another image workflow may have uploaded concurrently.
+          artifacts=$(gh api --paginate \
+            "/repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100")
+          obsolete=$(printf '%s' "$artifacts" |
+            jq -sr --argjson current "$IMAGE_ARTIFACT_ID" '
+              .[].artifacts[] |
+              select(.id < $current and
+                (.name | test("^rasdaemon-qemu-image-x86_64-[0-9a-f]{40}$"))) |
+              .id')
+
+          for artifact_id in $obsolete; do
+            echo "Deleting superseded QEMU image artifact $artifact_id"
+            gh api --method DELETE \
+              "/repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id"
+          done
+
+  test:
+    name: Test QEMU image
+    needs: build
+    uses: ./.github/workflows/qemu-tests.yml
+    with:
+      image: ${{ needs.build.outputs.image }}
+    secrets: inherit

@@ -1,0 +1,96 @@
+# SPDX-License-Identifier: GPL-2.0-only
+
+name: RAS Daemon functional tests
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        required: true
+        type: string
+
+  workflow_dispatch:
+    inputs:
+      image:
+        description: Published QEMU image reference
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qemu-tests-${{ github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test QEMU
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64]
+    steps:
+      - name: Check out rasdaemon source
+        uses: actions/checkout@v7
+        with:
+          repository: mchehab/rasdaemon
+          ref: master
+          path: rasdaemon-source
+
+      - name: Record tested rasdaemon revision
+        env:
+          TEST_ARCH: ${{ matrix.arch }}
+        run: |
+          set -eux
+
+          mkdir -p "build/qemu-results/$TEST_ARCH"
+          git -C rasdaemon-source rev-parse HEAD \
+            > "build/qemu-results/$TEST_ARCH/rasdaemon-source-revision"
+
+      - name: Download image
+        env:
+          IMAGE_REF: ${{ inputs.image || format('ghcr.io/{0}/rasdaemon-ci:x86_64', github.repository_owner) }}
+        run: |
+          echo "Using image $IMAGE_REF"
+          docker pull "$IMAGE_REF"
+      - name: Run
+        env:
+          TEST_ARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p build/qemu-results/$TEST_ARCH
+          docker_args=(--rm)
+          if test -r /dev/kvm && test -w /dev/kvm; then
+            docker_args+=(--device /dev/kvm)
+          fi
+          image_ref='${{ inputs.image || format('ghcr.io/{0}/rasdaemon-ci:x86_64', github.repository_owner) }}'
+          docker run "${docker_args[@]}" \
+            -v "$PWD/rasdaemon-source:/workspace:ro" \
+            -v "$PWD/build/qemu-results/$TEST_ARCH:/results" \
+            "$image_ref" \
+            run --arch "$TEST_ARCH" --accelerator auto \
+            --profile injection --timeout 3600
+
+      - name: Publish kernel and rasdaemon status table
+        if: always()
+        env:
+          TEST_ARCH: ${{ matrix.arch }}
+        run: |
+          set -eux
+
+          if test -f "build/qemu-results/$TEST_ARCH/summary.md"; then
+            cat "build/qemu-results/$TEST_ARCH/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '🔴 Infrastructure failure: no VM result table was produced.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        name: Upload
+        if: always()
+        with:
+          name: rasdaemon-qemu-results-${{ matrix.arch }}
+          path: build/qemu-results/${{ matrix.arch }}
+          retention-days: 90
+          if-no-files-found: error
