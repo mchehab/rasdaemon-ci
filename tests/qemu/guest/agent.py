@@ -40,21 +40,25 @@ class Results:
     def add(self, name, status, reason="", evidence=None, duration=0.0,
             kernel=None, rasdaemon=None):
         prerequisites = ("guest kernel lacks", "guest kernel exposes no",
-                         "hardware-first MCE injection requires", "blkdebug guest disk was not discovered")
+                         "hardware-first MCE injection requires",
+                         "blkdebug guest disk was not discovered")
 
-        if reason.startswith(prerequisites):
+        kernel_precondition = reason.startswith(prerequisites)
+        if kernel_precondition:
             status = "skipped"
 
         verdict = {"passed": "PASS", "failed": "FAIL", "skipped": "SKIP"}[status]
         observed = (evidence or {}).get("sqlite_count", 0) > 0
+        if kernel_precondition and kernel is None and rasdaemon is None:
+            kernel, rasdaemon = "SKIP", "SKIP"
         self.tests.append({
             "name": name,
             "status": status,
             "reason": reason,
             "evidence": evidence or {},
             "duration_seconds": round(duration, 3),
-            "kernel": kernel or ("PASS" if observed else "SKIP"),
-            "rasdaemon": rasdaemon or verdict,
+            "kernel": kernel if kernel is not None else ("PASS" if observed else "N/A"),
+            "rasdaemon": rasdaemon if rasdaemon is not None else verdict,
         })
         print("ras-qemu-result: " + json.dumps(self.tests[-1], sort_keys=True), flush=True)
         self.progress(f"{name} {status}")
@@ -66,7 +70,8 @@ class Results:
         print("ras-qemu-agent: %s" % message, flush=True)
 
     def command(self, name, command, cwd=None, timeout=300, required=True,
-                environment=None, expected_returncodes=(0,)):
+                environment=None, expected_returncodes=(0,), kernel=None,
+                rasdaemon=None):
         started = time.monotonic()
         self.progress("starting %s" % name)
         env = os.environ.copy()
@@ -80,7 +85,8 @@ class Results:
             )
         except (OSError, subprocess.TimeoutExpired) as error:
             status = "failed" if required else "skipped"
-            self.add(name, status, str(error), duration=time.monotonic() - started)
+            self.add(name, status, str(error), duration=time.monotonic() - started,
+                     kernel=kernel, rasdaemon=rasdaemon)
             self.progress("%s %s: %s" % (name, status, error))
             return False
         evidence = {
@@ -91,12 +97,14 @@ class Results:
         if completed.returncode not in expected_returncodes:
             status = "failed" if required else "skipped"
             self.add(name, status, "command returned %d" % completed.returncode,
-                     evidence, time.monotonic() - started)
+                     evidence, time.monotonic() - started, kernel=kernel,
+                     rasdaemon=rasdaemon)
             self.progress("%s %s (return code %d)" %
                           (name, status, completed.returncode))
             return False
         self.add(name, "passed", evidence=evidence,
-                 duration=time.monotonic() - started)
+                 duration=time.monotonic() - started, kernel=kernel,
+                 rasdaemon=rasdaemon)
         self.progress("%s passed" % name)
         return True
 
@@ -169,10 +177,11 @@ def ensure_tracefs(results):
     target = pathlib.Path("/sys/kernel/tracing")
     target.mkdir(parents=True, exist_ok=True)
     if run(["mountpoint", "-q", str(target)]).returncode == 0:
-        results.add("tracefs", "passed", evidence={"path": str(target)})
+        results.add("tracefs", "passed", evidence={"path": str(target)},
+                    kernel="N/A", rasdaemon="N/A")
         return True
     return results.command("tracefs", ["mount", "-t", "tracefs", "tracefs",
-                                       str(target)])
+                                       str(target)], kernel="N/A", rasdaemon="N/A")
 
 
 def guest_test_page(consume_poison: bool = False) -> tuple[int, int, int]:
@@ -1153,23 +1162,25 @@ def execute(profile):
     try:
         payload = mount_payload()
     except RuntimeError as error:
-        results.add("payload", "failed", str(error))
+        results.add("payload", "failed", str(error), kernel="N/A", rasdaemon="N/A")
         return results
     try:
         if WORK_DIR.exists():
             shutil.rmtree(WORK_DIR)
         WORK_DIR.mkdir(parents=True)
-        results.add("payload", "passed")
+        results.add("payload", "passed", kernel="N/A", rasdaemon="N/A")
 
         if profile not in ("baseline", "injection", "fuzz"):
             results.add(profile, "skipped",
-                        "%s profile requires an optional guest artifact" % profile)
+                        "%s profile requires an optional guest artifact" % profile,
+                        kernel="N/A", rasdaemon="N/A")
             return results
 
         archive = payload / "rasdaemon-install.tar"
         if archive.is_file():
             if not results.command(
-                    "install-payload", ["tar", "-xf", str(archive), "-C", "/"]):
+                    "install-payload", ["tar", "-xf", str(archive), "-C", "/"],
+                    kernel="N/A", rasdaemon="N/A"):
                 return results
             build = pathlib.Path("/usr/sbin")
         else:
@@ -1182,15 +1193,16 @@ def execute(profile):
                                "-Dsqlite3=enabled", "-Dmysql=disabled",
                                "-Dpostgresql=disabled",
                                "-Dpcie-edpc=disabled"], cwd=source,
+                kernel="N/A", rasdaemon="N/A",
             )
             if not configured:
                 return results
             if not results.command("build", ["ninja", "-C", str(build)],
-                                   cwd=source):
+                                   cwd=source, kernel="N/A", rasdaemon="N/A"):
                 return results
             if not results.command(
-                    "install", ["meson", "install", "-C", str(build)],
-                    cwd=source):
+                    "install", ["meson", "install", "-C", str(build)], cwd=source,
+                    kernel="N/A", rasdaemon="N/A"):
                 return results
         if not ensure_tracefs(results):
             return results
@@ -1206,7 +1218,7 @@ def execute(profile):
             if run(["mountpoint", "-q", debugfs]).returncode:
                 command = ["mount", "-t", "debugfs", "debugfs", debugfs]
 
-                if not results.command("debugfs", command):
+                if not results.command("debugfs", command, kernel="N/A", rasdaemon="N/A"):
                     return results
 
             mce_memory_smoke(results, build, environment)

@@ -534,28 +534,26 @@ class ResultDocument:
 
     @staticmethod
     def explain_skips(test: dict) -> None:
-        """Give every implicit component skip a human-readable explanation."""
-        fallback = {
-            "passed": "PASS", "failed": "FAIL", "skipped": "SKIP",
-        }[test["status"]]
-        kernel = test.setdefault("kernel", "SKIP")
-        rasdaemon = test.setdefault(
-            "rasdaemon",
-            fallback if test["name"] != "prerequisites" else "SKIP",
-        )
+        """Classify checks that do not assess either reported component.
+
+        A component is SKIP only when its test was intended to run but could
+        not.  Harness, setup, and component-specific checks are N/A for the
+        component they do not assess.
+        """
+        kernel = test.setdefault("kernel", "N/A")
+        rasdaemon = test.setdefault("rasdaemon", "N/A")
         reason = test.get("reason", "").strip()
 
         if reason:
             if kernel == "FAIL" and rasdaemon == "SKIP":
                 reason += "; rasdaemon was not evaluated after the kernel-side failure"
-        elif kernel == "SKIP" and rasdaemon == "SKIP":
-            reason = ("Harness or setup check only; it did not exercise kernel "
+        elif kernel == "N/A" and rasdaemon == "N/A":
+            reason = ("Harness or setup check only; it does not assess kernel "
                       "RAS handling or rasdaemon")
-        elif kernel == "SKIP":
-            reason = ("Guest setup or rasdaemon-only check; it did not exercise "
-                      "kernel RAS handling")
-        elif rasdaemon == "SKIP":
-            reason = "Kernel-only check; it did not exercise rasdaemon"
+        elif kernel == "N/A":
+            reason = "rasdaemon-only check; kernel RAS handling is not applicable"
+        elif rasdaemon == "N/A":
+            reason = "Kernel-only check; rasdaemon is not applicable"
 
         test["reason"] = reason
 
@@ -631,7 +629,7 @@ class ResultDocument:
 <h2>Component totals</h2><table><thead><tr><th>Component</th><th>PASS</th>
 <th>FAIL</th><th>SKIP</th><th>N/A</th></tr></thead><tbody>''' + total_rows + '''</tbody></table>
 <h2>Detailed results</h2>
-<p>SKIP means not exercised; inspect the reason. Missing prerequisites are not passes.</p>
+<p>SKIP means an intended component test could not run; inspect the reason. N/A means the check does not assess that component.</p>
 <div class="toolbar"><label>Filter tests or status:
 <input id="filter" placeholder="e.g. FAIL, cxl, prerequisite"></label>
 <button type="button" id="theme" class="theme-toggle" title="Change color theme"
@@ -1304,6 +1302,7 @@ def run_test(args, manifest):
         document.data["accelerator"] = accelerator
     except LabError as error:
         document.add_test("prerequisites", "skipped", str(error))
+        document.data["tests"][-1].update(kernel="N/A", rasdaemon="N/A")
         document.write(result_dir)
         return 1
 
@@ -1313,9 +1312,11 @@ def run_test(args, manifest):
     missing = [check.reason for check in required if not check.available]
     if missing:
         document.add_test("prerequisites", "skipped", "; ".join(missing))
+        document.data["tests"][-1].update(kernel="N/A", rasdaemon="N/A")
         document.write(result_dir)
         return 1
     document.add_test("prerequisites", "passed")
+    document.data["tests"][-1].update(kernel="N/A", rasdaemon="N/A")
 
     image = next(check.value for check in checks if check.name == "image")
     work_parent = pathlib.Path(args.work_dir).expanduser() if args.work_dir else None
@@ -1340,6 +1341,7 @@ def run_test(args, manifest):
             if args.dry_run:
                 document.add_test("guest", "skipped", "dry run requested",
                                   {"command": command})
+                document.data["tests"][-1].update(kernel="N/A", rasdaemon="N/A")
             else:
                 if not args.quiet:
                     print("Starting QEMU with accelerator %s" % accelerator,

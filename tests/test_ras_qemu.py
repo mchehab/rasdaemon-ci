@@ -125,13 +125,13 @@ class RasQemuTest(unittest.TestCase):
             self.assertEqual(data["totals"]["skipped"], 1)
             self.assertTrue((pathlib.Path(temporary) / "junit.xml").is_file())
 
-    def test_result_explains_implicit_component_skips(self):
+    def test_result_marks_non_component_checks_not_applicable(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
             result = ras_qemu.ResultDocument("x86_64", "tcg", "injection")
             result.add_test("prerequisites", "passed")
             result.add_test("database-report", "passed")
-            result.data["tests"][-1].update(kernel="SKIP", rasdaemon="PASS")
+            result.data["tests"][-1].update(kernel="N/A", rasdaemon="PASS")
             result.add_test("Enable Kernel CONFIG_ACPI_APEI_GHES config", "passed",
                             "Kernel option is y as requested")
             result.data["tests"][-1].update(kernel="PASS", rasdaemon="N/A")
@@ -143,19 +143,19 @@ class RasQemuTest(unittest.TestCase):
             data = json.loads((root / "result.json").read_text(encoding="utf-8"))
             reasons = {test["name"]: test["reason"] for test in data["tests"]}
             self.assertEqual(data["component_totals"], {
-                "kernel": {"passed": 1, "failed": 1, "skipped": 2,
-                           "not_applicable": 0},
-                "rasdaemon": {"passed": 1, "failed": 0, "skipped": 2,
-                              "not_applicable": 1},
+                "kernel": {"passed": 1, "failed": 1, "skipped": 0,
+                           "not_applicable": 2},
+                "rasdaemon": {"passed": 1, "failed": 0, "skipped": 1,
+                              "not_applicable": 2},
             })
-            self.assertIn("did not exercise kernel RAS handling or rasdaemon",
+            self.assertIn("does not assess kernel RAS handling or rasdaemon",
                           reasons["prerequisites"])
             self.assertIn("rasdaemon-only check", reasons["database-report"])
             self.assertIn("rasdaemon was not evaluated",
                           reasons["injection"])
             summary = (root / "summary.md").read_text(encoding="utf-8")
-            self.assertIn("| Kernel | 1 | 1 | 2 | 0 |", summary)
-            self.assertIn("| rasdaemon | 1 | 0 | 2 | 1 |", summary)
+            self.assertIn("| Kernel | 1 | 1 | 0 | 2 |", summary)
+            self.assertIn("| rasdaemon | 1 | 0 | 1 | 2 |", summary)
             self.assertNotIn("rasdaemon is not involved", summary)
             self.assertIn(reasons["prerequisites"], summary)
             self.assertIn(reasons["database-report"], summary)

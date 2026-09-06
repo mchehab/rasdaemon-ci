@@ -95,6 +95,16 @@ class ResultTableTest(unittest.TestCase):
         self.assertEqual(results.tests[0]["kernel"], "SKIP")
         self.assertEqual(results.tests[1]["kernel"], "PASS")
 
+    def test_rasdaemon_only_skip_does_not_skip_kernel(self) -> None:
+        """A skipped daemon check is not a skipped kernel RAS test."""
+        results = agent.Results()
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            results.add("systemd-unit-verify", "skipped", "systemd unavailable")
+
+        self.assertEqual(results.tests[0]["kernel"], "N/A")
+        self.assertEqual(results.tests[0]["rasdaemon"], "SKIP")
+
     def test_html_escapes_guest_text_and_preserves_component_verdicts(self) -> None:
         """A decoder message is data, including when it contains HTML."""
         document = ras_qemu.ResultDocument("x86_64", "tcg", "injection")
