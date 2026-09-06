@@ -11,8 +11,6 @@ Latest reports
 
 * `Daily functional-test report
   <https://mchehab.github.io/rasdaemon-ci/daily/>`_
-* `Weekly fuzz-test report
-  <https://mchehab.github.io/rasdaemon-ci/weekly/>`_
 
 Each report summarizes the kernel and rasdaemon results separately, links to
 the GitHub Actions run, and provides the detailed evidence and downloadable
