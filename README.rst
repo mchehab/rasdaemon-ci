@@ -12,8 +12,9 @@ Latest reports
 * `Daily functional-test report
   <https://mchehab.github.io/rasdaemon-ci/daily/>`_
 
-Each report summarizes the kernel and rasdaemon results separately, links to
-the GitHub Actions run, and provides the detailed evidence and downloadable
+Each report summarizes implemented feature results and reports x86_64 and
+ARM64 VM infrastructure failures separately. It links to the GitHub Actions
+run and provides detailed per-component evidence and downloadable
 machine-readable files.
 
 Functional feature implementation
@@ -146,7 +147,7 @@ architecture. The runtime ownership/check mapping is in
      - Implemented
      - Row threshold and isolation of the disposable page identified by CPER.
    * - mysql
-     - aarch64
+     - x86_64
      - Implemented
      - Real MariaDB service, recording backend and installed CLI readback.
    * - non-standard (internal)
@@ -177,7 +178,7 @@ architecture. The runtime ownership/check mapping is in
      - Implemented
      - Memory-failure injection must produce the configured threshold warning.
    * - postgresql
-     - aarch64
+     - x86_64
      - Implemented
      - Real PostgreSQL service, recording backend and installed CLI readback.
    * - reri

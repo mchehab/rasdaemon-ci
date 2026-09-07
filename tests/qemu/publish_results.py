@@ -63,19 +63,31 @@ class ResultSite:  # pylint: disable=R0903
         self.conclusion = conclusion
         self.results = results
 
+    @staticmethod
+    def _infrastructure_failure(result: PublishedResult) -> str:
+        reason = result.data.get("infrastructure_failure", "")
+        if reason:
+            return reason
+        # Compatibility with reports created before the explicit field existed.
+        for test in result.data.get("tests", []):
+            if (test.get("name") == "guest" and test.get("status") == "failed" and
+                    test.get("rasdaemon") == "SKIP"):
+                return test.get("reason", "guest failed before tests ran")
+        return ""
+
     def _totals(self) -> dict:
-        totals = {
-            component: {state: 0 for state in (
-                "passed", "failed", "skipped", "not_applicable",
-            )}
-            for component in ("kernel", "rasdaemon")
-        }
-
+        totals = {"passed": 0, "failed": 0,
+                  "infrastructure": {"x86_64": 0, "aarch64": 0}}
         for result in self.results:
-            for component, values in result.data["component_totals"].items():
-                for state, count in values.items():
-                    totals[component][state] += count
-
+            if self._infrastructure_failure(result):
+                arch = result.data.get("architecture", result.label)
+                if arch in totals["infrastructure"]:
+                    totals["infrastructure"][arch] = 1
+                continue
+            for row in result.data.get("features", []):
+                if row.get("checks"):
+                    totals["passed"] += int(bool(row.get("PASS")))
+                    totals["failed"] += int(bool(row.get("FAIL")))
         return totals
 
     @staticmethod
@@ -93,25 +105,20 @@ class ResultSite:  # pylint: disable=R0903
             stream.write(badge)
 
     def _write_badges(self, totals: dict | None) -> None:
-        """Write one independently colored badge for every component outcome."""
-        outcomes = (("pass", "passed", "#2da44e"),
-                    ("fail", "failed", "#d73a49"),
-                    ("skip", "skipped", "#bf8700"),
-                    ("n-a", "not_applicable", "#6e7781"))
-
-        for component in ("kernel", "rasdaemon"):
-            for label, state, color in outcomes:
-                filename = f"badge-{component}-{label}.svg"
-                path = os.path.join(self.site_dir, filename)
-                value = totals[component].get(state, 0) if totals else "N/A"
-                badge_color = "#2da44e" if value == 0 else color
-
-                if totals is None:
-                    badge_color = "#6e7781"
-
-                outcome = label.replace("-", "/").upper()
-                self._write_badge(path, f"{component} {outcome}",
-                                  value, badge_color)
+        """Write feature-regression and per-architecture VM badges."""
+        values = {
+            "feature-pass": ("features PASS", totals["passed"] if totals else "N/A"),
+            "feature-fail": ("features FAIL", totals["failed"] if totals else "N/A"),
+            "x86-vm-fail": ("x86 VM FAIL", totals["infrastructure"]["x86_64"]
+                            if totals else "N/A"),
+            "arm64-vm-fail": ("ARM64 VM FAIL", totals["infrastructure"]["aarch64"]
+                              if totals else "N/A"),
+        }
+        for filename, (label, value) in values.items():
+            color = "#6e7781" if totals is None else (
+                "#d73a49" if filename.endswith("fail") and value else "#2da44e")
+            self._write_badge(os.path.join(self.site_dir, f"badge-{filename}.svg"),
+                              label, value, color)
 
     def _metadata_html(self, result: PublishedResult) -> str:
         run_url = html.escape(self.run_url, quote=True)
@@ -146,14 +153,6 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
     def _write_index(self, totals: dict) -> None:
         run_url = html.escape(self.run_url, quote=True)
         assets = html.escape(self.results[0].label, quote=True)
-        rows = []
-
-        for component, values in totals.items():
-            label = "Kernel" if component == "kernel" else "rasdaemon"
-            rows.append(f"<tr><th>{label}</th><td>{values['passed']}</td>"
-                        f"<td>{values['failed']}</td><td>{values['skipped']}</td>"
-                        f"<td>{values['not_applicable']}</td></tr>")
-
         reports = ""
         feature_rows = []
 
@@ -172,8 +171,14 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
 <h1>{html.escape(self.title)}</h1><p>Latest published result. See the
 <a href="{run_url}">GitHub Actions run</a> for the complete workflow log.</p>
 {feature_table}
-<table><thead><tr><th>Component</th><th>PASS</th><th>FAIL</th><th>SKIP</th><th>N/A</th></tr>
-</thead><tbody>{''.join(rows)}</tbody></table><h2>Reports</h2><ul>{reports}</ul>
+<h2>Run status</h2><table><thead><tr><th>Features PASS</th><th>Features FAIL</th>
+<th>x86 VM FAIL</th><th>ARM64 VM FAIL</th></tr></thead><tbody><tr>
+<td>{totals['passed']}</td><td>{totals['failed']}</td>
+<td>{totals['infrastructure']['x86_64']}</td>
+<td>{totals['infrastructure']['aarch64']}</td></tr></tbody></table>
+<p>A VM failure means that architecture could not execute its functional tests.
+Unexecuted features are not counted as regressions.</p>
+<h2>Reports</h2><ul>{reports}</ul>
 </body></html>'''
 
         with open(os.path.join(self.site_dir, "index.html"), "w", encoding="utf-8") as stream:

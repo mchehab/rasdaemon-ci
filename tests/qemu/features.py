@@ -34,7 +34,7 @@ FEATURES = {
     "memory-ce-pfa": ("aarch64", ["consumer-memory-ce-pfa"]),
     "memory-failure": ("aarch64", ["memory-failure"]),
     "memory-row-ce-pfa": ("aarch64", ["consumer-memory-row-ce-pfa"]),
-    "mysql": ("aarch64", ["consumer-mysql"]),
+    "mysql": ("x86_64", ["consumer-mysql"]),
     "non-standard": ("aarch64", ["ghes-pci-bus", "ghes-unknown"]),
     "nvidia-ns-decode": ("aarch64", ["vendor-nvidia"]),
     "openbmc-unified-sel": ("aarch64", ["consumer-arm-sel", "consumer-openbmc-unified-sel"]),
@@ -42,7 +42,7 @@ FEATURES = {
                                     "consumer-memory-row-ce-pfa"]),
     "pcie-edpc": ("x86_64", ["consumer-pcie-edpc"]),
     "poison-page-stat": ("aarch64", ["consumer-poison-page-stat"]),
-    "postgresql": ("aarch64", ["consumer-postgresql"]),
+    "postgresql": ("x86_64", ["consumer-postgresql"]),
     "reri": ("aarch64", ["reri-event"]),
     "signal": ("aarch64", ["memory-sigbus"]),
     "sqlite3": ("aarch64", ["consumer-sqlite3"]),
@@ -88,7 +88,8 @@ def feature_inventory(source: str) -> list[str]:
     return sorted(names)
 
 
-def feature_results(arch: str, tests: list[dict], inventory: list[str]) -> list[dict]:
+def feature_results(arch: str, tests: list[dict], inventory: list[str],
+                    infrastructure_failure: str = "") -> list[dict]:
     """Judge implemented checks; list implementation gaps outside regression totals."""
     grouped: dict[str, list[dict]] = {}
     for test in tests:
@@ -116,8 +117,17 @@ def feature_results(arch: str, tests: list[dict], inventory: list[str]) -> list[
                          "untested": untested or [{"check": name, "reason": reason}]})
             continue
 
-        failed = [check for check in checks if len(grouped.get(check, [])) != 1 or
-                  grouped[check][0]["status"] != "passed"]
+        failed = [check for check in checks if len(grouped.get(check, [])) == 1 and
+                  grouped[check][0]["status"] == "failed"]
+        unavailable = [check for check in checks if len(grouped.get(check, [])) != 1 or
+                       grouped[check][0]["status"] == "skipped"]
+        if infrastructure_failure and unavailable and not failed:
+            reason = "Not run due to infrastructure failure: " + infrastructure_failure
+            rows.append({"feature": name, "arch": owner, "PASS": 0, "FAIL": 0,
+                         "N/A": 1, "reason": reason, "checks": checks,
+                         "untested": untested})
+            continue
+        failed.extend(unavailable)
         passed = bool(checks) and not failed
         reason = "All implemented functional checks passed" if passed else (
             "Missing, failed or skipped checks: " + ", ".join(failed)

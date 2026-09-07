@@ -105,6 +105,16 @@ mkfs.ext4 -F -q -L RASDAEMON_CI -d "$payload" "$payload_image"
 payload_uuid=$(blkid -s UUID -o value "$payload_image")
 test -n "$payload_uuid"
 
+server_packages=
+if test "$arch" = x86_64; then
+	server_packages='  - libmariadb3
+  - libpq5
+  - mariadb-server
+  - postgresql
+  - python3-pymysql
+  - python3-psycopg2'
+fi
+
 cat >"$work/user-data" <<EOF
 #cloud-config
 package_update: true
@@ -123,12 +133,7 @@ packages:
   - iproute2
   - iputils-ping
   - ipmitool
-  - libmariadb3
-  - libpq5
-  - mariadb-server
-  - postgresql
-  - python3-pymysql
-  - python3-psycopg2
+$server_packages
 runcmd:
   - [sh, -c, 'echo "Provisioning: package setup finished; kernel installation starting"']
   - [ bash, -c, "set -euxo pipefail; device=\$(blkid -U '$payload_uuid'); test -b \"\$device\"; mkdir -p /mnt/payload; mount -o ro \"\$device\" /mnt/payload; bash /mnt/payload/guest/install-kernel.sh '$release'" ]
@@ -174,9 +179,12 @@ echo "guest provisioning accelerator: $accel"
 timeout 30m "qemu-system-$arch" -machine "$machine,accel=$accel" -cpu "$cpu" \
 	"${firmware[@]}" -m 2048 -smp 2 -display none \
 	-no-reboot -monitor none -serial stdio \
-	-drive "file=$work/custom.qcow2,if=virtio,format=qcow2" \
-	-drive "file=$work/seed.iso,if=virtio,format=raw,readonly=on" \
-	-drive "file=$payload_image,if=virtio,format=raw,readonly=on" \
+	-drive "file=$work/custom.qcow2,if=none,id=ras-os,format=qcow2" \
+	-device virtio-blk-pci,drive=ras-os,bus=pcie.0,addr=0x2,bootindex=1 \
+	-drive "file=$work/seed.iso,if=none,id=ras-seed,format=raw,readonly=on" \
+	-device virtio-blk-pci,drive=ras-seed,bus=pcie.0,addr=0x3 \
+	-drive "file=$payload_image,if=none,id=ras-payload,format=raw,readonly=on" \
+	-device virtio-blk-pci,drive=ras-payload,bus=pcie.0,addr=0x4 \
 	-nic user,model=virtio </dev/null 2>&1 | tee "$console" || {
 	echo "guest provisioning failed" >&2
 	tail -n 100 "$console" >&2 || true

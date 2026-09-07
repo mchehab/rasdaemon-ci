@@ -28,10 +28,19 @@ git -C "$work/source" fetch -q --depth=1 origin "$ref"
 git -C "$work/source" checkout -q --detach FETCH_HEAD
 commit=$(git -C "$work/source" rev-parse HEAD)
 
+# ARM virt does not select PCI IPMI by default. The SEL consumer tests need
+# both the PCI KCS interface and the local BMC simulator it selects.
+cat >"$work/source/configs/devices/aarch64-softmmu/rasdaemon-ci.mak" <<EOF
+include default.mak
+CONFIG_PCI_IPMI_KCS=y
+CONFIG_IPMI_LOCAL=y
+EOF
+
 mkdir -p "$work/build" "$output/root" "$output/metadata"
 cd "$work/build"
 "$work/source/configure" \
 	--target-list=x86_64-softmmu,aarch64-softmmu \
+	--with-devices-aarch64=rasdaemon-ci \
 	--prefix=/opt/qemu \
 	--disable-docs \
 	--disable-werror \

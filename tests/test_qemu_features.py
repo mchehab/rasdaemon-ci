@@ -16,6 +16,18 @@ SPEC.loader.exec_module(features)
 class FeatureResultTest(unittest.TestCase):
     """Keep N/A explicit and prevent unsupported entries hiding regressions."""
 
+    def test_server_databases_are_x86_only_but_sqlite_stays_on_arm(self):
+        """Move only the server backends, preserving ARM SQLite coverage."""
+        for name in ("consumer-mysql", "consumer-postgresql"):
+            self.assertEqual(features.scenario_arch(name), "x86_64")
+        self.assertEqual(features.scenario_arch("consumer-sqlite3"), "aarch64")
+        scenarios = [{"name": name} for name in ("consumer-mysql", "consumer-postgresql")]
+        arm = features.planned_tests("injection", "aarch64", scenarios)
+        x86 = features.planned_tests("injection", "x86_64", scenarios)
+        for scenario in scenarios:
+            self.assertNotIn(scenario["name"], arm)
+            self.assertIn(scenario["name"], x86)
+
     def test_reri_is_not_a_failure(self):
         row = features.feature_results("aarch64", [], ["reri"])[0]
         self.assertEqual((row["PASS"], row["FAIL"], row["N/A"]), (0, 0, 1))
@@ -24,6 +36,11 @@ class FeatureResultTest(unittest.TestCase):
     def test_missing_supported_check_is_a_failure(self):
         row = features.feature_results("aarch64", [], ["arm"])[0]
         self.assertEqual((row["PASS"], row["FAIL"], row["N/A"]), (0, 1, 0))
+
+    def test_infrastructure_skip_is_not_a_feature_regression(self):
+        row = features.feature_results("aarch64", [], ["arm"], "QEMU did not boot")[0]
+        self.assertEqual((row["PASS"], row["FAIL"], row["N/A"]), (0, 0, 1))
+        self.assertIn("QEMU did not boot", row["reason"])
 
     def test_unknown_feature_is_an_implementation_gap(self):
         row = features.feature_results("aarch64", [], ["new-feature"])[0]

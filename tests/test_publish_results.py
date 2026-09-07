@@ -10,13 +10,20 @@ from tests.qemu.publish_results import PublishedResult, ResultSite
 
 
 class ResultSiteTest(unittest.TestCase):
-    """Published sites expose provenance and independent component totals."""
+    """Published sites expose provenance, feature totals and VM health."""
 
     @staticmethod
-    def _write_result(directory: str, revision: str, failed: int = 0) -> None:
+    def _write_result(directory: str, revision: str, failed: int = 0,
+                      arch: str = "x86_64", infrastructure: str = "") -> None:
         os.makedirs(directory)
         data = {
             "finished_at": "2026-09-06T12:00:00+00:00",
+            "architecture": arch,
+            "features": [
+                {"feature": "aer", "arch": arch, "PASS": int(not failed),
+                 "FAIL": int(bool(failed)), "N/A": 0, "reason": "result",
+                 "checks": ["aer-native"], "untested": []},
+            ],
             "component_totals": {
                 "kernel": {"passed": 20, "failed": 0, "skipped": 2,
                            "not_applicable": 0},
@@ -24,6 +31,8 @@ class ResultSiteTest(unittest.TestCase):
                               "not_applicable": 2},
             },
         }
+        if infrastructure:
+            data["infrastructure_failure"] = infrastructure
 
         with open(os.path.join(directory, "result.json"), "w", encoding="utf-8") as stream:
             json.dump(data, stream)
@@ -57,21 +66,20 @@ class ResultSiteTest(unittest.TestCase):
                 page = stream.read()
 
             badges = {}
-
-            for outcome in ("pass", "fail", "skip", "n-a"):
-                path = os.path.join(site_dir, f"badge-kernel-{outcome}.svg")
+            for outcome in ("feature-pass", "feature-fail", "x86-vm-fail",
+                            "arm64-vm-fail"):
+                path = os.path.join(site_dir, f"badge-{outcome}.svg")
                 with open(path, encoding="utf-8") as stream:
                     badges[outcome] = stream.read()
 
         self.assertIn("actions/runs/42", page)
         self.assertIn("rasdaemon/commit/" + "a" * 40, page)
-        self.assertIn("kernel PASS: 20", badges["pass"])
-        self.assertIn("#2da44e", badges["pass"])
-        self.assertIn("#2da44e", badges["fail"])
-        self.assertIn("#bf8700", badges["skip"])
-        self.assertIn("#2da44e", badges["n-a"])
-        self.assertIn('width="40" height="20"', badges["pass"])
-        self.assertIn('<text x="20" y="14">20</text>', badges["pass"])
+        self.assertIn("features PASS: 1", badges["feature-pass"])
+        self.assertIn("#2da44e", badges["feature-pass"])
+        self.assertIn("features FAIL: 0", badges["feature-fail"])
+        self.assertIn("x86 VM FAIL: 0", badges["x86-vm-fail"])
+        self.assertIn("ARM64 VM FAIL: 0", badges["arm64-vm-fail"])
+        self.assertIn('width="40" height="20"', badges["feature-pass"])
 
     def test_multiple_results_are_aggregated_and_linked(self) -> None:
         """The weekly page totals all fuzz modes and retains each full report."""
@@ -80,7 +88,7 @@ class ResultSiteTest(unittest.TestCase):
             zero_dir = os.path.join(temporary, "zero")
             site_dir = os.path.join(temporary, "site")
             self._write_result(random_dir, "b" * 40)
-            self._write_result(zero_dir, "b" * 40, failed=1)
+            self._write_result(zero_dir, "b" * 40, failed=1, arch="aarch64")
             results = [PublishedResult("random", random_dir),
                        PublishedResult("zero", zero_dir)]
             site = ResultSite("Weekly media CI tests", site_dir,
@@ -91,23 +99,37 @@ class ResultSiteTest(unittest.TestCase):
             with open(os.path.join(site_dir, "index.html"), encoding="utf-8") as stream:
                 page = stream.read()
 
-            with open(os.path.join(site_dir, "badge-rasdaemon-fail.svg"),
+            with open(os.path.join(site_dir, "badge-feature-fail.svg"),
                       encoding="utf-8") as stream:
                 badge = stream.read()
-
-            with open(os.path.join(site_dir, "badge-rasdaemon-n-a.svg"),
-                      encoding="utf-8") as stream:
-                not_applicable_badge = stream.read()
 
         self.assertIn("random report", page)
         self.assertIn("zero report", page)
         self.assertIn('class="theme-toggle"', page)
         self.assertIn('random/results.css', page)
-        self.assertIn("<th>rasdaemon</th><td>36</td><td>1</td><td>6</td>", page)
-        self.assertIn("rasdaemon FAIL: 1", badge)
+        self.assertIn("<td>1</td><td>1</td>", page)
+        self.assertIn("features FAIL: 1", badge)
         self.assertIn("#d73a49", badge)
-        self.assertIn("rasdaemon N/A: 4", not_applicable_badge)
-        self.assertIn("#6e7781", not_applicable_badge)
+
+    def test_infrastructure_failure_does_not_count_feature_failures(self) -> None:
+        """A VM startup failure is separate from feature regressions."""
+        with tempfile.TemporaryDirectory() as temporary:
+            result_dir = os.path.join(temporary, "arm")
+            site_dir = os.path.join(temporary, "site")
+            self._write_result(result_dir, "c" * 40, failed=1,
+                               arch="aarch64", infrastructure="QEMU exited")
+            site = ResultSite("Daily", site_dir, "https://example.test/run",
+                              "https://example.test/source", "failure",
+                              [PublishedResult("aarch64", result_dir)])
+            site.write()
+            with open(os.path.join(site_dir, "badge-feature-fail.svg"),
+                      encoding="utf-8") as stream:
+                feature_badge = stream.read()
+            with open(os.path.join(site_dir, "badge-arm64-vm-fail.svg"),
+                      encoding="utf-8") as stream:
+                vm_badge = stream.read()
+        self.assertIn("features FAIL: 0", feature_badge)
+        self.assertIn("ARM64 VM FAIL: 1", vm_badge)
 
     def test_invalid_source_revision_is_rejected(self) -> None:
         """Never place arbitrary artifact text into a source link."""
@@ -129,15 +151,13 @@ class ResultSiteTest(unittest.TestCase):
 
             badges = []
 
-            for component in ("kernel", "rasdaemon"):
-                for outcome in ("pass", "fail", "skip", "n-a"):
-                    path = os.path.join(
-                        site_dir, f"badge-{component}-{outcome}.svg"
-                    )
-                    with open(path, encoding="utf-8") as stream:
-                        badges.append(stream.read())
+            for name in ("feature-pass", "feature-fail", "x86-vm-fail",
+                         "arm64-vm-fail"):
+                with open(os.path.join(site_dir, f"badge-{name}.svg"),
+                          encoding="utf-8") as stream:
+                    badges.append(stream.read())
 
-        self.assertEqual(len(badges), 8)
+        self.assertEqual(len(badges), 4)
 
         for badge in badges:
             self.assertIn(">N/A</text>", badge)

@@ -2,13 +2,17 @@
 
 FROM debian:13-slim
 
+ARG TEST_ARCH=x86_64
+
 COPY root/ /
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+RUN set -eux; server_deps=; \
+    case "$TEST_ARCH" in x86_64) server_deps='libmariadb-dev libmariadb-dev-compat libpq-dev';; aarch64) ;; *) exit 2;; esac; \
+    apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         build-essential ca-certificates git meson ninja-build pkg-config python3 \
         python3-pip \
         libtraceevent-dev libsqlite3-dev sqlite3 libpci-dev python3-sqlalchemy \
-        libmariadb-dev libpq-dev \
+        $server_deps \
         libglib2.0-0 libpixman-1-0 zlib1g libslirp0 libcap-ng0 libaio1t64 \
         liburing2 libseccomp2 libfdt1 libgnutls30t64 libudev1 \
     && rm -rf /var/lib/apt/lists/*

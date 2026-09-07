@@ -143,4 +143,4 @@ cat >"$context/rasdaemon-ci/images.json" <<EOF
 EOF
 cp "$project_dir/tests/qemu/oci/Containerfile" "$context/Containerfile"
 
-docker build --file "$context/Containerfile" --tag "$tag" "$context"
+docker build --build-arg "TEST_ARCH=$arch" --file "$context/Containerfile" --tag "$tag" "$context"

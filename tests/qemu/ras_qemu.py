@@ -733,8 +733,11 @@ class ResultDocument:
     def write(self, result_dir):
         """Write result.json, results.log, and junit.xml."""
         if self.data["profile"] == "injection" and "feature_inventory" in self.data:
-            rows = features.feature_results(self.data["architecture"], self.data["tests"],
-                                             self.data["feature_inventory"])
+            rows = features.feature_results(
+                self.data["architecture"], self.data["tests"],
+                self.data["feature_inventory"],
+                self.data.get("infrastructure_failure", ""),
+            )
             self.data["features"] = rows
             failed = [row["feature"] for row in rows if row["FAIL"]]
             if failed and not any(test["name"] == "feature-coverage" for test in self.data["tests"]):
@@ -871,11 +874,12 @@ class VirtualMachine:
         self.payload_dir.mkdir()
         build = self.work_dir / "host-build"
         install = self.work_dir / "host-install"
+        server_backend = "enabled" if self.arch == "x86_64" else "disabled"
         commands = [
             (["meson", "setup", str(build), str(self.source_dir),
-              "--prefix=/usr", "-Dsqlite3=enabled", "-Dmysql=enabled",
+              "--prefix=/usr", "-Dsqlite3=enabled", f"-Dmysql={server_backend}",
               "-Denable-arch=all",
-              "-Dpostgresql=enabled", "-Dpcie-edpc=enabled",
+              f"-Dpostgresql={server_backend}", "-Dpcie-edpc=enabled",
               "-Dbmc-generic=enabled"], None),
             (["ninja", "-C", str(build)], None),
             (["meson", "install", "-C", str(build),
@@ -910,6 +914,16 @@ class VirtualMachine:
                                 (self.source_dir / "config.h.in").read_text(encoding="utf-8"),
                                 re.MULTILINE):
             enabled = bool(re.search(r"^#define " + macro + r"(?: 1)?$", config, re.MULTILINE))
+            if self.arch != "x86_64" and macro in ("HAVE_MYSQL", "HAVE_POSTGRESQL"):
+                state = "unexpectedly enabled" if enabled else "disabled as requested"
+                self.build_checks.append({
+                    "name": "Build " + macro,
+                    "status": "failed" if enabled else "passed",
+                    "reason": f"{macro} {state}; server database tests run on x86_64",
+                    "kernel": "N/A", "rasdaemon": "FAIL" if enabled else "PASS",
+                    "evidence": {"configuration": config, "requested": "disabled"},
+                })
+                continue
             unavailable = OPTIONAL_BUILD_MACROS.get(macro) if not enabled else None
             self.build_checks.append({
                 "name": "Build " + macro,
@@ -959,10 +973,10 @@ class VirtualMachine:
             "-qmp", "unix:%s,server=on,wait=off" % self.qmp_path,
             "-serial", "file:%s" % self.console_path,
             "-drive", "file=%s,if=none,id=ras-os,format=qcow2" % self.overlay_path,
-            "-device", "virtio-blk-pci,drive=ras-os,bus=pcie.0",
+            "-device", "virtio-blk-pci,drive=ras-os,bus=pcie.0,addr=0x2,bootindex=1",
             "-drive", "file=fat:ro:%s,if=none,id=ras-payload,format=raw,readonly=on" %
             self.payload_dir,
-            "-device", "virtio-blk-pci,drive=ras-payload,bus=pcie.0",
+            "-device", "virtio-blk-pci,drive=ras-payload,bus=pcie.0,addr=0x3",
             "-device", "virtio-serial-pci,bus=pcie.0",
             "-chardev", "socket,id=ras-result,path=%s,server=on,wait=off" %
                         self.result_path,
@@ -1004,7 +1018,7 @@ class VirtualMachine:
                 "-device", "pci-ipmi-kcs,bmc=ras-bmc,bus=pcie.0",
                 "-object", "memory-backend-file,id=ras-erst,size=0x10000,share=on,mem-path="
                 + os.path.join(self.work_dir, "erst-store.bin"),
-                "-device", "acpi-erst,memdev=ras-erst",
+                "-device", "acpi-erst,memdev=ras-erst,bus=pcie.0",
             ])
         if self.profile in ("injection", "fuzz"):
             if self.arch == "aarch64":
@@ -1525,6 +1539,7 @@ def run_test(args, manifest):
         accelerator = choose_accelerator(args.accelerator, checks)
         document.data["accelerator"] = accelerator
     except LabError as error:
+        document.data["infrastructure_failure"] = str(error)
         document.add_test("prerequisites", "skipped", str(error))
         document.data["tests"][-1].update(kernel="N/A", rasdaemon="N/A")
         document.write(result_dir)
@@ -1535,6 +1550,7 @@ def run_test(args, manifest):
                 check.name.startswith("firmware-")]
     missing = [check.reason for check in required if not check.available]
     if missing:
+        document.data["infrastructure_failure"] = "; ".join(missing)
         document.add_test("prerequisites", "skipped", "; ".join(missing))
         document.data["tests"][-1].update(kernel="N/A", rasdaemon="N/A")
         document.write(result_dir)
@@ -1600,6 +1616,8 @@ def run_test(args, manifest):
                                           "Scenarios were not reported: " + ", ".join(missing))
         except (LabError, OSError, subprocess.SubprocessError,
                 json.JSONDecodeError) as error:
+            if machine.watchdog.phase == "boot":
+                document.data["infrastructure_failure"] = str(error)
             if os.path.isfile(machine.console_path):
                 with open(machine.console_path, encoding="utf-8", errors="replace") as stream:
                     for line in stream:
