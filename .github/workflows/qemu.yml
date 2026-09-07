@@ -70,7 +70,10 @@ jobs:
                   select(.expired == false and .name == env.NAME) |
                   .id' |
               head -n 1)
-          if [ -n "$id" ]; then
+          arm_name=${NAME/x86_64/aarch64}
+          arm_id=$(gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts?name=$arm_name" \
+            --jq '.artifacts[] | select(.expired == false) | .id' | head -n 1)
+          if [ -n "$id" ] && [ -n "$arm_id" ]; then
               echo "exists=true" >> "$GITHUB_OUTPUT"
           else
               echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -80,12 +83,16 @@ jobs:
     name: Build QEMU
     needs: check
     if: needs.check.outputs.exists != 'true' || needs.check.outputs.build_changed == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
-        arch: [x86_64]
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
 

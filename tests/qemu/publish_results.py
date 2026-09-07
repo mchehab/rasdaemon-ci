@@ -11,6 +11,10 @@ import json
 import os
 import re
 import shutil
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+import features  # pylint: disable=C0413
 
 
 RESULT_HEADING = "<h1>Kernel and rasdaemon results</h1>"
@@ -119,7 +123,7 @@ class ResultSite:  # pylint: disable=R0903
         return f'''<p>Completed {finished}. Tested rasdaemon revision
 <a href="{source_url}"><code>{result.revision[:12]}</code></a>.
 See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and artifact.</p>
-<p>Download: <a href="summary.md">summary</a>, <a href="result.json">JSON</a>,
+<p>Download: <a href="summary.rst">summary</a>, <a href="result.json">JSON</a>,
 <a href="junit.xml">JUnit</a>, <a href="results.log">result log</a>,
 <a href="console.log">guest console</a>, <a href="qemu.log">QEMU log</a>.</p>'''
 
@@ -151,11 +155,14 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
                         f"<td>{values['not_applicable']}</td></tr>")
 
         reports = ""
+        feature_rows = []
 
         for result in self.results:
             link = html.escape(result.label, quote=True)
             label = html.escape(result.label)
             reports += f'<li><a href="{link}/">{label} report</a></li>'
+            feature_rows.extend(result.data.get("features", []))
+        feature_table = features.html_table(sorted(feature_rows, key=lambda row: row["feature"]))
         page = f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(self.title)}</title><link rel="stylesheet" href="{assets}/results.css">
@@ -164,6 +171,7 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
  aria-label="Change color theme">◐ Auto</button>
 <h1>{html.escape(self.title)}</h1><p>Latest published result. See the
 <a href="{run_url}">GitHub Actions run</a> for the complete workflow log.</p>
+{feature_table}
 <table><thead><tr><th>Component</th><th>PASS</th><th>FAIL</th><th>SKIP</th><th>N/A</th></tr>
 </thead><tbody>{''.join(rows)}</tbody></table><h2>Reports</h2><ul>{reports}</ul>
 </body></html>'''

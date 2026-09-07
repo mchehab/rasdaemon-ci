@@ -5,13 +5,15 @@ set -o pipefail
 
 kernel=
 output=
-base_url=https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2
+base_url=
+arch=x86_64
 base_sha512=
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 guest_dir=$(realpath "$script_dir/../guest")
 
 while test $# -gt 0; do
 	case $1 in
+	--arch) arch=$2; shift 2 ;;
 	--kernel) kernel=$2; shift 2 ;;
 	--output) output=$2; shift 2 ;;
 	--base-url) base_url=$2; shift 2 ;;
@@ -24,8 +26,14 @@ test -d "$kernel" || { echo "--kernel must name a build directory: $kernel" >&2;
 test -n "$output" || { echo "--output is required" >&2; exit 2; }
 kernel=$(realpath "$kernel")
 output=$(realpath -m "$output")
-command -v qemu-system-x86_64 >/dev/null || {
-	echo "qemu-system-x86_64 is not installed" >&2
+case $arch in
+x86_64) deb_arch=amd64; machine=q35; cpu=max ;;
+aarch64|arm64) arch=aarch64; deb_arch=arm64; machine=virt; cpu=max ;;
+*) echo "Unsupported architecture: $arch" >&2; exit 2 ;;
+esac
+test -n "$base_url" || base_url="https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-$deb_arch.qcow2"
+command -v "qemu-system-$arch" >/dev/null || {
+	echo "qemu-system-$arch is not installed" >&2
 	exit 1
 }
 command -v qemu-img >/dev/null || {
@@ -110,6 +118,15 @@ packages:
   - python3-sqlalchemy
   - sqlite3
   - util-linux
+  - iproute2
+  - iputils-ping
+  - ipmitool
+  - libmariadb3
+  - libpq5
+  - mariadb-server
+  - postgresql
+  - python3-pymysql
+  - python3-psycopg2
 runcmd:
   - [ bash, -c, "set -euxo pipefail; device=\$(blkid -U '$payload_uuid'); test -b \"\$device\"; mkdir -p /mnt/payload; mount -o ro \"\$device\" /mnt/payload; bash /mnt/payload/guest/install-kernel.sh '$release'" ]
 power_state:
@@ -139,9 +156,17 @@ trap cleanup_guest_build EXIT HUP INT TERM
 accel=tcg
 if test -r /dev/kvm -a -w /dev/kvm; then
 	accel=kvm
+	cpu=host
 fi
+firmware=()
+
+if test "$arch" = aarch64; then
+	firmware=(-bios /usr/share/AAVMF/AAVMF_CODE.fd)
+fi
+
 echo "guest provisioning accelerator: $accel"
-timeout 20m qemu-system-x86_64 -machine "q35,accel=$accel" -m 2048 -smp 2 -display none \
+timeout 20m "qemu-system-$arch" -machine "$machine,accel=$accel" -cpu "$cpu" \
+	"${firmware[@]}" -m 2048 -smp 2 -display none \
 	-no-reboot -serial "file:$console" \
 	-drive "file=$work/custom.qcow2,if=virtio,format=qcow2" \
 	-drive "file=$work/seed.iso,if=virtio,format=raw,readonly=on" \

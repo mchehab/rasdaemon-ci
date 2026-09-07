@@ -31,7 +31,7 @@ commit=$(git -C "$work/source" rev-parse HEAD)
 mkdir -p "$work/build" "$output/root" "$output/metadata"
 cd "$work/build"
 "$work/source/configure" \
-	--target-list=x86_64-softmmu \
+	--target-list=x86_64-softmmu,aarch64-softmmu \
 	--prefix=/opt/qemu \
 	--disable-docs \
 	--disable-werror \

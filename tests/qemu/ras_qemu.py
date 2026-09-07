@@ -15,6 +15,7 @@ import os
 import pathlib
 import platform
 import re
+import shlex
 import shutil
 import signal
 import socket
@@ -29,8 +30,20 @@ import xml.etree.ElementTree as ET
 
 
 FORMAT_VERSION = 1
+
+# These options are deliberately requested for every payload build.  Meson may
+# still disable them when the build host lacks the device/library capability;
+# keep that compilation observation, but do not turn a documented platform
+# limitation into a regression failure.
+OPTIONAL_BUILD_MACROS = {
+    "HAVE_PCIE_EDPC": "The current QEMU test topology has no DPC-capable PCIe port",
+}
 PROJECT_DIR = pathlib.Path(__file__).resolve().parents[2]
 HARNESS_DIR = pathlib.Path(__file__).resolve().parent
+sys.path.insert(0, os.fspath(HARNESS_DIR))
+import features  # pylint: disable=C0413
+import hisi  # pylint: disable=C0413
+import hmp_inject  # pylint: disable=C0413
 RESULT_STYLE = HARNESS_DIR / "results.css"
 RESULT_SCRIPT = HARNESS_DIR / "results.js"
 RESULT_PORT_NAME = "org.rasdaemon.test.0"
@@ -146,6 +159,9 @@ def apply_injection_failures(tests: list[dict], injections: dict[str, dict]) -> 
     for test in tests:
         key = aliases.get(test["name"], test["name"])
         injection = injections.get(key, {})
+
+        if injection:
+            test.setdefault("evidence", {})["host_injection"] = injection
 
         if "injection_error" in injection:
             test.update(status="failed", kernel="SKIP", rasdaemon="SKIP",
@@ -459,10 +475,30 @@ class HtmlEvidence:
 
     def render(self, value: object, name: str = "") -> str:
         """Render dictionaries and lists as labeled HTML, not JSON syntax."""
+        if name in ("command", "command_line", "command-line", "qemu_command"):
+            command = shlex.join(str(item) for item in value) if isinstance(value, (list, tuple)) else str(value)
+            return "<pre>$ " + html.escape(command) + "</pre>"
+
+        if isinstance(value, str) and name in ("output", "stdout", "response"):
+            try:
+                decoded = json.loads(value)
+            except (ValueError, TypeError):
+                decoded = None
+            if isinstance(decoded, (dict, list)):
+                return self.render(decoded)
+            if not value:
+                return "<em>No output</em>"
+            return self._scalar(value, name) if len(value) > self.LARGE_TEXT else (
+                "<pre>" + html.escape(value) + "</pre>")
+
         if isinstance(value, dict):
             fields = []
-
-            for key, item in value.items():
+            ordered = [key for key in ("command", "command_line", "command-line",
+                                       "output", "stdout", "stderr", "response",
+                                       "returncode") if key in value]
+            ordered.extend(key for key in value if key not in ordered)
+            for key in ordered:
+                item = value[key]
                 label = html.escape(self._label(key))
                 fields.append(f"<dt>{label}</dt><dd>{self.render(item, str(key))}</dd>")
 
@@ -516,7 +552,7 @@ class ResultDocument:
         }
 
     def add_test(self, name, status, reason="", evidence=None, duration=0.0):
-        """Append a pass, fail, or skip result."""
+        """Append a pass, fail, skip, or deliberately N/A result."""
         self.data["tests"].append({
             "name": name,
             "status": status,
@@ -544,16 +580,22 @@ class ResultDocument:
         rasdaemon = test.setdefault("rasdaemon", "N/A")
         reason = test.get("reason", "").strip()
 
-        if reason:
+        if test["name"] == "prerequisites":
+            explanation = ("Prerequisites check " + test["status"] +
+                           ": QEMU tools, guest image integrity, firmware and "
+                           "a usable accelerator are required to start the VM")
+            if not reason.startswith("Prerequisites check "):
+                reason = explanation + ("; " + reason if reason else "")
+        elif reason:
             if kernel == "FAIL" and rasdaemon == "SKIP":
                 reason += "; rasdaemon was not evaluated after the kernel-side failure"
         elif kernel == "N/A" and rasdaemon == "N/A":
             reason = ("Harness or setup check only; it does not assess kernel "
                       "RAS handling or rasdaemon")
         elif kernel == "N/A":
-            reason = "rasdaemon-only check; kernel RAS handling is not applicable"
+            reason = "rasdaemon check " + test["status"]
         elif rasdaemon == "N/A":
-            reason = "Kernel-only check; rasdaemon is not applicable"
+            reason = "Kernel check " + test["status"]
 
         test["reason"] = reason
 
@@ -584,16 +626,13 @@ class ResultDocument:
             "N/A": "⚪ N/A",
         }
         totals = self.component_totals()
-        markdown = ["## Component totals", "",
-                    "| Component | PASS | FAIL | SKIP | N/A |",
-                    "| --- | ---: | ---: | ---: | ---: |",
-                    ("| Kernel | {passed} | {failed} | {skipped} | {not_applicable} |"
-                     .format(**totals["kernel"])),
-                    ("| rasdaemon | {passed} | {failed} | {skipped} | {not_applicable} |"
-                     .format(**totals["rasdaemon"])),
-                    "", "## Detailed results", "",
-                    "| Test | Kernel | rasdaemon | Reason |",
-                    "| --- | --- | --- | --- |"]
+        component_rows = [[name, str(values["passed"]), str(values["failed"]),
+                           str(values["skipped"]), str(values["not_applicable"])]
+                          for name, values in (("Kernel", totals["kernel"]),
+                                               ("rasdaemon", totals["rasdaemon"]))]
+        report = "Component totals\n================\n\n"
+        report += features.rst_table(["Component", "PASS", "FAIL", "SKIP", "N/A"], component_rows)
+        detail_rows = []
         rows = []
         renderer = HtmlEvidence()
 
@@ -602,12 +641,13 @@ class ResultDocument:
             daemon = test["rasdaemon"]
             reason = test.get("reason", "").replace("\n", " ")
             fields = (test["name"], badges[kernel], badges[daemon], reason)
-            markdown.append("| " + " | ".join(str(value).replace("|", "&#124;")
-                                               for value in fields) + " |")
+            detail_rows.append([str(value) for value in fields])
             rows.append(renderer.test_row(test))
 
-        with open(os.path.join(directory, "summary.md"), "w", encoding="utf-8") as stream:
-            stream.write("\n".join(markdown) + "\n")
+        report += "\nDetailed results\n================\n\n"
+        report += features.rst_table(["Test", "Kernel", "rasdaemon", "Reason"], detail_rows)
+        with open(os.path.join(directory, "summary.rst"), "w", encoding="utf-8") as stream:
+            stream.write(report)
 
         total_rows = ""
 
@@ -629,7 +669,7 @@ class ResultDocument:
 <h2>Component totals</h2><table><thead><tr><th>Component</th><th>PASS</th>
 <th>FAIL</th><th>SKIP</th><th>N/A</th></tr></thead><tbody>''' + total_rows + '''</tbody></table>
 <h2>Detailed results</h2>
-<p>SKIP means an intended component test could not run; inspect the reason. N/A means the check does not assess that component.</p>
+<p>SKIP means an intended component test could not run; inspect the reason. N/A means the check is deliberately outside this run or does not assess that component.</p>
 <div class="toolbar"><label>Filter tests or status:
 <input id="filter" placeholder="e.g. FAIL, cxl, prerequisite"></label>
 <button type="button" id="theme" class="theme-toggle" title="Change color theme"
@@ -641,6 +681,9 @@ class ResultDocument:
 <div id="evidence-dialog-content"></div></dialog>''' + "".join(renderer.templates) + '''
 </body></html>'''
 
+        if "features" in self.data:
+            page = page.replace("<h2>Component totals</h2>", features.html_table(self.data["features"]) +
+                                "<h2>Component totals</h2>", 1)
         with open(os.path.join(directory, "results.html"), "w", encoding="utf-8") as stream:
             stream.write(page)
 
@@ -653,14 +696,27 @@ class ResultDocument:
         self.data["finished_at"] = utc_now()
         self.data["totals"] = {
             state: sum(test["status"] == state for test in self.data["tests"])
-            for state in ("passed", "failed", "skipped")
+            for state in ("passed", "failed", "skipped", "not_applicable")
         }
 
     def write(self, result_dir):
         """Write result.json, results.log, and junit.xml."""
+        if self.data["profile"] == "injection" and "feature_inventory" in self.data:
+            rows = features.feature_results(self.data["architecture"], self.data["tests"],
+                                             self.data["feature_inventory"])
+            self.data["features"] = rows
+            failed = [row["feature"] for row in rows if row["FAIL"]]
+            if failed and not any(test["name"] == "feature-coverage" for test in self.data["tests"]):
+                self.add_test("feature-coverage", "failed",
+                              "Functional coverage incomplete: " + ", ".join(failed))
         self.finish()
         result_dir.mkdir(parents=True, exist_ok=True)
         self.write_table(os.fspath(result_dir))
+        if "features" in self.data:
+            table = features.write_feature_table(os.fspath(result_dir), self.data["features"])
+            summary = result_dir / "summary.rst"
+            detail = summary.read_text(encoding="utf-8")
+            summary.write_text(table + "\n" + detail, encoding="utf-8")
         json_path = result_dir / "result.json"
         with open(json_path, "w", encoding="utf-8") as stream:
             json.dump(self.data, stream, indent=2, sort_keys=True)
@@ -670,23 +726,25 @@ class ResultDocument:
             for result in self.data["tests"]:
                 reason = result["reason"]
                 suffix = ": " + reason if reason else ""
-                stream.write("%s %s%s\n" %
-                             (result["status"].upper(), result["name"], suffix))
+                label = "N/A" if result["status"] == "not_applicable" else result["status"].upper()
+                stream.write("%s %s%s\n" % (label, result["name"], suffix))
 
         suite = ET.Element("testsuite", {
             "name": "rasdaemon-qemu-%s" % self.data["architecture"],
             "tests": str(len(self.data["tests"])),
             "failures": str(self.data["totals"]["failed"]),
-            "skipped": str(self.data["totals"]["skipped"]),
+            "skipped": str(self.data["totals"]["skipped"] +
+                           self.data["totals"]["not_applicable"]),
         })
         for result in self.data["tests"]:
             case = ET.SubElement(suite, "testcase", {
                 "name": result["name"],
                 "time": str(result["duration_seconds"]),
             })
-            if result["status"] == "skipped":
+            if result["status"] in ("skipped", "not_applicable"):
                 ET.SubElement(case, "skipped", {
                     "message": result["reason"],
+                    "type": "N/A" if result["status"] == "not_applicable" else "SKIP",
                 })
             elif result["status"] == "failed":
                 failure = ET.SubElement(case, "failure", {
@@ -725,8 +783,12 @@ class VirtualMachine:
         self.blkdebug_config = self.work_dir / "blkdebug.conf"
         with open(os.path.join(HARNESS_DIR, "scenarios.json"), encoding="utf-8") as stream:
             self.scenarios: list[dict] = json.load(stream)
+        self.scenarios.extend(hisi.scenarios())
+        self.scenarios = [scenario for scenario in self.scenarios
+                          if features.scenario_arch(scenario["name"]) == self.arch]
 
         self.injection_evidence: dict[str, dict] = {}
+        self.build_checks: list[dict] = []
         self.watchdog = GuestWatchdog(os.fspath(self.qmp_path))
         self.fuzz_mode = "random"
         self.fuzz_seed = 1
@@ -768,14 +830,17 @@ class VirtualMachine:
 
     def _stage_source(self):
         """Build rasdaemon on the host and stage only installed output."""
+        if architecture_name(platform.machine()) != self.arch:
+            raise LabError("Build the payload on a host matching the guest architecture")
         self.payload_dir.mkdir()
         build = self.work_dir / "host-build"
         install = self.work_dir / "host-install"
         commands = [
             (["meson", "setup", str(build), str(self.source_dir),
-              "--prefix=/usr", "-Dsqlite3=enabled", "-Dmysql=disabled",
+              "--prefix=/usr", "-Dsqlite3=enabled", "-Dmysql=enabled",
               "-Denable-arch=all",
-              "-Dpostgresql=disabled", "-Dpcie-edpc=disabled"], None),
+              "-Dpostgresql=enabled", "-Dpcie-edpc=enabled",
+              "-Dbmc-generic=enabled"], None),
             (["ninja", "-C", str(build)], None),
             (["meson", "install", "-C", str(build),
               "--destdir", str(install)], None),
@@ -788,6 +853,21 @@ class VirtualMachine:
             if completed.returncode:
                 raise LabError("host payload build failed: %s\n%s" %
                                (" ".join(command), completed.stdout[-32768:]))
+        config = (build / "config.h").read_text(encoding="utf-8")
+        for macro in re.findall(r"^#mesondefine (HAVE_\w+)",
+                                (self.source_dir / "config.h.in").read_text(encoding="utf-8"),
+                                re.MULTILINE):
+            enabled = bool(re.search(r"^#define " + macro + r"(?: 1)?$", config, re.MULTILINE))
+            unavailable = OPTIONAL_BUILD_MACROS.get(macro) if not enabled else None
+            self.build_checks.append({
+                "name": "Build " + macro,
+                "status": "passed" if enabled else "not_applicable" if unavailable else "failed",
+                "reason": (f"rasdaemon compilation flag {macro} enabled" if enabled else
+                           f"rasdaemon compilation flag {macro} is N/A: {unavailable}" if unavailable else
+                           f"rasdaemon compilation flag {macro} was not enabled"),
+                "kernel": "N/A", "rasdaemon": "PASS" if enabled else "N/A" if unavailable else "FAIL",
+                "evidence": {"configuration": config},
+            })
         archive = self.payload_dir / "rasdaemon-install.tar"
         with tarfile.open(archive, "w") as stream:
             for entry in install.iterdir():
@@ -797,6 +877,10 @@ class VirtualMachine:
             raise LabError("guest agent is missing from the CI harness")
         shutil.copy2(agent, self.payload_dir / "agent.py")
         shutil.copy2(os.path.join(HARNESS_DIR, "scenarios.json"), self.payload_dir)
+        shutil.copy2(os.path.join(HARNESS_DIR, "features.py"), self.payload_dir)
+        shutil.copy2(os.path.join(HARNESS_DIR, "hisi.py"), self.payload_dir)
+        shutil.copy2(os.path.join(HARNESS_DIR, "guest/consumers.py"), self.payload_dir)
+        shutil.copy2(os.path.join(HARNESS_DIR, "guest/erst.py"), self.payload_dir)
         (self.payload_dir / ".ras-qemu-profile").write_text(
             self.profile + "\n", encoding="utf-8")
 
@@ -859,12 +943,25 @@ class VirtualMachine:
                 "-device", "pcie-root-port,id=ras-aer-root,bus=pcie.0,slot=4",
                 "-device",
                 "virtio-rng-pci,id=ras-aer,bus=ras-aer-root,aer=on",
+                "-device", "ipmi-bmc-sim,id=ras-bmc",
+                "-device", "pci-ipmi-kcs,bmc=ras-bmc,bus=pcie.0",
+                "-object", "memory-backend-file,id=ras-erst,size=0x10000,share=on,mem-path="
+                + os.path.join(self.work_dir, "erst-store.bin"),
+                "-device", "acpi-erst,memdev=ras-erst",
             ])
         if self.profile in ("injection", "fuzz"):
+            if self.arch == "aarch64":
+                command.extend(["-machine", "ras=on,acpi=on,gic-version=3"])
+                command.extend([
+                    "-device", "pcie-root-port,id=ras-aer-root,bus=pcie.0,slot=4",
+                    "-device", "virtio-rng-pci,id=ras-aer,bus=ras-aer-root,aer=on",
+                    "-device", "ipmi-bmc-sim,id=ras-bmc",
+                    "-device", "pci-ipmi-kcs,bmc=ras-bmc,bus=pcie.0",
+                ])
             command.extend([
                 "-qmp", f"tcp:127.0.0.1:{GHES_QMP_PORT},server=on,wait=off",
             ])
-        if self.profile == "injection":
+        if self.profile == "injection" and self.arch == "aarch64":
             command.extend([
                 "-drive",
                 "if=none,format=raw,cache=none,id=ras-block-drive,file="
@@ -952,7 +1049,7 @@ class VirtualMachine:
         # clear QEMU updates the bank without raising a synchronous #MC; the
         # guest's shortened polling interval discovers and reports the event.
         status = 0x9c00000000000090
-        command_line = "mce 0 %d %#x 0 %#x 0" % (bank, status, physical)
+        command_line = hmp_inject.mce_command(0, bank, status, 0, physical, 0, False)
         with QmpClient(self.qmp_path, timeout=30) as qmp:
             if not qmp.has_command("human-monitor-command"):
                 raise LabError("QEMU lacks human-monitor-command for MCE")
@@ -974,7 +1071,7 @@ class VirtualMachine:
 
     def inject_aer(self):
         """Inject a correctable error into the dedicated PCIe endpoint."""
-        command_line = "pcie_aer_inject_error ras-aer BAD_DLLP"
+        command_line = hmp_inject.aer_command("ras-aer", "BAD_DLLP", False)
         with QmpClient(self.qmp_path, timeout=30) as qmp:
             if not qmp.has_command("human-monitor-command"):
                 raise LabError("QEMU lacks human-monitor-command for AER")
@@ -996,6 +1093,21 @@ class VirtualMachine:
         """Inject only after the matching guest consumer reports readiness."""
         name = scenario["name"]
         evidence = self.injection_evidence.setdefault(name, {})
+        if "cases" in scenario:
+            evidence["cases"] = []
+            for index, case in enumerate(scenario["cases"]):
+                case_name = f"{name}-case-{index}"
+                try:
+                    self.inject_scenario(dict(case, name=case_name))
+                finally:
+                    evidence["cases"].append(self.injection_evidence.pop(case_name, {}))
+                deadline = time.monotonic() + 35
+                while case_name not in self.ready_markers():
+                    if time.monotonic() >= deadline:
+                        raise LabError(f"Guest did not confirm decoded fixture {case_name}")
+                    self._print_guest_progress()
+                    time.sleep(0.1)
+            return
         if name == "cxl-overflow":
             media = next(item for item in self.scenarios if item["name"] == "cxl-media")
             with QmpClient(self.qmp_path, timeout=30) as qmp:
@@ -1014,19 +1126,32 @@ class VirtualMachine:
                 evidence["transcript"] = qmp.transcript
                 qmp.execute(scenario["qmp"], scenario["arguments"])
             return
-        if scenario.get("producer") == "hwpoison":
+        if scenario.get("producer") in ("hwpoison", "netdevsim", "test-driver", "cxl-maintenance"):
             return
-        script = "/opt/qemu/libexec/rasdaemon/ghes_inject.py"
+        script = os.environ.get("RAS_QEMU_GHES_HELPER",
+                                "/opt/qemu/libexec/rasdaemon/ghes_inject.py")
+        if not os.path.isfile(script):
+            raise LabError("GHES injection helper is missing: " + script)
         arguments = scenario.get("helper")
         if arguments is None:
             # UEFI CPER memory section: only error-type is valid, so no
             # arbitrary guest address can be offlined by the kernel.
-            if name == "ghes-memory":
+            if "cper" in scenario:
+                guid = scenario["cper"]["guid"]
+                payload = bytes.fromhex(scenario["cper"]["payload"])
+            elif name == "ghes-memory" or scenario.get("producer") == "pfa":
                 guid = "a5bc1114-6f64-4ede-b863-3e83ed7c83b1"
                 payload = bytearray(80)
                 struct.pack_into("<Q", payload, 0, 1 << 14)
                 payload[72] = 2  # single-bit ECC
-            elif name == "ghes-aer":
+                if scenario.get("producer") == "pfa":
+                    physical = int(self.ready_markers()[name]["physical"], 0)
+                    # Only the page allocated by the guest helper may be isolated.
+                    struct.pack_into("<Q", payload, 0, 0xc1fa)
+                    struct.pack_into("<Q", payload, 16, physical)
+                    struct.pack_into("<H", payload, 42, 17)  # row
+                    struct.pack_into("<H", payload, 74, 1)  # rank
+            elif name == "ghes-aer" or scenario.get("producer") == "ghes-aer":
                 guid = "d995e954-bbc1-430f-ad91-b44dcb3c6f35"
                 payload = bytearray(208)
                 struct.pack_into("<Q", payload, 0, (1 << 3) | (1 << 7))
@@ -1069,7 +1194,11 @@ class VirtualMachine:
         command = [sys.executable, script, "--debug", "--host", "127.0.0.1",
                    "--port", str(GHES_QMP_PORT)] + arguments
         evidence["command"] = command
-        completed = subprocess.run(command, check=False, text=True,
+        environment = dict(os.environ)
+        helper_path = environment.get("RAS_QEMU_GHES_PYTHONPATH")
+        if helper_path:
+            environment["PYTHONPATH"] = helper_path + os.pathsep + environment.get("PYTHONPATH", "")
+        completed = subprocess.run(command, check=False, text=True, env=environment,
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, timeout=45)
         evidence["output"] = completed.stdout
@@ -1279,6 +1408,7 @@ def run_test(args, manifest):
     probe = CapabilityProbe(manifest, args.cache_dir)
     checks = probe.inspect(args.arch)
     document = ResultDocument(args.arch, args.accelerator, args.profile)
+    document.data["feature_inventory"] = features.feature_inventory(args.source_dir)
     document.data["capabilities"] = [check.as_dict() for check in checks]
     config_status = os.path.join(HARNESS_DIR, "..", "kernel", "config-status.tsv")
 
@@ -1333,13 +1463,16 @@ def run_test(args, manifest):
                 print("Preparing guest and building rasdaemon payload",
                       file=sys.stderr, flush=True)
             machine.prepare()
+            for check in machine.build_checks:
+                document.add_guest_test(check)
             command = machine.command()
             document.data["qemu_command"] = command
             if not args.quiet:
                 print("Guest console: %s" % machine.console_path,
                       file=sys.stderr, flush=True)
             if args.dry_run:
-                document.add_test("guest", "skipped", "dry run requested",
+                document.add_test("guest", "not_applicable",
+                                  "N/A: dry run requested; no guest was started",
                                   {"command": command})
                 document.data["tests"][-1].update(kernel="N/A", rasdaemon="N/A")
             else:
@@ -1361,7 +1494,9 @@ def run_test(args, manifest):
                         document.add_guest_test(test)
                 if args.profile == "injection":
                     required = {scenario["name"] for scenario in machine.scenarios}
-                    required.update(("mce-hardware-first", "aer-native", "block-io-native"))
+                    required.update(name for name in (
+                        "mce-hardware-first", "aer-native", "block-io-native")
+                        if features.scenario_arch(name) == args.arch)
                     reported = {test["name"] for test in guest_tests}
                     missing = sorted(required - reported)
                     if missing:
@@ -1386,7 +1521,8 @@ def run_test(args, manifest):
             document.data["tests"][-1].update(kernel="FAIL" if machine.watchdog.failure else "SKIP",
                                                rasdaemon="SKIP")
             expected = [scenario["name"] for scenario in machine.scenarios]
-            expected += ["mce-hardware-first", "aer-native", "block-io-native"]
+            expected += [name for name in ("mce-hardware-first", "aer-native", "block-io-native")
+                         if features.scenario_arch(name) == args.arch]
             expected = ["fuzz"] if args.profile == "fuzz" else expected
             reported = {test["name"] for test in document.data["tests"]}
 

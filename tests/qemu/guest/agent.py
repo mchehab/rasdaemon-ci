@@ -8,6 +8,7 @@
 import datetime
 import contextlib
 import ctypes
+import fcntl
 import glob
 import json
 import mmap
@@ -18,10 +19,18 @@ import signal
 import sqlite3
 import struct
 import subprocess
+import sys
 import tempfile
 import threading
 import time
 from typing import IO
+
+sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+import features  # pylint: disable=C0413
+import hisi  # pylint: disable=C0413
+import consumers  # pylint: disable=C0413
+import erst  # pylint: disable=C0413
 
 
 RESULT_PORT = pathlib.Path(
@@ -655,9 +664,28 @@ def matching_record(scenario: dict, row: dict, evidence: dict) -> bool:
     """Distinguish the injected record from empty-list and background events."""
     name = scenario["name"]
 
-    if name == "fuzz":
+    if "expected" in scenario:
+        matches = all(key in row and row[key] == value
+                      for key, value in scenario["expected"].items())
+        matches = matches and all(fragment in (row.get(key) or "")
+                                  for key, fragments in scenario.get("expected_contains", {}).items()
+                                  for fragment in fragments)
+        if name == "vendor-yitian":
+            matches = matches and "0x1234" in row.get("regs_dump", "")
+        return matches
+
+    if scenario.get("producer") == "pfa":
+        return row.get("address") == evidence["physical"]
+
+    if name in ("fuzz", "ghes-unknown"):
         guid = bytes.fromhex("78563412341278569abc123456789abc")
         return row.get("sec_type") == guid and row.get("error") == bytes(range(32))
+
+    if name == "ghes-pci-bus":
+        guid = bytes.fromhex("633975c5843b9540bf78eddad3f9c9dd")
+        payload = struct.pack("<QQHBBIQQQQQQ", 0x1ff, 0x1234, 3, 0x56, 0x12, 0,
+                              0x12345678, 0x9abc, 1 << 56, 0, 0x44, 0x55)
+        return row.get("sec_type") == guid and row.get("error") == payload
 
     if name == "cxl-overflow":
         return row.get("count", 0) > 0
@@ -676,7 +704,7 @@ def matching_record(scenario: dict, row: dict, evidence: dict) -> bool:
     if name in ("cxl-media", "cxl-dram"):
         expected[name] = {"dpa": scenario["arguments"]["dpa"]}
 
-    if name == "memory-failure":
+    if name == "memory-failure" or scenario.get("backend"):
         expected[name] = {"pfn": f"{evidence['pfn']:#x}"}
 
     return all(row.get(key) == value for key, value in expected.get(name, {}).items())
@@ -693,7 +721,7 @@ class ScenarioUnavailable(RuntimeError):
 
 
 def wait_daemon_ready(process: subprocess.Popen, log_path: str,
-                      events: list[str], timeout: float = 15) -> None:
+                      events: list[str], timeout: float = 15, backend: str = "sqlite3") -> None:
     """Wait for this process's database and consumer, not stale trace flags."""
     deadline = time.monotonic() + timeout
 
@@ -702,7 +730,7 @@ def wait_daemon_ready(process: subprocess.Popen, log_path: str,
             raise RuntimeError("rasdaemon exited during startup: " + read_text(log_path)[-4096:])
 
         output = read_text(log_path)
-        database_ready = "Database backend started: sqlite3." in output
+        database_ready = f"Database backend started: {backend}." in output
         listening = ("Listening to events for cpus " in output or
                      "Listening to events on cpu " in output)
         enabled = any(os.path.isfile(event) and read_text(event).strip() == "1"
@@ -736,6 +764,7 @@ class RecordedScenario:
         self.environment = dict(environment, RAS_SQLITE3_DATABASE=self.paths["database"])
         self.evidence: dict = {"event": scenario["event"], "table": scenario["table"], "rows": []}
         self.process: subprocess.Popen | None = None
+        self.consumers = consumers.ConsumerChecks(self)
 
     def capture_cxl_aer_state(self, phase: str) -> None:
         """Retain PCI bindings and AER registers around CXL AER injection."""
@@ -858,6 +887,16 @@ class RecordedScenario:
     def start(self, log: IO[str]) -> None:
         """Start recording and wait for the required tracepoint."""
         event = self.scenario["event"]
+        if self.scenario.get("producer") == "test-driver":
+            if run(["modprobe", "ras_ci"]).returncode:
+                raise ScenarioUnavailable("ras_ci software test producer is unavailable")
+            self.evidence["test_driver_loaded"] = True
+        if self.scenario.get("producer") == "netdevsim":
+            if run(["modprobe", "netdevsim"]).returncode:
+                raise ScenarioUnavailable("netdevsim module is unavailable")
+            with open("/sys/bus/netdevsim/new_device", "w", encoding="ascii") as stream:
+                stream.write("4242 1\n")
+            self.evidence["netdevsim_created"] = True
         trace_format = os.path.join("/sys/kernel/tracing/events", event, "format")
 
         if not os.path.isfile(trace_format):
@@ -869,6 +908,7 @@ class RecordedScenario:
         with open(observer_event, "w", encoding="ascii") as stream:
             stream.write("1\n")
 
+        self.consumers.prepare()
         settings = "".join(f"{key}={value}\n" for key, value in self.environment.items()
                            if key != "PYTHONDONTWRITEBYTECODE")
 
@@ -891,14 +931,19 @@ class RecordedScenario:
         self.process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT,
                                         env=dict(os.environ, **self.environment),
                                         start_new_session=True)
-        wait_daemon_ready(self.process, self.paths["log"], [self.paths["enabled"]])
+        wait_daemon_ready(self.process, self.paths["log"], [self.paths["enabled"]],
+                          backend=self.environment["RASDAEMON_DB_BACKEND"])
         self.evidence["trace_enabled_before_injection"] = "1"
 
     def ready(self) -> None:
         """Publish guest-discovered addresses before allowing host injection."""
         marker = self.scenario["name"] + "-ready"
+        if self.scenario.get("producer") == "pfa":
+            holder, physical, page_size = guest_test_page()
+            self.evidence.update(holder_pid=holder, physical=physical, pfn=physical // page_size)
+            marker += f" physical={physical:#x}"
 
-        if self.scenario["name"] == "ghes-aer":
+        if self.scenario["name"] == "ghes-aer" or self.scenario.get("producer") == "ghes-aer":
             endpoints = []
 
             for device in glob.glob("/sys/bus/pci/devices/*"):
@@ -919,6 +964,32 @@ class RecordedScenario:
 
     def inject_page(self) -> None:
         """Poison only a disposable helper's page inside this guest."""
+        if self.scenario.get("producer") == "cxl-maintenance":
+            self.query_cxl_sparing()
+            return
+        if self.scenario["name"] == "extlog-memory":
+            with open("/sys/kernel/debug/ras_ci/extlog", "w", encoding="ascii") as stream:
+                stream.write("1")
+            self.evidence["producer"] = "ras_ci software extlog trace producer"
+            return
+        if self.scenario["name"] == "net-xmit-timeout":
+            commands = [["ip", "address", "add", "192.0.2.1/24", "dev", "rasci0"],
+                        ["ip", "link", "set", "rasci0", "up"],
+                        ["ping", "-c", "1", "-W", "1", "-I", "rasci0", "192.0.2.2"]]
+            transcript = self.evidence.setdefault("producer_commands", [])
+            for command in commands:
+                completed = run(command, timeout=10)
+                transcript.append({"command": command, "output": completed.stdout,
+                                   "returncode": completed.returncode})
+                if command[0] != "ping" and completed.returncode:
+                    raise RuntimeError("Failed to configure software timeout device")
+            return
+        if self.scenario.get("producer") == "netdevsim":
+            path = "/sys/kernel/debug/netdevsim/netdevsim4242/health/break_health"
+            with open(path, "w", encoding="ascii") as stream:
+                stream.write("rasdaemon-ci-health\n")
+            self.evidence["producer"] = {"interface": path, "message": "rasdaemon-ci-health"}
+            return
         if self.scenario.get("producer") != "hwpoison":
             return
 
@@ -937,8 +1008,39 @@ class RecordedScenario:
             with contextlib.suppress(ProcessLookupError):
                 os.kill(holder, signal.SIGUSR1)
 
+    def query_cxl_sparing(self) -> None:
+        """Ask the disposable QEMU CXL device for sparing resources, not repairs."""
+        devices = glob.glob("/dev/cxl/mem*")
+        if len(devices) != 1:
+            raise ScenarioUnavailable("Expected exactly one disposable QEMU CXL memory device")
+        serial_path = os.path.join("/sys/bus/cxl/devices", os.path.basename(devices[0]), "serial")
+        if int(read_text(serial_path).strip(), 0) != 1:
+            raise RuntimeError("CXL device serial does not match the dedicated QEMU test device")
+
+        # Perform Maintenance (0600h): sparing class, row subclass, QUERY
+        # RESOURCES, with valid nibble mask and subchannel. This requests
+        # an informational event; it does not perform a sparing operation.
+        payload = bytes([2, 1, 0x0d, 1, 2, 3, 0, 0, 3, 4, 42, 0, 0, 0x34, 0x12, 5])
+        buffer = ctypes.create_string_buffer(payload)
+        command = bytearray(48)  # struct cxl_send_command from linux/cxl_mem.h
+        struct.pack_into("<I", command, 0, 2)  # CXL_MEM_COMMAND_ID_RAW
+        struct.pack_into("<H", command, 8, 0x0600)
+        struct.pack_into("<I", command, 16, len(payload))
+        struct.pack_into("<Q", command, 24, ctypes.addressof(buffer))
+        evidence = {"interface": "CXL_MEM_SEND_COMMAND", "device": devices[0],
+                    "opcode": "0x0600", "operation": "query row-sparing resources",
+                    "input_payload": payload.hex()}
+        self.evidence["mailbox"] = evidence
+        with open(devices[0], "rb", buffering=0) as device:
+            fcntl.ioctl(device.fileno(), 0xc030ce02, command, True)
+        evidence["device_returncode"] = struct.unpack_from("<I", command, 12)[0]
+        if evidence["device_returncode"]:
+            raise RuntimeError("CXL maintenance resource query was rejected by the device")
+
     def records(self) -> list[dict]:
         """Read committed rows without creating a missing database."""
+        if self.scenario.get("backend"):
+            return self.consumers.records()
         database = self.paths["database"]
 
         if not os.path.isfile(database):
@@ -958,6 +1060,9 @@ class RecordedScenario:
 
     def wait_record(self) -> None:
         """Wait for matching data, never accepting an empty poison-list trace."""
+        if "cases" in self.scenario:
+            self.wait_cases()
+            return
         timeout = 3300 if self.scenario["name"] == "fuzz" else 30
         deadline = time.monotonic() + timeout
 
@@ -988,14 +1093,67 @@ class RecordedScenario:
 
         raise RuntimeError("injection produced no matching " + self.scenario["table"] + " row")
 
+    def wait_cases(self) -> None:
+        """Acknowledge each committed fixture before the next GHES injection."""
+        seen = set()
+        cases = self.scenario["cases"]
+        self.evidence["fixtures"] = []
+        for index, case in enumerate(cases):
+            deadline = time.monotonic() + 30
+            while time.monotonic() < deadline:
+                if self.process.poll() is not None:
+                    raise RuntimeError("rasdaemon exited while decoding the fixture corpus")
+                rows = self.records()
+                fresh = [row for row in rows if row["id"] not in seen]
+                if fresh:
+                    if len(fresh) != 1 or not matching_record(dict(case, name=self.scenario["name"]),
+                                                            fresh[0], self.evidence):
+                        self.evidence["unexpected_rows"] = fresh
+                        self.evidence["expected_fixture"] = case
+                        raise RuntimeError(f"Fixture {index} produced unexpected decoded fields")
+                    row = fresh[0]
+                    seen.add(row["id"])
+                    self.evidence["rows"].append(row)
+                    self.evidence["fixtures"].append({"index": index, "expected": case["expected"],
+                                                      "row": row})
+                    self.results.progress(f"{self.scenario['name']}-case-{index}-ready")
+                    break
+                time.sleep(0.1)
+            else:
+                raise RuntimeError(f"Fixture {index} produced no matching decoded row")
+
     def cleanup(self) -> None:
         """Reap only the daemon and page helper owned by this scenario."""
+        errors = self.evidence.setdefault("cleanup_errors", [])
+
+        @contextlib.contextmanager
+        def cleanup_step():
+            try:
+                yield
+            except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
+                errors.append(str(error))
+
         with contextlib.suppress(OSError, subprocess.TimeoutExpired):
             self.capture_cxl_aer_state("after")
 
-        if self.process is not None and self.process.poll() is None:
-            os.killpg(self.process.pid, signal.SIGKILL)
-            self.process.wait(timeout=10)
+        with cleanup_step():
+            if self.process is not None and self.process.poll() is None:
+                os.killpg(self.process.pid, signal.SIGKILL)
+                self.process.wait(timeout=10)
+
+        with cleanup_step():
+            self.consumers.close()
+
+        with cleanup_step():
+            if self.evidence.get("test_driver_loaded"):
+                completed = run(["modprobe", "-r", "ras_ci"], timeout=10)
+                if completed.returncode:
+                    raise RuntimeError("Cannot unload ras_ci: " + completed.stdout)
+
+        with cleanup_step():
+            if self.evidence.get("netdevsim_created"):
+                with open("/sys/bus/netdevsim/del_device", "w", encoding="ascii") as stream:
+                    stream.write("4242\n")
 
         holder = self.evidence.get("holder_pid")
 
@@ -1043,12 +1201,21 @@ class RecordedScenario:
                     raise RuntimeError("rasdaemon did not shut down cleanly")
 
             self.evidence["sqlite_count"] = len(self.evidence["rows"])
+            if self.scenario.get("producer") == "pfa":
+                output = read_text(self.paths["log"])
+                address = f"{self.evidence['physical']:#x}"
+                if not any(address in line and "offlined" in line for line in output.splitlines()):
+                    raise RuntimeError("rasdaemon did not successfully offline the injected page")
         except ScenarioUnavailable as error:
             status, reason = "skipped", str(error)
         except (OSError, RuntimeError, sqlite3.Error, subprocess.TimeoutExpired) as error:
             status, reason = "failed", str(error)
         finally:
             self.cleanup()
+
+        if self.evidence.get("cleanup_errors"):
+            status = "failed"
+            reason = "; ".join(filter(None, [reason] + self.evidence["cleanup_errors"]))
 
         observed = self.evidence.get("kernel_observed") or bool(self.evidence["rows"])
         kernel = "PASS" if observed else "SKIP"
@@ -1063,7 +1230,9 @@ class RecordedScenario:
             kernel, daemon = "SKIP", "SKIP"
 
         self.results.add(name, status, reason, self.evidence, time.monotonic() - started,
-                         kernel=kernel, rasdaemon=daemon)
+                         kernel="N/A" if name.startswith("consumer-") else kernel,
+                         rasdaemon=daemon)
+        self.consumers.check(status)
 
         if status == "passed":
             command = ["/usr/sbin/ras-mc-ctl", "database", "--errors",
@@ -1221,14 +1390,19 @@ def execute(profile):
                 if not results.command("debugfs", command, kernel="N/A", rasdaemon="N/A"):
                     return results
 
-            mce_memory_smoke(results, build, environment)
             if os.uname().machine == "x86_64":
+                mce_memory_smoke(results, build, environment)
                 aer_smoke(results, build, environment)
-            block_error_smoke(results, build, environment)
+                erst.ErstCheck(results, os.fspath(build / "rasdaemon"), environment,
+                               wait_daemon_ready).execute()
+            else:
+                block_error_smoke(results, build, environment)
             scenarios = json.loads(read_text(os.path.join(payload, "scenarios.json")))
+            scenarios.extend(hisi.scenarios())
 
             for scenario in scenarios:
-                RecordedScenario(results, os.fspath(build), environment, scenario).execute()
+                if features.scenario_arch(scenario["name"]) == os.uname().machine:
+                    RecordedScenario(results, os.fspath(build), environment, scenario).execute()
         else:
             daemon_smoke(results, build, environment)
             installed_interface_smoke(results, environment)

@@ -6,6 +6,7 @@ import os
 import pathlib
 import re
 import struct
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -42,6 +43,11 @@ class RasQemuTest(unittest.TestCase):
     def test_architecture_aliases(self):
         self.assertEqual(ras_qemu.architecture_name("amd64"), "x86_64")
         self.assertEqual(ras_qemu.architecture_name("arm64"), "aarch64")
+
+    def test_optional_build_feature_is_recorded_as_not_applicable(self):
+        """An unsupported device must not turn its retained build check red."""
+        self.assertIn("HAVE_PCIE_EDPC", ras_qemu.OPTIONAL_BUILD_MACROS)
+        self.assertIn("DPC-capable", ras_qemu.OPTIONAL_BUILD_MACROS["HAVE_PCIE_EDPC"])
 
     def test_manifest_rejects_missing_field(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -118,11 +124,15 @@ class RasQemuTest(unittest.TestCase):
             result = ras_qemu.ResultDocument("x86_64", "tcg", "baseline")
             result.add_test("one", "passed")
             result.add_test("two", "skipped", "not available")
+            result.add_test("three", "not_applicable", "N/A: unsupported test device")
             result.write(pathlib.Path(temporary))
             data = json.loads((pathlib.Path(temporary) / "result.json").read_text(
                 encoding="utf-8"))
             self.assertEqual(data["totals"]["passed"], 1)
             self.assertEqual(data["totals"]["skipped"], 1)
+            self.assertEqual(data["totals"]["not_applicable"], 1)
+            junit = (pathlib.Path(temporary) / "junit.xml").read_text(encoding="utf-8")
+            self.assertIn('type="N/A"', junit)
             self.assertTrue((pathlib.Path(temporary) / "junit.xml").is_file())
 
     def test_result_marks_non_component_checks_not_applicable(self):
@@ -148,14 +158,14 @@ class RasQemuTest(unittest.TestCase):
                 "rasdaemon": {"passed": 1, "failed": 0, "skipped": 1,
                               "not_applicable": 2},
             })
-            self.assertIn("does not assess kernel RAS handling or rasdaemon",
-                          reasons["prerequisites"])
-            self.assertIn("rasdaemon-only check", reasons["database-report"])
+            self.assertIn("Prerequisites check passed", reasons["prerequisites"])
+            self.assertIn("guest image integrity", reasons["prerequisites"])
+            self.assertEqual("rasdaemon check passed", reasons["database-report"])
             self.assertIn("rasdaemon was not evaluated",
                           reasons["injection"])
-            summary = (root / "summary.md").read_text(encoding="utf-8")
-            self.assertIn("| Kernel | 1 | 1 | 0 | 2 |", summary)
-            self.assertIn("| rasdaemon | 1 | 0 | 1 | 2 |", summary)
+            summary = (root / "summary.rst").read_text(encoding="utf-8")
+            self.assertIn("| Kernel | 1 | 1 | 0 | 2 |", re.sub(r" +", " ", summary))
+            self.assertIn("| rasdaemon | 1 | 0 | 1 | 2 |", re.sub(r" +", " ", summary))
             self.assertNotIn("rasdaemon is not involved", summary)
             self.assertIn(reasons["prerequisites"], summary)
             self.assertIn(reasons["database-report"], summary)
@@ -327,7 +337,7 @@ class RasQemuTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
             vm = ras_qemu.VirtualMachine(
-                self.descriptor(), "x86_64", "kvm", root / "image.qcow2",
+                self.descriptor(), "aarch64", "kvm", root / "image.qcow2",
                 root, pathlib.Path(__file__).parent.parent, 10, "injection")
             vm.overlay_path.touch()
             vm.payload_dir.mkdir()
@@ -341,8 +351,8 @@ class RasQemuTest(unittest.TestCase):
             for index, value in enumerate(command):
                 if value == "-device" and command[index + 1].startswith("virtio-"):
                     self.assertIn("bus=", command[index + 1])
-            self.assertIn("cxl-type3,id=ras-cxl", joined)
-            self.assertIn("ras=on,cxl=on", joined)
+            self.assertNotIn("cxl-type3,id=ras-cxl", joined)
+            self.assertIn("ras=on,acpi=on", joined)
             self.assertNotIn("if=virtio", joined)
 
     def test_pci_bus_helper_uses_supported_arguments(self):
@@ -352,7 +362,27 @@ class RasQemuTest(unittest.TestCase):
 
         scenario = next(item for item in scenarios if item["name"] == "ghes-pci-bus")
 
-        self.assertEqual(scenario["helper"], ["pci-bus"])
+        self.assertEqual(scenario["helper"], [
+            "pci-bus", "--error-status", "0x1234", "--error-type", "3",
+            "--bus-number", "0x56", "--segment-number", "0x12",
+            "--bus-address", "0x12345678", "--bus-data", "0x9abc",
+            "--bus-command", "pci-x", "--bus-requestor", "0",
+            "--bus-completer", "0x44", "--target-id", "0x55",
+        ])
+
+    def test_ghes_helper_can_be_overridden_for_manual_runs(self):
+        """Local source-clone validation must not require an OCI-only path."""
+        with tempfile.TemporaryDirectory() as temporary:
+            helper = pathlib.Path(temporary) / "ghes_inject.py"
+            helper.write_text("", encoding="utf-8")
+            vm = ras_qemu.VirtualMachine(self.descriptor(), "aarch64", "tcg", "guest.qcow2",
+                                         temporary, tempfile.gettempdir(), 60, "injection")
+            with patch.dict(os.environ, {"RAS_QEMU_GHES_HELPER": str(helper)}, clear=False), \
+                 patch.object(ras_qemu.subprocess, "run") as runner:
+                runner.return_value = subprocess.CompletedProcess([], 0, "ok")
+                vm.inject_scenario({"name": "ghes-unknown"})
+            command = runner.call_args.args[0]
+            self.assertEqual(command[1], str(helper))
 
 
 class InjectionEvidenceTest(unittest.TestCase):
@@ -442,12 +472,13 @@ class InjectionEvidenceTest(unittest.TestCase):
     def test_raw_memory_cper_is_corrected_and_has_no_valid_address(self) -> None:
         """Verify CPER severity, section lengths and safe validation bits."""
         with tempfile.TemporaryDirectory() as temporary:
-            machine = ras_qemu.VirtualMachine(self.descriptor(), "x86_64", "tcg",
+            machine = ras_qemu.VirtualMachine(self.descriptor(), "aarch64", "tcg",
                                          os.path.join(temporary, "guest"), temporary,
                                          temporary, 30, "injection")
             scenario = next(item for item in machine.scenarios if item["name"] == "ghes-memory")
             completed = unittest.mock.Mock(returncode=0, stdout="injected")
-            with patch.object(ras_qemu.subprocess, "run", return_value=completed):
+            with patch.object(ras_qemu.os.path, "isfile", return_value=True), \
+                 patch.object(ras_qemu.subprocess, "run", return_value=completed):
                 machine.inject_scenario(scenario)
             raw = machine.injection_evidence["ghes-memory"]["raw_cper"]
             pattern = r"^    [0-9a-f]{8}  ([0-9a-f ]+?)  [.]"
@@ -533,10 +564,12 @@ class InjectionEvidenceTest(unittest.TestCase):
 
         self.assertEqual(tests[0]["status"], "passed")
         self.assertEqual(tests[0]["kernel"], "PASS")
-        self.assertEqual(tests[1], {
-            "name": "ghes-memory", "status": "failed", "kernel": "SKIP",
-            "rasdaemon": "SKIP", "reason": "Injection failed: helper crashed",
-        })
+        self.assertEqual(tests[1]["status"], "failed")
+        self.assertEqual(tests[1]["kernel"], "SKIP")
+        self.assertEqual(tests[1]["rasdaemon"], "SKIP")
+        self.assertEqual(tests[1]["reason"], "Injection failed: helper crashed")
+        self.assertEqual(tests[1]["evidence"]["host_injection"],
+                         {"injection_error": "helper crashed"})
 
 
 if __name__ == "__main__":

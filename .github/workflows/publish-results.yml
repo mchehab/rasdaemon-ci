@@ -11,6 +11,7 @@ on:
   workflow_run:
     workflows:
       - Build QEMU test image
+      - RAS Daemon functional tests
       - Fuzzy logic stress tests
     types: [completed]
     branches: [main]
@@ -54,32 +55,38 @@ jobs:
           find_daily()
           {
             runs=$(gh api \
-              "/repos/$GITHUB_REPOSITORY/actions/workflows/qemu-image.yml/runs?branch=main&status=completed&per_page=100")
+              "/repos/$GITHUB_REPOSITORY/actions/workflows/qemu-tests.yml/runs?branch=main&status=completed&per_page=100")
 
             for run_id in $(printf '%s' "$runs" | jq -r \
               '.workflow_runs | sort_by(.id) | reverse | .[].id'); do
               artifacts=$(gh api \
                 "/repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts?per_page=100")
-              artifact_id=$(printf '%s' "$artifacts" | jq -r '
-                [.artifacts[] | select(.expired == false and
-                  .name == "rasdaemon-qemu-results-x86_64")]
-                | max_by(.created_at) | .id // empty')
-
-              if test -n "$artifact_id"; then
-                rm -rf build/candidate
-                download_artifact "$artifact_id" build/candidate
-
-                revision=$(cat build/candidate/rasdaemon-source-revision 2>/dev/null || true)
-                if [[ "$revision" =~ ^[0-9a-f]{40}$ ]] &&
-                   jq -e '.component_totals' build/candidate/result.json >/dev/null; then
-                  mkdir -p build/results/daily
-                  mv build/candidate build/results/daily/x86_64
-                  printf '%s' "$runs" | jq -r --argjson id "$run_id" \
-                    '.workflow_runs[] | select(.id == $id) |
-                     [.html_url, .conclusion] | @tsv' \
-                    > build/results/daily/run
-                  return
+              compatible=true
+              rm -rf build/candidate
+              for arch in x86_64 aarch64; do
+                artifact_id=$(printf '%s' "$artifacts" | jq -r --arg arch "$arch" '
+                  [.artifacts[] | select(.expired == false and
+                    .name == ("rasdaemon-qemu-results-" + $arch))]
+                  | max_by(.created_at) | .id // empty')
+                if test -z "$artifact_id"; then
+                  compatible=false
+                  break
                 fi
+                download_artifact "$artifact_id" "build/candidate/$arch"
+                revision=$(cat "build/candidate/$arch/rasdaemon-source-revision" 2>/dev/null || true)
+                if ! [[ "$revision" =~ ^[0-9a-f]{40}$ ]] ||
+                   ! jq -e '.component_totals and .features' "build/candidate/$arch/result.json" >/dev/null; then
+                  compatible=false
+                fi
+              done
+              if $compatible &&
+                 cmp -s build/candidate/x86_64/rasdaemon-source-revision build/candidate/aarch64/rasdaemon-source-revision; then
+                mkdir -p build/results
+                mv build/candidate build/results/daily
+                printf '%s' "$runs" | jq -r --argjson id "$run_id" '
+                  .workflow_runs[] | select(.id == $id) |
+                  [.html_url, .conclusion] | @tsv' > build/results/daily/run
+                return
               fi
             done
 
@@ -157,6 +164,7 @@ jobs:
             IFS=$'\t' read -r daily_url daily_conclusion \
               < build/results/daily/run
             daily_results+=(--result x86_64=build/results/daily/x86_64)
+            daily_results+=(--result aarch64=build/results/daily/aarch64)
           fi
 
           if test -f build/results/weekly/run; then

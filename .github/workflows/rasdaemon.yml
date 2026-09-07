@@ -46,18 +46,25 @@ jobs:
             --jq '.artifacts[] |
               select(.expired == false and .name == env.NAME) |
               .id' | head -n 1)
-          echo "exists=$([ -n "$id" ] && echo true || echo false)" \
+          arm_name=${NAME/x86_64/aarch64}
+          arm_id=$(gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts?name=$arm_name" \
+            --jq '.artifacts[] | select(.expired == false) | .id' | head -n 1)
+          echo "exists=$([ -n "$id" ] && [ -n "$arm_id" ] && echo true || echo false)" \
             >> "$GITHUB_OUTPUT"
 
   build:
     name: Build RAS Daemon
     needs: check
     if: needs.check.outputs.exists != 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        arch: [x86_64]
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
     steps:
       - name: Check out rasdaemon source
         uses: actions/checkout@v7

@@ -35,7 +35,7 @@ class ResultSiteTest(unittest.TestCase):
                   encoding="utf-8") as stream:
             stream.write(revision + "\n")
 
-        for filename in ("summary.md", "junit.xml", "results.log", "console.log", "qemu.log"):
+        for filename in ("summary.rst", "junit.xml", "results.log", "console.log", "qemu.log"):
             with open(os.path.join(directory, filename), "w", encoding="utf-8") as stream:
                 stream.write(filename)
 

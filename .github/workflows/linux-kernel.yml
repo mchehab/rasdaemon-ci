@@ -41,7 +41,7 @@ jobs:
           changed=false
 
           if ! git diff --quiet "$BEFORE" "$AFTER" -- \
-              tests/qemu/ci/build-kernel.sh .github/workflows/linux-kernel.yml; then
+              tests/qemu/ci/build-kernel.sh tests/qemu/guest/test-driver .github/workflows/linux-kernel.yml; then
             changed=true
           fi
 
@@ -75,20 +75,27 @@ jobs:
             --jq '.artifacts[] |
               select(.expired == false and .name == env.NAME) |
               .id' | head -n 1)
-          echo "exists=$([ -n "$id" ] && echo true || echo false)" \
+          arm_name=${NAME/x86_64/aarch64}
+          arm_id=$(gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts?name=$arm_name" \
+            --jq '.artifacts[] | select(.expired == false) | .id' | head -n 1)
+          echo "exists=$([ -n "$id" ] && [ -n "$arm_id" ] && echo true || echo false)" \
             >> "$GITHUB_OUTPUT"
 
   build:
     name: Build Linux kernel
     needs: check
     if: needs.check.outputs.exists != 'true' || needs.check.outputs.build_changed == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
 
     strategy:
       fail-fast: false
       matrix:
-        arch: [x86_64]
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
 
     steps:
       - uses: actions/checkout@v7
@@ -99,7 +106,7 @@ jobs:
             libelf-dev libssl-dev git
       - name: Build kernel
         run: |
-          tests/qemu/ci/build-kernel.sh \
+          tests/qemu/ci/build-kernel.sh --arch "${{ matrix.arch }}" \
             --ref '${{ needs.check.outputs.ref }}' \
             --output build/kernel
       - uses: actions/upload-artifact@v7

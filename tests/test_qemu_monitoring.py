@@ -6,6 +6,7 @@ import base64
 import io
 import json
 import os
+import re
 import socket
 import tempfile
 import types
@@ -117,15 +118,15 @@ class ResultTableTest(unittest.TestCase):
             with open(os.path.join(directory, "results.html"), encoding="utf-8") as stream:
                 page = stream.read()
 
-            with open(os.path.join(directory, "summary.md"), encoding="utf-8") as stream:
+            with open(os.path.join(directory, "summary.rst"), encoding="utf-8") as stream:
                 summary = stream.read()
 
         self.assertIn("&lt;script&gt;bad&lt;/script&gt;", page)
         self.assertIn("<h2>Component totals</h2>", page)
         self.assertIn('<tr><th>Kernel</th><td class="PASS">1</td>', page)
         self.assertIn('<tr><th>rasdaemon</th><td class="PASS">0</td>', page)
-        self.assertIn("| Kernel | 1 | 0 | 0 |", summary)
-        self.assertIn("| rasdaemon | 0 | 1 | 0 |", summary)
+        self.assertIn("| Kernel | 1 | 0 | 0 |", re.sub(r" +", " ", summary))
+        self.assertIn("| rasdaemon | 0 | 1 | 0 |", re.sub(r" +", " ", summary))
         self.assertIn("🟢 PASS | 🔴 FAIL", summary)
         self.assertNotIn("<summary>Evidence</summary>", page)
 

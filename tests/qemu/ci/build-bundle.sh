@@ -3,6 +3,7 @@
 
 set -o pipefail
 
+arch=x86_64
 channel=release
 kernel_repository=https://github.com/torvalds/linux.git
 kernel_ref=
@@ -19,6 +20,7 @@ project_dir=$(realpath "$script_dir/../../..")
 
 while test $# -gt 0; do
 	case $1 in
+	--arch) arch=$2; shift 2 ;;
 	--channel) channel=$2; shift 2 ;;
 	--kernel-repository) kernel_repository=$2; shift 2 ;;
 	--kernel-ref) kernel_ref=$2; shift 2 ;;
@@ -33,6 +35,12 @@ while test $# -gt 0; do
 	*) echo "Unknown argument: $1" >&2; exit 2 ;;
 	esac
 done
+
+case $arch in
+x86_64) machine=q35; firmware_code=edk2-x86_64-code.fd; firmware_vars=edk2-i386-vars.fd ;;
+aarch64|arm64) arch=aarch64; machine=virt; firmware_code=edk2-aarch64-code.fd; firmware_vars=edk2-arm-vars.fd ;;
+*) echo "Unsupported architecture: $arch" >&2; exit 2 ;;
+esac
 
 mkdir -p "$output"
 output=$(realpath "$output")
@@ -67,18 +75,18 @@ if test ! -f "$qemu_dir/metadata/qemu.json"; then
 fi
 
 if test ! -f "$kernel_dir/metadata/kernel.json"; then
-	"$script_dir/build-kernel.sh" --repository "$kernel_repository" \
+	"$script_dir/build-kernel.sh" --arch "$arch" --repository "$kernel_repository" \
 		--ref "$resolved_kernel_ref" \
 		--output "$kernel_dir"
 fi
 
 if test -n "$base_sha512"; then
-	"$script_dir/build-guest.sh" --kernel "$kernel_dir" \
+	"$script_dir/build-guest.sh" --arch "$arch" --kernel "$kernel_dir" \
 		--base-sha512 "$base_sha512" \
-		--output "$context/rasdaemon-ci/rasdaemon-guest-x86_64.qcow2"
+		--output "$context/rasdaemon-ci/rasdaemon-guest-$arch.qcow2"
 else
-	"$script_dir/build-guest.sh" --kernel "$kernel_dir" \
-		--output "$context/rasdaemon-ci/rasdaemon-guest-x86_64.qcow2"
+	"$script_dir/build-guest.sh" --arch "$arch" --kernel "$kernel_dir" \
+		--output "$context/rasdaemon-ci/rasdaemon-guest-$arch.qcow2"
 fi
 
 cp -a "$qemu_dir/root" "$context/root"
@@ -97,28 +105,34 @@ cp "$project_dir/tests/qemu/scenarios.json" \
 	"$context/rasdaemon-ci/harness/"
 cp "$project_dir/tests/qemu/fuzz.py" \
 	"$context/rasdaemon-ci/harness/"
+cp "$project_dir/tests/qemu/features.py" "$project_dir/tests/qemu/hmp_inject.py" \
+	"$project_dir/tests/qemu/hisi.py" \
+	"$context/rasdaemon-ci/harness/"
 cp "$project_dir/tests/qemu/results.css" \
 	"$project_dir/tests/qemu/results.js" \
 	"$context/rasdaemon-ci/harness/"
 cp "$project_dir/tests/qemu/guest/agent.py" \
 	"$context/rasdaemon-ci/harness/guest/"
-image_sha=$(sha256sum "$context/rasdaemon-ci/rasdaemon-guest-x86_64.qcow2" | awk '{print $1}')
+cp "$project_dir/tests/qemu/guest/consumers.py" \
+	"$project_dir/tests/qemu/guest/erst.py" \
+	"$context/rasdaemon-ci/harness/guest/"
+image_sha=$(sha256sum "$context/rasdaemon-ci/rasdaemon-guest-$arch.qcow2" | awk '{print $1}')
 cat >"$context/rasdaemon-ci/images.json" <<EOF
 {
   "format_version": 1,
   "architectures": {
-    "x86_64": {
-      "qemu_binary": "qemu-system-x86_64",
-      "machine": "q35",
+    "$arch": {
+      "qemu_binary": "qemu-system-$arch",
+      "machine": "$machine",
       "cpu": {"kvm": "host", "tcg": "max"},
       "memory_mb": 2048,
       "cpus": 2,
       "firmware": {"pairs": [{
-        "code": "/opt/qemu/share/qemu/edk2-x86_64-code.fd",
-        "vars": "/opt/qemu/share/qemu/edk2-i386-vars.fd"
+        "code": "/opt/qemu/share/qemu/$firmware_code",
+        "vars": "/opt/qemu/share/qemu/$firmware_vars"
       }]},
       "image": {
-        "filename": "rasdaemon-guest-x86_64.qcow2",
+        "filename": "rasdaemon-guest-$arch.qcow2",
         "sha256": "$image_sha",
         "source": "oci:$tag"
       }

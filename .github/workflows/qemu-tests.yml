@@ -8,6 +8,9 @@ on:
       image:
         required: true
         type: string
+      arm-image:
+        required: true
+        type: string
 
   workflow_dispatch:
     inputs:
@@ -15,6 +18,13 @@ on:
         description: Published QEMU image reference
         required: false
         type: string
+      arm-image:
+        description: Published arm64 QEMU image reference
+        required: false
+        type: string
+
+  schedule:
+    - cron: "0 6 * * *"
 
 permissions:
   contents: read
@@ -24,20 +34,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  source:
+    name: Pin source for both architectures
+    runs-on: ubuntu-24.04
+    outputs:
+      revision: ${{ steps.source.outputs.revision }}
+    steps:
+      - name: Resolve rasdaemon revision
+        id: source
+        run: |
+          set -euxo pipefail
+          revision=$(git ls-remote https://github.com/mchehab/rasdaemon.git refs/heads/master | awk '{print $1}')
+          test "${#revision}" -eq 40
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+
   test:
     name: Test QEMU
-    runs-on: ubuntu-24.04
+    needs: source
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        arch: [x86_64]
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    env:
+      IMAGE_REF: ${{ (matrix.arch == 'aarch64' && (inputs.arm-image || format('ghcr.io/{0}/rasdaemon-ci:aarch64', github.repository_owner))) || inputs.image || format('ghcr.io/{0}/rasdaemon-ci:x86_64', github.repository_owner) }}
     steps:
       - name: Check out rasdaemon source
         uses: actions/checkout@v7
         with:
           repository: mchehab/rasdaemon
-          ref: master
+          ref: ${{ needs.source.outputs.revision }}
           path: rasdaemon-source
 
       - name: Record tested rasdaemon revision
@@ -51,8 +82,6 @@ jobs:
             > "build/qemu-results/$TEST_ARCH/rasdaemon-source-revision"
 
       - name: Download image
-        env:
-          IMAGE_REF: ${{ inputs.image || format('ghcr.io/{0}/rasdaemon-ci:x86_64', github.repository_owner) }}
         run: |
           echo "Using image $IMAGE_REF"
           docker pull "$IMAGE_REF"
@@ -65,11 +94,10 @@ jobs:
           if test -r /dev/kvm && test -w /dev/kvm; then
             docker_args+=(--device /dev/kvm)
           fi
-          image_ref='${{ inputs.image || format('ghcr.io/{0}/rasdaemon-ci:x86_64', github.repository_owner) }}'
           docker run "${docker_args[@]}" \
             -v "$PWD/rasdaemon-source:/workspace:ro" \
             -v "$PWD/build/qemu-results/$TEST_ARCH:/results" \
-            "$image_ref" \
+            "$IMAGE_REF" \
             run --arch "$TEST_ARCH" --accelerator auto \
             --profile injection --timeout 3600
 
@@ -80,8 +108,8 @@ jobs:
         run: |
           set -eux
 
-          if test -f "build/qemu-results/$TEST_ARCH/summary.md"; then
-            cat "build/qemu-results/$TEST_ARCH/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          if test -f "build/qemu-results/$TEST_ARCH/results.html"; then
+            echo "Download rasdaemon-qemu-results-$TEST_ARCH and open results.html for feature and detailed results." >> "$GITHUB_STEP_SUMMARY"
           else
             echo '🔴 Infrastructure failure: no VM result table was produced.' >> "$GITHUB_STEP_SUMMARY"
           fi

@@ -5,11 +5,14 @@ set -o pipefail
 
 repository=https://github.com/torvalds/linux.git
 ref=
+arch=x86_64
 output=
+script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 jobs=${JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)}
 
 while test $# -gt 0; do
 	case $1 in
+	--arch) arch=$2; shift 2 ;;
 	--repository) repository=$2; shift 2 ;;
 	--ref) ref=$2; shift 2 ;;
 	--output) output=$2; shift 2 ;;
@@ -30,7 +33,13 @@ git -C "$work/source" checkout -q --detach FETCH_HEAD
 commit=$(git -C "$work/source" rev-parse HEAD)
 
 mkdir -p "$work/build" "$output/modules" "$output/metadata"
-make -C "$work/source" O="$work/build" x86_64_defconfig
+case $arch in
+x86_64) kernel_arch=x86; defconfig=x86_64_defconfig; image_target=bzImage; image_path=arch/x86/boot/bzImage ;;
+aarch64|arm64) arch=aarch64; kernel_arch=arm64; defconfig=defconfig; image_target=Image; image_path=arch/arm64/boot/Image ;;
+*) echo "Unsupported architecture: $arch" >&2; exit 2 ;;
+esac
+export ARCH=$kernel_arch
+make -C "$work/source" O="$work/build" "$defconfig"
 config="$work/source/scripts/config"
 config_enable=()
 config_enable+=(ACPI_APEI)
@@ -66,6 +75,13 @@ config_enable+=(SERIAL_8250_CONSOLE)
 config_enable+=(TRACEFS_FS)
 config_enable+=(TRACEPOINTS)
 config_enable+=(TRACING)
+config_enable+=(NET)
+config_enable+=(INET)
+config_enable+=(NETDEVICES)
+config_enable+=(NET_DEVLINK)
+config_enable+=(IPMI_HANDLER)
+config_enable+=(IPMI_DEVICE_INTERFACE)
+config_enable+=(IPMI_SI)
 config_enable+=(VFAT_FS)
 config_enable+=(VIRTIO)
 config_enable+=(VIRTIO_BLK)
@@ -75,8 +91,18 @@ config_enable+=(X86_MCE)
 config_enable+=(X86_MCE_AMD)
 config_enable+=(X86_MCE_INTEL)
 
+if test "$arch" = aarch64; then
+	config_enable+=(ACPI EFI ARM64_RAS ARM64_ERRATUM_1800710)
+	config_enable+=(SERIAL_AMBA_PL011 SERIAL_AMBA_PL011_CONSOLE)
+fi
+
 config_module=()
 config_module+=(HWPOISON_INJECT)
+config_module+=(NETDEVSIM)
+
+if test "$arch" = x86_64; then
+	config_module+=(ACPI_EXTLOG ACPI_APEI_ERST_DEBUG)
+fi
 
 config_disable=()
 config_disable+=(DEBUG_INFO)
@@ -109,15 +135,21 @@ for option in ACPI_APEI_GHES ACPI_APEI_PCIEAER EDAC_GHES MEMORY_FAILURE \
 	printf 'CONFIG_%s\ty\t%s\n' "$option" "$actual" >> "$output/metadata/config-status.tsv"
 done
 
-make -C "$work/source" O="$work/build" -j"$jobs" bzImage modules
+make -C "$work/source" O="$work/build" -j"$jobs" "$image_target" modules
 release=$(make -s -C "$work/source" O="$work/build" kernelrelease)
 make -C "$work/source" O="$work/build" \
 	modules_install INSTALL_MOD_PATH="$output/modules" INSTALL_MOD_STRIP=1
+mkdir -p "$work/test-driver"
+cp "$script_dir/../guest/test-driver/Makefile" "$script_dir/../guest/test-driver/ras_ci.c" \
+	"$work/test-driver/"
+make -C "$work/source" O="$work/build" M="$work/test-driver" modules
+make -C "$work/source" O="$work/build" M="$work/test-driver" \
+	modules_install INSTALL_MOD_PATH="$output/modules"
 test -d "$output/modules/lib/modules/$release"
 
-cp "$work/build/arch/x86/boot/bzImage" "$output/vmlinuz-$release"
+cp "$work/build/$image_path" "$output/vmlinuz-$release"
 cp "$work/build/.config" "$output/config-$release"
 cp "$work/build/System.map" "$output/System.map-$release"
 cat >"$output/metadata/kernel.json" <<EOF
-{"repository":"$repository","ref":"$ref","commit":"$commit","release":"$release"}
+{"repository":"$repository","ref":"$ref","commit":"$commit","release":"$release","arch":"$arch"}
 EOF

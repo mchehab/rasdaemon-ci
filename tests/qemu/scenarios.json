@@ -12,15 +12,29 @@
     "helper": [
       "arm",
       "--severity",
-      "corrected"
-    ]
+      "corrected",
+      "--mpidr",
+      "1",
+      "--multiple-error",
+      "2",
+      "--vendor",
+      "0x00,0x00,0x11,0x00,0x34,0x12,0x00,0x00,0x78,0x56,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00"
+    ],
+    "vendor_hex": "000011003412000078560000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "expected": {
+      "mpidr": 1
+    }
   },
   {
     "name": "ghes-pci-bus",
     "event": "ras/non_standard_event",
     "table": "non_standard_event",
     "helper": [
-      "pci-bus"
+      "pci-bus", "--error-status", "0x1234", "--error-type", "3",
+      "--bus-number", "0x56", "--segment-number", "0x12",
+      "--bus-address", "0x12345678", "--bus-data", "0x9abc",
+      "--bus-command", "pci-x", "--bus-requestor", "0",
+      "--bus-completer", "0x44", "--target-id", "0x55"
     ]
   },
   {
@@ -120,6 +134,29 @@
     }
   },
   {
+    "name": "cxl-memory-sparing",
+    "event": "cxl/cxl_memory_sparing",
+    "table": "cxl_memory_sparing_event",
+    "producer": "cxl-maintenance",
+    "expected": {
+      "serial": 1,
+      "log_type": "Informational",
+      "hdr_maint_op_class": 2,
+      "hdr_maint_op_sub_class": 1,
+      "flags": 1,
+      "result": 0,
+      "res_avail": 1,
+      "channel": 1,
+      "rank": 2,
+      "nibble_mask": 3,
+      "bank_group": 3,
+      "bank": 4,
+      "row": 42,
+      "column": 4660,
+      "sub_channel": 5
+    }
+  },
+  {
     "name": "cxl-aer-ue",
     "event": "cxl/cxl_aer_uncorrectable_error",
     "table": "cxl_aer_ue_event",
@@ -162,5 +199,125 @@
     "event": "signal/signal_generate",
     "table": "signal_event",
     "producer": "hwpoison"
+  },
+  {
+    "name": "vendor-ampere",
+    "event": "ras/non_standard_event",
+    "table": "amp_payload0_event",
+    "cper": {
+      "guid": "e8ed898d-df16-43cc-8ecc-54f060ef157f",
+      "payload": "000011003412000078560000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "expected": {
+      "instance": 17,
+      "status_reg": 4660,
+      "addr_reg": 22136
+    }
+  },
+  {
+    "name": "vendor-jaguar",
+    "event": "ras/non_standard_event",
+    "table": "jm_payload0_event",
+    "cper": {
+      "guid": "82d78ba3-fa14-407a-ba0e-f3ba8170013c",
+      "payload": "0300000000110000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "expected": {
+      "version": 0,
+      "soc_id": 17
+    }
+  },
+  {
+    "name": "vendor-nvidia",
+    "event": "ras/non_standard_event",
+    "table": "nvidia_ns_event",
+    "cper": {
+      "guid": "6d5244f2-2712-11ec-bea7-cb3fdb95c786",
+      "payload": "4e56000000000000000000000000000001001100020000000000000000000000"
+    },
+    "expected": {
+      "error_type": 1,
+      "error_instance": 17,
+      "severity": 2
+    }
+  },
+  {
+    "name": "vendor-yitian",
+    "event": "ras/non_standard_event",
+    "table": "yitian_ddr_reg_dump_event",
+    "cper": {
+      "guid": "a6980811-16ea-4e4d-b936-fb00a23ff29c",
+      "payload": "5000110034120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "expected": {
+      "address": 0
+    }
+  },
+  {
+    "name": "devlink-health",
+    "event": "devlink/devlink_health_report",
+    "table": "devlink_event",
+    "producer": "netdevsim",
+    "expected": {
+      "bus_name": "netdevsim",
+      "dev_name": "netdevsim4242",
+      "reporter_name": "dummy",
+      "msg": "rasdaemon-ci-health"
+    }
+  },
+  {
+    "name": "consumer-mysql",
+    "event": "ras/memory_failure_event",
+    "table": "memory_failure_event",
+    "producer": "hwpoison",
+    "backend": "mysql"
+  },
+  {
+    "name": "consumer-postgresql",
+    "event": "ras/memory_failure_event",
+    "table": "memory_failure_event",
+    "producer": "hwpoison",
+    "backend": "postgresql"
+  },
+  {
+    "name": "consumer-memory-ce-pfa",
+    "event": "ras/mc_event",
+    "table": "mc_event",
+    "producer": "pfa"
+  },
+  {
+    "name": "consumer-memory-row-ce-pfa",
+    "event": "ras/mc_event",
+    "table": "mc_event",
+    "producer": "pfa"
+  },
+  {
+    "name": "extlog-memory",
+    "event": "ras/extlog_mem_event",
+    "table": "extlog_event",
+    "producer": "test-driver",
+    "expected": {
+      "etype": 2,
+      "error_count": 17,
+      "severity": 2,
+      "address": 305418240,
+      "fru_text": "rasdaemon-ci-extlog"
+    }
+  },
+  {
+    "name": "net-xmit-timeout",
+    "event": "net/net_dev_xmit_timeout",
+    "table": "devlink_event",
+    "producer": "test-driver",
+    "expected": {
+      "dev_name": "rasci0",
+      "msg": "TX timeout on queue: 0\n"
+    }
+  },
+  {
+    "name": "consumer-arm-sel",
+    "event": "ras/aer_event",
+    "table": "aer_event",
+    "producer": "ghes-aer"
   }
 ]
