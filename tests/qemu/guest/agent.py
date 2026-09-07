@@ -1212,9 +1212,11 @@ class RecordedScenario:
                 self.wait_record()
                 os.killpg(self.process.pid, signal.SIGTERM)
                 self.process.wait(timeout=15)
+                self.evidence["rasdaemon_returncode"] = self.process.returncode
 
                 if self.process.returncode:
-                    raise RuntimeError("rasdaemon did not shut down cleanly")
+                    raise RuntimeError("rasdaemon did not shut down cleanly "
+                                       f"(exit status {self.process.returncode})")
 
             self.evidence["sqlite_count"] = len(self.evidence["rows"])
             if self.scenario.get("producer") == "pfa":
