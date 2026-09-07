@@ -1041,7 +1041,7 @@ class VirtualMachine:
             if self.process.poll() is not None:
                 raise LabError("QEMU exited before guest boot completed")
             time.sleep(0.2)
-        raise LabError("guest boot did not complete before the timeout")
+        raise LabError(f"Timeout after {self.timeout}s: guest boot did not complete")
 
     def inject_mce(self, physical, bank):
         """Inject a corrected hardware-first memory MCE through HMP/QMP."""
@@ -1287,7 +1287,7 @@ class VirtualMachine:
                     client = None
                     time.sleep(0.2)
             if client is None:
-                raise LabError("guest result channel did not become ready")
+                raise LabError(f"Timeout after {self.timeout}s: guest result channel did not become ready")
             print("[guest] result channel connected; waiting for test results",
                   file=sys.stderr, flush=True)
             while time.monotonic() < deadline:
@@ -1336,6 +1336,8 @@ class VirtualMachine:
                     payload = payload.split(b"\n", 1)[0]
                     break
             if not payload:
+                if time.monotonic() >= deadline:
+                    raise LabError(f"Timeout after {self.timeout}s: guest returned no result document")
                 raise LabError("guest returned no result document")
             qmp_evidence["scenarios"] = self.injection_evidence
             return json.loads(payload.decode("utf-8")), command, qmp_evidence
@@ -1531,7 +1533,8 @@ def run_test(args, manifest):
                     if name not in reported:
                         active = machine.watchdog.phase.startswith(name)
                         status = "failed" if active else "skipped"
-                        reason = str(error) if active else "Not run after guest/infrastructure failure"
+                        reason = (str(error) if active else
+                                  f"Not run after guest/infrastructure failure: {error}")
                         document.add_test(name, status, reason)
                         kernel = "FAIL" if active and machine.watchdog.failure else "SKIP"
                         document.data["tests"][-1].update(kernel=kernel, rasdaemon="SKIP")

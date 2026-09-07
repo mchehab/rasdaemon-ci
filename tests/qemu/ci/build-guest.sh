@@ -165,13 +165,16 @@ if test "$arch" = aarch64; then
 fi
 
 echo "guest provisioning accelerator: $accel"
-timeout 20m "qemu-system-$arch" -machine "$machine,accel=$accel" -cpu "$cpu" \
+# Stream firmware, boot and provisioning output immediately, including when
+# the guest never reaches cloud-init. pipefail preserves QEMU/timeout failures
+# through tee; the saved console remains available to the diagnostic trap.
+timeout 30m "qemu-system-$arch" -machine "$machine,accel=$accel" -cpu "$cpu" \
 	"${firmware[@]}" -m 2048 -smp 2 -display none \
-	-no-reboot -serial "file:$console" \
+	-no-reboot -monitor none -serial stdio \
 	-drive "file=$work/custom.qcow2,if=virtio,format=qcow2" \
 	-drive "file=$work/seed.iso,if=virtio,format=raw,readonly=on" \
 	-drive "file=$payload_image,if=virtio,format=raw,readonly=on" \
-	-nic user,model=virtio || {
+	-nic user,model=virtio </dev/null 2>&1 | tee "$console" || {
 	echo "guest provisioning failed" >&2
 	tail -n 100 "$console" >&2 || true
 	exit 1
