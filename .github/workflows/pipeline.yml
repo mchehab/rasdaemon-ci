@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: GPL-2.0-only
+name: RAS CI pipeline
+
+# Single build/test entry point. Daily polling resolves rasdaemon master,
+# QEMU rasdaemon_tests, and the latest final Linux release. Immediate upstream
+# notifications require a source workflow or external webhook to send an
+# upstream-changed repository dispatch; cross-repository pushes do not do so.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  repository_dispatch:
+    types: [upstream-changed]
+  schedule:
+    - cron: "0 0 * * *"
+
+permissions:
+  actions: write
+  contents: read
+  packages: write
+
+# One running pipeline and one latest pending request. Never cancel active work.
+# This lock belongs only to the caller, not to its reusable workflows.
+# Weekly fuzz shares the lock. Independent source builds and architecture
+# matrices remain parallel within a run.
+concurrency:
+  group: rasdaemon-ci-pipeline
+  cancel-in-progress: false
+
+jobs:
+  # Reusable builders have no independent automatic triggers. They reuse
+  # existing artifacts; unchanged images are reused even on a manual test rerun.
+  kernel:
+    uses: ./.github/workflows/linux-kernel.yml
+    secrets: inherit
+  qemu:
+    uses: ./.github/workflows/qemu.yml
+    secrets: inherit
+  rasdaemon:
+    uses: ./.github/workflows/rasdaemon.yml
+    secrets: inherit
+  image:
+    # Wait for all builders before building images and running functional tests.
+    needs: [kernel, qemu, rasdaemon]
+    uses: ./.github/workflows/qemu-image.yml
+    secrets: inherit

@@ -12,26 +12,8 @@ on:
         required: true
         type: string
 
-  workflow_dispatch:
-    inputs:
-      image:
-        description: Published QEMU image reference
-        required: false
-        type: string
-      arm-image:
-        description: Published arm64 QEMU image reference
-        required: false
-        type: string
-
-  schedule:
-    - cron: "0 6 * * *"
-
 permissions:
   contents: read
-
-concurrency:
-  group: qemu-tests-${{ github.sha }}
-  cancel-in-progress: true
 
 jobs:
   source:

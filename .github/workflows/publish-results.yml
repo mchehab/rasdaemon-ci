@@ -5,13 +5,12 @@ name: Publish media CI results
 on:
   workflow_dispatch:
 
-  push:
-    branches: [main]
-
   workflow_run:
+    # Reusable test jobs belong to the coordinator run. Publish only after
+    # every test job finishes, for failures as well as successes. Pushes and
+    # intermediate build completions must not replace badges or Pages.
     workflows:
-      - Build QEMU test image
-      - RAS Daemon functional tests
+      - RAS CI pipeline
       - Fuzzy logic stress tests
     types: [completed]
     branches: [main]
@@ -21,12 +20,14 @@ permissions:
 
 concurrency:
   group: rasdaemon-ci-pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   prepare:
     name: Prepare latest reports
     runs-on: ubuntu-24.04
+    outputs:
+      ready: ${{ steps.results.outputs.ready }}
     permissions:
       actions: read
       contents: read
@@ -34,6 +35,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Download latest daily and weekly results
+        id: results
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -55,7 +57,7 @@ jobs:
           find_daily()
           {
             runs=$(gh api \
-              "/repos/$GITHUB_REPOSITORY/actions/workflows/qemu-tests.yml/runs?branch=main&status=completed&per_page=100")
+              "/repos/$GITHUB_REPOSITORY/actions/workflows/pipeline.yml/runs?status=completed&per_page=100")
 
             for run_id in $(printf '%s' "$runs" | jq -r \
               '.workflow_runs | sort_by(.id) | reverse | .[].id'); do
@@ -148,8 +150,13 @@ jobs:
 
           find_daily
           find_weekly
+          # A failed setup or an incomplete first run must not erase live badges.
+          if test -f build/results/daily/run; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build Pages site
+        if: steps.results.outputs.ready == 'true'
         run: |
           set -eux
 
@@ -204,6 +211,7 @@ jobs:
           EOF
 
       - name: Upload GitHub Pages artifact
+        if: steps.results.outputs.ready == 'true'
         uses: actions/upload-pages-artifact@v5
         with:
           path: build/pages
@@ -211,6 +219,7 @@ jobs:
   deploy:
     name: Publish latest reports
     needs: prepare
+    if: needs.prepare.outputs.ready == 'true'
     runs-on: ubuntu-24.04
     permissions:
       id-token: write

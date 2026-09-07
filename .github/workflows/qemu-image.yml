@@ -3,76 +3,20 @@
 name: Build QEMU test image
 
 on:
-  push:
-    branches: [main]
-
-  workflow_run:
-    workflows:
-      - Build Linux
-      - Build QEMU
-      - Build RAS Daemon
-
-    types: [completed]
-
-    branches: [main]
-
-  workflow_dispatch:
+  workflow_call:
 
 permissions:
   actions: write
   contents: read
   packages: write
 
-concurrency:
-  group: qemu-image-${{ github.event.workflow_run.head_sha || github.sha }}
-  cancel-in-progress: true
-
 jobs:
   check:
     name: Check source artifacts
-    if: >-
-      github.event_name == 'push' ||
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-22.04
     outputs:
       build: ${{ steps.changed.outputs.build }}
     steps:
-      - name: Wait completed workflows
-        if: github.event_name != 'workflow_dispatch'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-        run: |
-          for attempt in $(seq 1 120); do
-            runs=$(gh api \
-              "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$HEAD_SHA&per_page=100")
-
-            kernel=$(printf '%s' "$runs" | jq -r '
-              [.workflow_runs[] | select(.name == "Build Linux")]
-              | sort_by(.created_at) | last
-              | if . then "\(.status):\(.conclusion)" else "missing" end')
-            qemu=$(printf '%s' "$runs" | jq -r '
-              [.workflow_runs[] | select(.name == "Build QEMU")]
-              | sort_by(.created_at) | last
-              | if . then "\(.status):\(.conclusion)" else "missing" end')
-            rasdaemon=$(printf '%s' "$runs" | jq -r '
-              [.workflow_runs[] | select(.name == "Build RAS Daemon")]
-              | sort_by(.created_at) | last
-              | if . then "\(.status):\(.conclusion)" else "missing" end')
-
-            echo "kernel=$kernel qemu=$qemu rasdaemon=$rasdaemon"
-            if [[ "$kernel" == "completed:success" &&
-                  "$qemu" == "completed:success" &&
-                  "$rasdaemon" == "completed:success" ]]; then
-              exit 0
-            fi
-            sleep 60
-          done
-
-          echo "Timed out waiting for source workflows" >&2
-          exit 1
-
       - name: Check changes
         id: changed
         env:
@@ -80,8 +24,9 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
-          artifacts=$(gh api --paginate \
-            "/repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100")
+          artifacts=$(gh api --paginate --slurp \
+            "/repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" |
+            jq '{artifacts: [.[].artifacts[]]}')
 
           kernel=$(printf '%s' "$artifacts" | jq -r '
             [.artifacts[] | select(.expired == false and
@@ -109,8 +54,7 @@ jobs:
             image=$arm_image
           fi
 
-          if [[ -z "$arm_image" || "$EVENT_NAME" == "push" ||
-                "$EVENT_NAME" == "workflow_dispatch" || -z "$image" ||
+          if [[ -z "$arm_image" || -z "$image" ||
                 "$kernel" > "$image" ||
                 "$qemu" > "$image" || "$rasdaemon" > "$image" ]]; then
             echo "build=true" >> "$GITHUB_OUTPUT"
@@ -285,7 +229,8 @@ jobs:
 
   test:
     name: Test QEMU image
-    needs: build
+    needs: [check, build]
+    if: always() && needs.check.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped')
     uses: ./.github/workflows/qemu-tests.yml
     with:
       image: ${{ needs.build.outputs.x86_image }}

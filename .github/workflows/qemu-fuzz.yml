@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: qemu-fuzz-${{ github.ref }}
+  group: rasdaemon-ci-pipeline
   cancel-in-progress: false
 
 jobs:
