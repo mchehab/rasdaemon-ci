@@ -1516,10 +1516,6 @@ def run_test(args, manifest):
     probe = CapabilityProbe(manifest, args.cache_dir)
     checks = probe.inspect(args.arch)
     document = ResultDocument(args.arch, args.accelerator, args.profile)
-    # Keep VM execution health separate from functional feature verdicts.  A
-    # completed suite may contain real feature regressions; an interrupted
-    # suite must not turn all unexecuted features into FAIL.
-    document.data["vm_status"] = "failed"
     document.data["feature_inventory"] = features.feature_inventory(args.source_dir)
     document.data["capabilities"] = [check.as_dict() for check in checks]
     config_status = os.path.join(HARNESS_DIR, "..", "kernel", "config-status.tsv")
@@ -1616,24 +1612,12 @@ def run_test(args, manifest):
                     reported = {test["name"] for test in guest_tests}
                     missing = sorted(required - reported)
                     if missing:
-                        document.data["vm_status"] = "partial"
-                        document.data["infrastructure_failure"] = (
-                            "VM stopped before reporting: " + ", ".join(missing))
                         document.add_test("coverage-contract", "failed",
                                           "Scenarios were not reported: " + ", ".join(missing))
-                    else:
-                        document.data["vm_status"] = "completed"
-                else:
-                    document.data["vm_status"] = "completed"
         except (LabError, OSError, subprocess.SubprocessError,
                 json.JSONDecodeError) as error:
             if machine.watchdog.phase == "boot":
                 document.data["infrastructure_failure"] = str(error)
-                document.data["vm_status"] = "failed"
-            else:
-                document.data["vm_status"] = "partial"
-                document.data["infrastructure_failure"] = (
-                    "VM aborted during tests: " + str(error))
             if os.path.isfile(machine.console_path):
                 with open(machine.console_path, encoding="utf-8", errors="replace") as stream:
                     for line in stream:

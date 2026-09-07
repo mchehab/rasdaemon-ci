@@ -75,36 +75,12 @@ class ResultSite:  # pylint: disable=R0903
                 return test.get("reason", "guest failed before tests ran")
         return ""
 
-    @staticmethod
-    def _vm_status(result: PublishedResult) -> str:
-        """Return completed, partial, failed, or unavailable VM health."""
-        status = result.data.get("vm_status")
-        if status in ("completed", "partial", "failed"):
-            if status == "completed" and ResultSite._infrastructure_failure(result):
-                return "failed"
-            return status
-        if ResultSite._infrastructure_failure(result):
-            return "failed"
-        # Reports written before vm_status was introduced completed the
-        # document only after the guest returned; retain that interpretation.
-        return "completed"
-
     def _totals(self) -> dict:
         totals = {"passed": 0, "failed": 0,
-                  "infrastructure": {"x86_64": 0, "aarch64": 0},
-                  "vm_status": {"x86_64": "unavailable", "aarch64": "unavailable"},
-                  "components": {component: {state: 0 for state in
-                                ("passed", "failed", "skipped", "not_applicable")}
-                               for component in ("kernel", "rasdaemon")}}
+                  "infrastructure": {"x86_64": 0, "aarch64": 0}}
         for result in self.results:
-            arch = result.data.get("architecture", result.label)
-            if arch in totals["vm_status"]:
-                totals["vm_status"][arch] = self._vm_status(result)
-            for component, values in result.data.get("component_totals", {}).items():
-                if component in totals["components"]:
-                    for state in totals["components"][component]:
-                        totals["components"][component][state] += int(values.get(state, 0))
             if self._infrastructure_failure(result):
+                arch = result.data.get("architecture", result.label)
                 if arch in totals["infrastructure"]:
                     totals["infrastructure"][arch] = 1
                 continue
@@ -128,56 +104,21 @@ class ResultSite:  # pylint: disable=R0903
         with open(path, "w", encoding="utf-8") as stream:
             stream.write(badge)
 
-    @staticmethod
-    def _write_vm_badge(path: str, label: str, status: str) -> None:
-        """Write a compact, high-signal VM health indicator."""
-        symbols = {"completed": "●", "partial": "○", "failed": "✕",
-                   "unavailable": "?"}
-        colors = {"completed": "#2da44e", "partial": "#bf8700",
-                  "failed": "#d73a49", "unavailable": "#6e7781"}
-        symbol = symbols.get(status, "?")
-        color = colors.get(status, colors["unavailable"])
-        title = html.escape(f"{label}: {status}", quote=True)
-        badge = f'''<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"
- role="img" aria-label="{title}"><title>{title}</title>
-<circle cx="16" cy="16" r="13" fill="{color}"/>
-<text x="16" y="23" fill="#fff" text-anchor="middle"
- font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="21">{symbol}</text></svg>
-'''
-        with open(path, "w", encoding="utf-8") as stream:
-            stream.write(badge)
-
     def _write_badges(self, totals: dict | None) -> None:
         """Write feature-regression and per-architecture VM badges."""
         values = {
             "feature-pass": ("features PASS", totals["passed"] if totals else "N/A"),
             "feature-fail": ("features FAIL", totals["failed"] if totals else "N/A"),
+            "x86-vm-fail": ("x86 VM FAIL", totals["infrastructure"]["x86_64"]
+                            if totals else "N/A"),
+            "arm64-vm-fail": ("ARM64 VM FAIL", totals["infrastructure"]["aarch64"]
+                              if totals else "N/A"),
         }
-        if totals:
-            for component in ("kernel", "rasdaemon"):
-                label = component + " "
-                values.update({
-                    f"{component}-pass": (label + "PASS",
-                                          totals["components"][component]["passed"]),
-                    f"{component}-fail": (label + "FAIL",
-                                          totals["components"][component]["failed"]),
-                    f"{component}-skip": (label + "SKIP",
-                                          totals["components"][component]["skipped"]),
-                })
-        else:
-            for component in ("kernel", "rasdaemon"):
-                for state in ("pass", "fail", "skip"):
-                    values[f"{component}-{state}"] = (component + " " + state.upper(), "N/A")
         for filename, (label, value) in values.items():
             color = "#6e7781" if totals is None else (
                 "#d73a49" if filename.endswith("fail") and value else "#2da44e")
             self._write_badge(os.path.join(self.site_dir, f"badge-{filename}.svg"),
                               label, value, color)
-        for filename, label, arch in (("x86-vm-fail", "x86 VM", "x86_64"),
-                                      ("arm64-vm-fail", "ARM64 VM", "aarch64")):
-            status = totals["vm_status"][arch] if totals else "unavailable"
-            self._write_vm_badge(os.path.join(self.site_dir, f"badge-{filename}.svg"),
-                                 label, status)
 
     def _metadata_html(self, result: PublishedResult) -> str:
         run_url = html.escape(self.run_url, quote=True)
@@ -214,31 +155,13 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
         assets = html.escape(self.results[0].label, quote=True)
         reports = ""
         feature_rows = []
-        other_rows = []
-        functional_checks = {check for checks in features.FEATURES.values()
-                             for check in checks[1]}
 
         for result in self.results:
             link = html.escape(result.label, quote=True)
             label = html.escape(result.label)
             reports += f'<li><a href="{link}/">{label} report</a></li>'
             feature_rows.extend(result.data.get("features", []))
-            for test in result.data.get("tests", []):
-                if test.get("name") in functional_checks or test.get("name") in {
-                        "feature-coverage", "coverage-contract"}:
-                    continue
-                other_rows.append((result.label, test))
         feature_table = features.html_table(sorted(feature_rows, key=lambda row: row["feature"]))
-        other_body = "".join(
-            f'<tr><td>{html.escape(label)}</td><td>{html.escape(test["name"])}</td>'
-            f'<td class="{html.escape(test["status"].upper())}">{html.escape(test["status"].upper())}</td>'
-            f'<td>{html.escape(test.get("reason", ""))}</td></tr>'
-            for label, test in other_rows)
-        other_table = ('<h2>Other checks</h2><p>Internal build, setup, lifecycle and '
-                       'consumer checks are shown here; they are not feature badge totals.</p>'
-                       '<table><thead><tr><th>Report</th><th>Check</th><th>Status</th>'
-                       '<th>Reason</th></tr></thead><tbody>' + other_body +
-                       '</tbody></table>') if other_rows else ""
         page = f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(self.title)}</title><link rel="stylesheet" href="{assets}/results.css">
@@ -248,14 +171,13 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
 <h1>{html.escape(self.title)}</h1><p>Latest published result. See the
 <a href="{run_url}">GitHub Actions run</a> for the complete workflow log.</p>
 {feature_table}
-{other_table}
 <h2>Run status</h2><table><thead><tr><th>Features PASS</th><th>Features FAIL</th>
-<th>x86 VM</th><th>ARM64 VM</th></tr></thead><tbody><tr>
+<th>x86 VM FAIL</th><th>ARM64 VM FAIL</th></tr></thead><tbody><tr>
 <td>{totals['passed']}</td><td>{totals['failed']}</td>
-<td>{totals['vm_status']['x86_64']}</td>
-<td>{totals['vm_status']['aarch64']}</td></tr></tbody></table>
-<p>VM status is completed, partial, failed, or unavailable. Unexecuted features
-are not counted as regressions.</p>
+<td>{totals['infrastructure']['x86_64']}</td>
+<td>{totals['infrastructure']['aarch64']}</td></tr></tbody></table>
+<p>A VM failure means that architecture could not execute its functional tests.
+Unexecuted features are not counted as regressions.</p>
 <h2>Reports</h2><ul>{reports}</ul>
 </body></html>'''
 

@@ -14,13 +14,11 @@ class ResultSiteTest(unittest.TestCase):
 
     @staticmethod
     def _write_result(directory: str, revision: str, failed: int = 0,
-                      arch: str = "x86_64", infrastructure: str = "",
-                      vm_status: str = "completed") -> None:
+                      arch: str = "x86_64", infrastructure: str = "") -> None:
         os.makedirs(directory)
         data = {
             "finished_at": "2026-09-06T12:00:00+00:00",
             "architecture": arch,
-            "vm_status": vm_status,
             "features": [
                 {"feature": "aer", "arch": arch, "PASS": int(not failed),
                  "FAIL": int(bool(failed)), "N/A": 0, "reason": "result",
@@ -68,9 +66,7 @@ class ResultSiteTest(unittest.TestCase):
                 page = stream.read()
 
             badges = {}
-            for outcome in ("feature-pass", "feature-fail", "kernel-pass",
-                            "kernel-fail", "kernel-skip", "rasdaemon-pass",
-                            "rasdaemon-fail", "rasdaemon-skip", "x86-vm-fail",
+            for outcome in ("feature-pass", "feature-fail", "x86-vm-fail",
                             "arm64-vm-fail"):
                 path = os.path.join(site_dir, f"badge-{outcome}.svg")
                 with open(path, encoding="utf-8") as stream:
@@ -81,9 +77,8 @@ class ResultSiteTest(unittest.TestCase):
         self.assertIn("features PASS: 1", badges["feature-pass"])
         self.assertIn("#2da44e", badges["feature-pass"])
         self.assertIn("features FAIL: 0", badges["feature-fail"])
-        self.assertIn("x86 VM: completed", badges["x86-vm-fail"])
-        self.assertIn("ARM64 VM: unavailable", badges["arm64-vm-fail"])
-        self.assertIn(">●</text>", badges["x86-vm-fail"])
+        self.assertIn("x86 VM FAIL: 0", badges["x86-vm-fail"])
+        self.assertIn("ARM64 VM FAIL: 0", badges["arm64-vm-fail"])
         self.assertIn('width="40" height="20"', badges["feature-pass"])
 
     def test_multiple_results_are_aggregated_and_linked(self) -> None:
@@ -134,24 +129,7 @@ class ResultSiteTest(unittest.TestCase):
                       encoding="utf-8") as stream:
                 vm_badge = stream.read()
         self.assertIn("features FAIL: 0", feature_badge)
-        self.assertIn("ARM64 VM: failed", vm_badge)
-        self.assertIn(">✕</text>", vm_badge)
-
-    def test_partial_vm_has_yellow_open_circle(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            result_dir = os.path.join(temporary, "arm")
-            site_dir = os.path.join(temporary, "site")
-            self._write_result(result_dir, "d" * 40, arch="aarch64",
-                               vm_status="partial", infrastructure="timeout")
-            ResultSite("Daily", site_dir, "https://example.test/run",
-                       "https://example.test/source", "failure",
-                       [PublishedResult("aarch64", result_dir)]).write()
-            with open(os.path.join(site_dir, "badge-arm64-vm-fail.svg"),
-                      encoding="utf-8") as stream:
-                badge = stream.read()
-        self.assertIn("ARM64 VM: partial", badge)
-        self.assertIn(">○</text>", badge)
-        self.assertIn("#bf8700", badge)
+        self.assertIn("ARM64 VM FAIL: 1", vm_badge)
 
     def test_invalid_source_revision_is_rejected(self) -> None:
         """Never place arbitrary artifact text into a source link."""
@@ -173,21 +151,16 @@ class ResultSiteTest(unittest.TestCase):
 
             badges = []
 
-            for name in ("feature-pass", "feature-fail", "kernel-pass",
-                         "kernel-fail", "kernel-skip", "rasdaemon-pass",
-                         "rasdaemon-fail", "rasdaemon-skip", "x86-vm-fail",
+            for name in ("feature-pass", "feature-fail", "x86-vm-fail",
                          "arm64-vm-fail"):
                 with open(os.path.join(site_dir, f"badge-{name}.svg"),
                           encoding="utf-8") as stream:
                     badges.append(stream.read())
 
-        self.assertEqual(len(badges), 10)
+        self.assertEqual(len(badges), 4)
 
-        for badge in badges[:8]:
+        for badge in badges:
             self.assertIn(">N/A</text>", badge)
-            self.assertIn("#6e7781", badge)
-        for badge in badges[8:]:
-            self.assertIn("unavailable", badge)
             self.assertIn("#6e7781", badge)
 
 

@@ -113,10 +113,7 @@ class ConsumerChecks:
             commands = [["systemctl", "start", "postgresql"],
                         ["runuser", "-u", "postgres", "--", "psql", "-v", "ON_ERROR_STOP=1",
                          "-c", "CREATE USER ras_ci WITH PASSWORD 'ras_ci';"],
-                        ["runuser", "-u", "postgres", "--", "createdb", "-O", "ras_ci", "ras_ci"],
-                        ["runuser", "-u", "postgres", "--", "psql", "-v", "ON_ERROR_STOP=1",
-                         "-d", "ras_ci", "-c",
-                         "CREATE SCHEMA ras_ci AUTHORIZATION ras_ci;"]]
+                        ["runuser", "-u", "postgres", "--", "createdb", "-O", "ras_ci", "ras_ci"]]
             environment.update(RAS_PG_HOST="127.0.0.1", RAS_PG_USER="ras_ci",
                                RAS_PG_PASSWORD="ras_ci", RAS_PG_DATABASE="ras_ci",
                                RAS_PG_SCHEMA="ras_ci")

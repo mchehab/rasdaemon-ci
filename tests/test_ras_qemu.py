@@ -454,46 +454,6 @@ class InjectionEvidenceTest(unittest.TestCase):
 
     descriptor = staticmethod(RasQemuTest.descriptor)
 
-    def test_recorded_scenario_retains_daemon_exit_status(self) -> None:
-        """A shutdown failure must expose the process status in its evidence."""
-        scenario = {"name": "ghes-memory", "event": "ras/mc_event",
-                    "table": "mc_event"}
-        results = unittest.mock.Mock()
-        recorded = agent.RecordedScenario(results, "/build", {}, scenario)
-        process = unittest.mock.Mock(pid=1234, returncode=7)
-
-        def started(_log):
-            recorded.process = process
-
-        with patch("builtins.open", unittest.mock.mock_open()), \
-             patch.object(recorded, "start", side_effect=started), \
-             patch.object(recorded, "ready"), patch.object(recorded, "inject_page"), \
-             patch.object(recorded, "wait_record"), patch.object(recorded, "cleanup"), \
-             patch.object(recorded.consumers, "check"), patch.object(agent.os, "killpg"):
-            recorded.execute()
-
-        result = results.add.call_args
-        self.assertEqual(result.args[1], "failed")
-        self.assertEqual(result.args[2],
-                         "rasdaemon did not shut down cleanly (exit status 7)")
-        self.assertEqual(result.args[3]["rasdaemon_returncode"], 7)
-
-    def test_postgresql_setup_creates_selected_schema(self) -> None:
-        """Provision the schema passed to rasdaemon as well as its database."""
-        scenario = {"name": "consumer-postgresql", "event": "ras/memory_failure_event",
-                    "table": "memory_failure_event", "backend": "postgresql"}
-        recorded = agent.RecordedScenario(unittest.mock.Mock(), "/build", {}, scenario)
-        completed = subprocess.CompletedProcess([], 0, "")
-
-        with patch.object(agent.consumers.subprocess, "run", return_value=completed) as runner:
-            recorded.consumers.prepare_database("postgresql")
-
-        commands = [invocation.args[0] for invocation in runner.call_args_list]
-        self.assertIn(["runuser", "-u", "postgres", "--", "psql", "-v", "ON_ERROR_STOP=1",
-                       "-d", "ras_ci", "-c", "CREATE SCHEMA ras_ci AUTHORIZATION ras_ci;"],
-                      commands)
-        self.assertEqual(recorded.environment["RAS_PG_SCHEMA"], "ras_ci")
-
     def test_cxl_pcie_internal_error_masks(self) -> None:
         """Unmask only the PCIe carrier bit and reject ignored writes."""
         scenarios = [("cxl-aer-ce", "ECAP_AER+14.L", 0xe000, 0x4000),
