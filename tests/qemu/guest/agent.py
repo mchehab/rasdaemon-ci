@@ -45,6 +45,13 @@ class Results:
 
     def __init__(self):
         self.tests = []
+        self.started = {}
+
+    def start(self, name):
+        """Record an actual test boundary once, before doing its work."""
+        if name not in self.started:
+            self.started[name] = time.monotonic()
+            self.progress(f"Test {name} started")
 
     def add(self, name, status, reason="", evidence=None, duration=0.0,
             kernel=None, rasdaemon=None):
@@ -70,19 +77,23 @@ class Results:
             "rasdaemon": rasdaemon if rasdaemon is not None else verdict,
         })
         print("ras-qemu-result: " + json.dumps(self.tests[-1], sort_keys=True), flush=True)
-        self.progress(f"{name} {status}")
+        elapsed = duration or (time.monotonic() - self.started.get(name, time.monotonic()))
+        self.progress(f"Test {name} finished: {verdict}; duration={max(0, elapsed):.3f}s; "
+                      f"reason={reason or 'completed'}")
+        self.started.pop(name, None)
 
     @classmethod
     def progress(cls, message: str) -> None:
         """Write a short status line to the retained guest serial console."""
         cls.phase = message
-        print("ras-qemu-agent: %s" % message, flush=True)
+        stamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        print(f"[{stamp}] [{os.uname().machine}] ras-qemu-agent: {message}", flush=True)
 
     def command(self, name, command, cwd=None, timeout=300, required=True,
                 environment=None, expected_returncodes=(0,), kernel=None,
                 rasdaemon=None):
         started = time.monotonic()
-        self.progress("starting %s" % name)
+        self.start(name)
         env = os.environ.copy()
         if environment:
             env.update(environment)
@@ -94,9 +105,12 @@ class Results:
             )
         except (OSError, subprocess.TimeoutExpired) as error:
             status = "failed" if required else "skipped"
-            self.add(name, status, str(error), duration=time.monotonic() - started,
+            output = getattr(error, "stdout", "") or ""
+            if isinstance(output, bytes):
+                output = output.decode("utf-8", errors="replace")
+            self.add(name, status, str(error), evidence={"command": command, "output": output},
+                     duration=time.monotonic() - started,
                      kernel=kernel, rasdaemon=rasdaemon)
-            self.progress("%s %s: %s" % (name, status, error))
             return False
         evidence = {
             "command": command,
@@ -108,13 +122,10 @@ class Results:
             self.add(name, status, "command returned %d" % completed.returncode,
                      evidence, time.monotonic() - started, kernel=kernel,
                      rasdaemon=rasdaemon)
-            self.progress("%s %s (return code %d)" %
-                          (name, status, completed.returncode))
             return False
         self.add(name, "passed", evidence=evidence,
                  duration=time.monotonic() - started, kernel=kernel,
                  rasdaemon=rasdaemon)
-        self.progress("%s passed" % name)
         return True
 
     def document(self, profile):
@@ -323,6 +334,7 @@ def mce_rows(database: str) -> list[dict]:
 
 def mce_memory_smoke(results, build, environment):
     """Receive a host-injected x86 MCE and verify real rasdaemon."""
+    results.start("mce-hardware-first")
     trace_format = pathlib.Path(
         "/sys/kernel/tracing/events/mce/mce_record/format")
     trace_event = pathlib.Path(
@@ -478,6 +490,7 @@ def mce_memory_smoke(results, build, environment):
 
 def aer_smoke(results, build, environment):
     """Receive a QEMU PCIe AER error and verify real rasdaemon recording."""
+    results.start("aer-native")
     trace_format = pathlib.Path(
         "/sys/kernel/tracing/events/ras/aer_event/format")
     trace_event = pathlib.Path(
@@ -569,6 +582,7 @@ def aer_smoke(results, build, environment):
 
 def block_error_smoke(results, build, environment):
     """Trigger a real guest block EIO through QEMU's blkdebug backend."""
+    results.start("block-io-native")
     trace_root = pathlib.Path("/sys/kernel/tracing/events/block")
     candidates = [name for name in ("block_rq_error", "block_rq_complete")
                   if (trace_root / name / "format").is_file()]
@@ -737,6 +751,7 @@ def wait_daemon_ready(process: subprocess.Popen, log_path: str,
                       for event in events)
 
         if database_ready and listening and enabled:
+            Results.progress(f"rasdaemon ready: pid={process.pid}; backend={backend}")
             return
 
         time.sleep(0.2)
@@ -1187,6 +1202,7 @@ class RecordedScenario:
         started = time.monotonic()
         name = self.scenario["name"]
         status, reason = "passed", ""
+        self.results.start(name)
 
         try:
             with open(self.paths["log"], "w", encoding="utf-8") as log:
@@ -1242,6 +1258,7 @@ class RecordedScenario:
 
 def daemon_smoke(results, build, environment):
     """Verify trace discovery, recording setup, and normal signal shutdown."""
+    results.start("daemon-lifecycle")
     binary = build / "rasdaemon"
     database = pathlib.Path(environment["RAS_SQLITE3_DATABASE"])
     database.parent.mkdir(parents=True, exist_ok=True)
@@ -1328,6 +1345,8 @@ def installed_interface_smoke(results, environment):
 def execute(profile):
     """Execute the selected test profile."""
     results = Results()
+    results.progress(f"Guest userspace ready; running kernel {os.uname().release}")
+    results.start("payload")
     try:
         payload = mount_payload()
     except RuntimeError as error:
@@ -1375,6 +1394,10 @@ def execute(profile):
                 return results
         if not ensure_tracefs(results):
             return results
+        revision_path = payload / "source-revision"
+        revision = revision_path.read_text().strip() if revision_path.is_file() else "unknown"
+        version = run([str(build / "rasdaemon"), "--version"], timeout=10)
+        results.progress(f"rasdaemon payload version={version.stdout.strip()}; source HEAD={revision}")
         environment = safe_environment(WORK_DIR / "ras-mce.db")
         if profile == "fuzz":
             scenario = {"name": "fuzz", "event": "ras/non_standard_event",
@@ -1452,6 +1475,9 @@ def main():
                 payload.rmdir()
     results = execute(profile)
     document = results.document(profile)
+    results.progress(f"Suite {profile} finished: " + ", ".join(
+        f"{status}={sum(test['status'] == status for test in results.tests)}"
+        for status in ("passed", "failed", "skipped")))
     RESULT_PORT.parent.mkdir(parents=True, exist_ok=True)
     deadline = time.monotonic() + 60
     while not RESULT_PORT.exists() and time.monotonic() < deadline:

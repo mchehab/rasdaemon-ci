@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-only
 import importlib.util
+import contextlib
+import io
 import json
 import os
 import pathlib
@@ -8,6 +10,7 @@ import re
 import struct
 import subprocess
 import tempfile
+import types
 import unittest
 from unittest.mock import patch
 
@@ -43,6 +46,66 @@ class RasQemuTest(unittest.TestCase):
     def test_architecture_aliases(self):
         self.assertEqual(ras_qemu.architecture_name("amd64"), "x86_64")
         self.assertEqual(ras_qemu.architecture_name("arm64"), "aarch64")
+
+    def test_progress_filters_noise_and_buffers_incomplete_lines(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            vm = ras_qemu.VirtualMachine(self.descriptor(), "x86_64", "tcg",
+                                        root / "image", root, root, 10)
+            vm.watchdog.start()
+            vm.console_path.write_text("noise\nras-qemu-agent: heartbeat\nLinux version 7.test\n"
+                                       "ras-qemu-agent: Test example sta")
+            with contextlib.redirect_stderr(io.StringIO()) as output:
+                vm._print_guest_progress()
+                self.assertIn("Linux version 7.test", output.getvalue())
+                self.assertNotIn("heartbeat", output.getvalue())
+                self.assertNotIn("noise", output.getvalue())
+                self.assertNotIn("Test example", output.getvalue())
+                with vm.console_path.open("a") as stream:
+                    stream.write("rted\n")
+                vm._print_guest_progress()
+                self.assertIn("Test example started", output.getvalue())
+
+    def test_timeout_report_retains_pass_and_skips_pending_baseline(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            args = types.SimpleNamespace(arch="x86_64", cache_dir=root,
+                                         accelerator="tcg", profile="baseline",
+                                         source_dir=root, result_dir=root / "results",
+                                         work_dir=None, timeout=12, quiet=True, dry_run=False)
+            descriptor = self.descriptor()
+            descriptor["image"]["sha256"] = ""
+            checks = [ras_qemu.Check(name, True, "available", str(root / "image"))
+                      for name in ("qemu", "qemu-img", "image", "tcg")]
+            captured = {}
+
+            def fail_run(machine):
+                machine.console_path.write_text('ras-qemu-result: ' + json.dumps({
+                    "name": "payload", "status": "passed", "reason": "done",
+                    "evidence": {}, "kernel": "N/A", "rasdaemon": "N/A",
+                    "duration_seconds": 1}) + '\n')
+                machine.watchdog.active_tests.add("daemon-lifecycle")
+                raise ras_qemu.LabError("Timeout after 12s: result incomplete")
+
+            def capture(document, directory):
+                captured.update(document.data)
+                # Match write's totals contract without exercising HTML here.
+                captured["totals"] = document.data["totals"] = {"failed": 1}
+                return str(directory / "results.json")
+
+            with patch.object(ras_qemu.CapabilityProbe, "inspect", return_value=checks), \
+                    patch.object(ras_qemu.features, "feature_inventory", return_value=[]), \
+                    patch.object(ras_qemu.VirtualMachine, "prepare"), \
+                    patch.object(ras_qemu.VirtualMachine, "command", return_value=["qemu"]), \
+                    patch.object(ras_qemu.VirtualMachine, "run", fail_run), \
+                    patch.object(ras_qemu.ResultDocument, "write", capture), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(ras_qemu.run_test(args, {"architectures": {"x86_64": descriptor}}), 1)
+            tests = {test["name"]: test for test in captured["tests"]}
+            self.assertEqual(tests["payload"]["status"], "passed")
+            self.assertEqual(tests["daemon-lifecycle"]["status"], "failed")
+            self.assertEqual(tests["database-json"]["status"], "skipped")
+            self.assertIn("Timeout after 12s", tests["database-json"]["reason"])
 
     def test_optional_build_feature_is_recorded_as_not_applicable(self):
         """An unsupported device must not turn its retained build check red."""

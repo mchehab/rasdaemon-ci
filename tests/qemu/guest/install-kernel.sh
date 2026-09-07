@@ -4,6 +4,7 @@
 set -o pipefail
 
 release=${1:?kernel release is required}
+echo "Provisioning: installing kernel $release"
 payload=/mnt/payload
 
 test -f "$payload/vmlinuz-$release"
@@ -27,7 +28,9 @@ install -D -m 0755 "$payload/guest/select-kernel.sh" \
 ln -sf bootstrap.sh /usr/local/libexec/ras-qemu-agent
 
 depmod "$release"
+echo "Provisioning: initramfs generation started for $release"
 update-initramfs -c -k "$release"
+echo "Provisioning: initramfs generation finished for $release"
 /usr/local/libexec/select-kernel.sh "$release"
 systemctl enable ras-qemu-agent.service
 systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target \

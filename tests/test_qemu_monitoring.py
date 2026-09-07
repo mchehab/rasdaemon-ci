@@ -8,6 +8,7 @@ import json
 import os
 import re
 import socket
+import subprocess
 import tempfile
 import types
 import unittest
@@ -81,8 +82,27 @@ class ResultTableTest(unittest.TestCase):
         with contextlib.redirect_stdout(output):
             agent.Results().add("payload", "passed")
 
-        self.assertIn("ras-qemu-agent: payload passed\n", output.getvalue())
+        self.assertIn("ras-qemu-agent: Test payload finished: PASS;", output.getvalue())
         self.assertIn("ras-qemu-result:", output.getvalue())
+
+    def test_command_timeout_keeps_partial_output(self):
+        results = agent.Results()
+        error = subprocess.TimeoutExpired(["slow"], 1, output=b"work completed so far\n")
+        with patch.object(agent.subprocess, "run", side_effect=error), \
+                contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertFalse(results.command("slow-check", ["slow"], timeout=1))
+        self.assertEqual(results.tests[0]["evidence"]["output"], "work completed so far\n")
+        self.assertEqual(results.tests[0]["evidence"]["command"], ["slow"])
+        self.assertIn("Test slow-check started", output.getvalue())
+        self.assertIn("Test slow-check finished: FAIL", output.getvalue())
+
+    def test_planned_checks_include_baseline_and_consumers(self):
+        baseline = ras_qemu.features.planned_tests("baseline", "x86_64", [])
+        self.assertIn("systemd-service-stop", baseline)
+        arm = ras_qemu.features.planned_tests("injection", "aarch64",
+                                            [{"name": "memory-failure"}])
+        self.assertIn("consumer-database-report", arm)
+        self.assertNotIn("mce-hardware-first", arm)
 
     def test_kernel_precondition_skips_without_aborting_results(self) -> None:
         """A missing event must not prevent recording the next scenario."""

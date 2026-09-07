@@ -45,6 +45,8 @@ def main() -> None:
     parser.add_argument("--accelerator", choices=("auto", "kvm", "tcg"),
                         default="auto")
     parser.add_argument("--timeout", type=int, default=3600)
+    parser.add_argument("--verbose", "--verbose-console", "-v", action="store_true",
+                        help="show full guest serial output instead of lifecycle events only")
 
     args = parser.parse_args()
 
@@ -59,6 +61,8 @@ def main() -> None:
     image = f"ghcr.io/{owner}/rasdaemon-ci:{args.arch}"
     log(f"Pulling image {image}")
     command(["docker", "pull", image])
+    command(["docker", "image", "inspect", "--format",
+             "Image ID={{.Id}}; repository digests={{json .RepoDigests}}", image])
     os.makedirs(args.result_dir, exist_ok=True)
     docker_args = ["docker", "run", "--rm"]
     host_arch = os.uname().machine
@@ -87,6 +91,8 @@ def main() -> None:
     ])
 
     log("Starting test container")
+    if args.verbose:
+        docker_args.append("--verbose-console")
     command(docker_args)
 
     result_dir = os.path.realpath(args.result_dir)

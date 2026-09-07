@@ -161,6 +161,7 @@ class ErstCheck:
 
     def execute(self) -> None:
         """Report failures without preventing unrelated guest tests."""
+        self.results.start("erst-persistence")
         started = time.monotonic()
         status, reason = "passed", ""
         with tempfile.TemporaryDirectory(prefix="ras-erst-") as directory:

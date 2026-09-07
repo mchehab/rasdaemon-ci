@@ -190,3 +190,31 @@ def write_feature_table(directory: str, rows: list[dict]) -> str:
         stream.write("\n")
 
     return table
+
+
+def planned_tests(profile, arch, scenarios):
+    """Inventory of normal installed-payload checks for interrupted runs."""
+    names = ["payload", "install-payload", "tracefs"]
+    if profile == "baseline":
+        return names + ["daemon-lifecycle", "sqlite-schema", "rasdaemon-cli",
+                        "dimm-status", "database-json", "systemd-daemon-reload",
+                        "systemd-unit-verify", "systemd-service-start", "systemd-service-stop"]
+    if profile == "fuzz":
+        return names + ["fuzz", "fuzz-report"]
+    if profile != "injection":
+        return names
+    names += (["mce-hardware-first", "aer-native", "erst-persistence"]
+              if arch == "x86_64" else ["block-io-native"])
+    consumers = {
+        "memory-failure": ["consumer-abrt-report", "consumer-trigger",
+                           "consumer-poison-page-stat", "consumer-sqlite3",
+                           "consumer-database-report"],
+        "ghes-arm": ["consumer-cpu-fault-isolation", "arm-vendor-data"],
+        "ghes-aer": ["consumer-bmc-generic"],
+        "consumer-arm-sel": ["consumer-ampere-oem-sel", "consumer-openbmc-unified-sel"],
+    }
+    for scenario in scenarios:
+        name = scenario["name"]
+        if scenario_arch(name) == arch:
+            names.extend([name, *consumers.get(name, []), name + "-report"])
+    return list(dict.fromkeys(names))

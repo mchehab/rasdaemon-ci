@@ -42,6 +42,17 @@ class ConsumerChecks:
 
     def prepare(self) -> None:
         """Install an ABRT protocol sink and a real executable trigger in the VM."""
+        scenario = self.scenario.scenario
+        planned = {
+            "memory-failure": ["abrt-report", "trigger", "poison-page-stat", "sqlite3", "database-report"],
+            "ghes-arm": ["cpu-fault-isolation"],
+            "ghes-aer": ["bmc-generic"],
+            "consumer-arm-sel": ["ampere-oem-sel", "openbmc-unified-sel"],
+        }
+        for name in planned.get(scenario["name"], []):
+            self.scenario.results.start("consumer-" + name)
+        if scenario["name"] == "ghes-arm":
+            self.scenario.results.start("arm-vendor-data")
         backend = self.scenario.scenario.get("backend")
         if backend:
             self.prepare_database(backend)

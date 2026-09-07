@@ -108,6 +108,8 @@ test -n "$payload_uuid"
 cat >"$work/user-data" <<EOF
 #cloud-config
 package_update: true
+bootcmd:
+  - [sh, -c, 'echo "Provisioning: guest booted; package setup pending"']
 packages:
   - initramfs-tools
   - libpci3
@@ -128,6 +130,7 @@ packages:
   - python3-pymysql
   - python3-psycopg2
 runcmd:
+  - [sh, -c, 'echo "Provisioning: package setup finished; kernel installation starting"']
   - [ bash, -c, "set -euxo pipefail; device=\$(blkid -U '$payload_uuid'); test -b \"\$device\"; mkdir -p /mnt/payload; mount -o ro \"\$device\" /mnt/payload; bash /mnt/payload/guest/install-kernel.sh '$release'" ]
 power_state:
   mode: poweroff
@@ -181,6 +184,7 @@ timeout 30m "qemu-system-$arch" -machine "$machine,accel=$accel" -cpu "$cpu" \
 }
 
 marker="RASDAEMON_CI_PROVISIONING_COMPLETE=$release"
+echo "Provisioning: QEMU exited; checking completion marker"
 grep -F "$marker" "$console" || {
 	echo "guest provisioning marker is missing: $marker" >&2
 	tail -n 100 "$console" >&2
@@ -189,6 +193,7 @@ grep -F "$marker" "$console" || {
 
 mkdir -p "$(dirname "$output")"
 qemu-img convert -O qcow2 -c "$work/custom.qcow2" "$output"
+echo "Provisioning: compressed image ready: $output"
 sha256sum "$output" >"$output.sha256"
 printf '%s\n' "$base_url" >"$output.base-url"
 printf '%s\n' "$expected" >"$output.base-sha512"

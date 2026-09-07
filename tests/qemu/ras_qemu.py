@@ -8,6 +8,7 @@
 import argparse
 import dataclasses
 import datetime
+import functools
 import hashlib
 import html
 import json
@@ -24,6 +25,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import threading
 import time
 import uuid
 import xml.etree.ElementTree as ET
@@ -62,6 +64,22 @@ NON_TEXT_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 class LabError(RuntimeError):
     """A deterministic test-lab failure."""
+
+
+def injection_progress(method):
+    """Log the request and observed completion of every injection helper."""
+    @functools.wraps(method)
+    def wrapped(machine, *args, **kwargs):
+        name = args[0].get("name", method.__name__) if args and isinstance(args[0], dict) else method.__name__
+        machine.progress(f"Injection {name} requested")
+        try:
+            result = method(machine, *args, **kwargs)
+        except (LabError, OSError, subprocess.SubprocessError) as error:
+            machine.progress(f"Injection {name} failed: {error}")
+            raise
+        machine.progress(f"Injection {name} helper completed")
+        return result
+    return wrapped
 
 
 @dataclasses.dataclass
@@ -333,6 +351,7 @@ class GuestWatchdog:
         self.samples: list[dict] = []
         self.failure = ""
         self.pending = ""
+        self.active_tests = set()
 
     def start(self) -> None:
         """Start deadlines when QEMU starts, excluding payload build time."""
@@ -364,6 +383,10 @@ class GuestWatchdog:
                 self.timing["heartbeat"] = now
             elif "ras-qemu-agent: " in line:
                 phase = line.split("ras-qemu-agent: ", 1)[1]
+                if phase.startswith("Test ") and phase.endswith(" started"):
+                    self.active_tests.add(phase[5:-8])
+                elif phase.startswith("Test ") and " finished:" in phase:
+                    self.active_tests.discard(phase[5:].split(" finished:", 1)[0])
 
                 if phase != self.phase:
                     self.phase = phase
@@ -374,6 +397,15 @@ class GuestWatchdog:
         sample = {"elapsed": round(time.monotonic() - self.timing["start"], 1),
                   "reason": reason, "phase": self.phase}
         self.samples.append(sample)
+        if detailed:
+            sample["runner"] = {}
+            for filename in ("/proc/loadavg", "/proc/meminfo", "/proc/pressure/cpu",
+                             "/proc/pressure/memory", "/proc/pressure/io"):
+                try:
+                    sample["runner"][filename] = pathlib.Path(filename).read_text()
+                except OSError as error:
+                    sample["runner"][filename] = str(error)
+            sample["runner"]["disk"] = shutil.disk_usage(tempfile.gettempdir())._asdict()
 
         try:
             with QmpClient(self.qmp_path, timeout=2) as qmp:
@@ -417,9 +449,8 @@ class GuestWatchdog:
         sample = self.snapshot("periodic liveness", detailed=quiet > 60)
         status = sample.get("status", {}).get("status", "QMP-unresponsive")
         heartbeat_age = "not received" if heartbeat is None else f"{now - heartbeat:.0f}s"
-        print(f"[watchdog] qemu={status}; phase={self.phase}; phase-age={phase_age:.0f}s; "
-              f"console-idle={quiet:.0f}s; heartbeat-age={heartbeat_age}",
-              file=sys.stderr, flush=True)
+        sample.update(phase_age=round(phase_age, 1), console_idle=round(quiet, 1),
+                      heartbeat_age=heartbeat_age)
 
         if status in ("guest-panicked", "internal-error", "io-error", "shutdown", "paused", "suspended"):
             raise LabError(f"QEMU entered {status} during {self.phase}")
@@ -777,6 +808,11 @@ class VirtualMachine:
         self.qemu_log_path = self.work_dir / "qemu.log"
         self.qemu_log = None
         self.console_offset = 0
+        self.console_pending = ""
+        self.console_lock = threading.Lock()
+        self.progress_stop = threading.Event()
+        self.progress_thread = None
+        self.verbose_console = False
         self.overlay_path = self.work_dir / "overlay.qcow2"
         self.payload_dir = self.work_dir / "payload"
         self.block_image = self.work_dir / "block-error.raw"
@@ -846,13 +882,29 @@ class VirtualMachine:
               "--destdir", str(install)], None),
         ]
         for command, environment in commands:
-            completed = subprocess.run(
-                command, check=False, text=True, env=environment,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            )
+            self.progress("Payload command started: " + shlex.join(command))
+            started = time.monotonic()
+            log_path = self.work_dir / "payload-build.log"
+            with log_path.open("a", encoding="utf-8") as log:
+                log.write("\n$ " + shlex.join(command) + "\n")
+                log.flush()
+                completed = subprocess.Popen(
+                    command, text=True, env=environment, stdout=log,
+                    stderr=subprocess.STDOUT, start_new_session=True,
+                )
+                try:
+                    completed.wait(timeout=600)
+                except subprocess.TimeoutExpired as error:
+                    os.killpg(completed.pid, signal.SIGKILL)
+                    completed.wait(timeout=10)
+                    self.progress("Payload command interrupted: timeout after 600s")
+                    raise LabError("Payload build timeout after 600s: " +
+                                   shlex.join(command)) from error
+            self.progress(f"Payload command finished: exit={completed.returncode}; "
+                          f"duration={time.monotonic() - started:.1f}s")
             if completed.returncode:
                 raise LabError("host payload build failed: %s\n%s" %
-                               (" ".join(command), completed.stdout[-32768:]))
+                               (shlex.join(command), log_path.read_text()[-32768:]))
         config = (build / "config.h").read_text(encoding="utf-8")
         for macro in re.findall(r"^#mesondefine (HAVE_\w+)",
                                 (self.source_dir / "config.h.in").read_text(encoding="utf-8"),
@@ -869,6 +921,11 @@ class VirtualMachine:
                 "evidence": {"configuration": config},
             })
         archive = self.payload_dir / "rasdaemon-install.tar"
+        revision = subprocess.run(["git", "-C", str(self.source_dir), "rev-parse", "HEAD"],
+                                  check=False, text=True, stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE, timeout=10)
+        (self.payload_dir / "source-revision").write_text(
+            revision.stdout.strip() if revision.returncode == 0 else "unknown (not a Git checkout)")
         with tarfile.open(archive, "w") as stream:
             for entry in install.iterdir():
                 stream.add(entry, arcname=entry.name, recursive=True)
@@ -990,7 +1047,20 @@ class VirtualMachine:
             markers[match.group(1)] = values
         return markers
 
+    def progress(self, message):
+        """Emit an immediately visible, architecture-labelled lifecycle event."""
+        print(f"[{utc_now()}] [{self.arch}] {message}", file=sys.stderr, flush=True)
+
+    def _forward_progress(self):
+        """Keep console forwarding alive during blocking injection calls."""
+        while not self.progress_stop.wait(0.2):
+            self._print_guest_progress()
+
     def _print_guest_progress(self):
+        with self.console_lock:
+            self._read_guest_progress()
+
+    def _read_guest_progress(self):
         """Forward newly written guest-agent progress to the CI console."""
         try:
             with self.console_path.open("r", encoding="utf-8",
@@ -1002,14 +1072,19 @@ class VirtualMachine:
             return
         self.watchdog.observe(text)
 
-        for line in text.splitlines():
+        self.console_pending += text
+        lines = self.console_pending.split("\n")
+        self.console_pending = lines.pop()
+        for line in lines:
             line = ANSI_ESCAPE.sub("", line)
             line = NON_TEXT_CONTROL.sub("", line).replace("\r", "").strip()
-            if line:
-                if line.startswith("ras-qemu-result: "):
-                    continue
-                print("[guest-console] " + line,
-                      file=sys.stderr, flush=True)
+            if not line or "ras-qemu-agent: heartbeat" in line:
+                continue
+            if "ras-qemu-result: " in line:
+                continue
+            if (self.verbose_console or "ras-qemu-agent: " in line or
+                    "Linux version " in line or "Kernel panic" in line):
+                self.progress(line)
 
     def mce_ready_target(self):
         """Return the guest-selected bank and owned physical address."""
@@ -1029,7 +1104,8 @@ class VirtualMachine:
                 encoding="utf-8", errors="replace")
         except OSError:
             return False
-        return "ras-qemu-agent: payload passed" in console
+        return ("ras-qemu-agent: payload passed" in console or
+                "ras-qemu-agent: Test payload finished: PASS" in console)
 
     def wait_for_guest_boot(self, deadline):
         """Wait for the guest agent before attempting guest injections."""
@@ -1043,6 +1119,7 @@ class VirtualMachine:
             time.sleep(0.2)
         raise LabError(f"Timeout after {self.timeout}s: guest boot did not complete")
 
+    @injection_progress
     def inject_mce(self, physical, bank):
         """Inject a corrected hardware-first memory MCE through HMP/QMP."""
         # VAL|EN|MISCV|ADDRV with memory-controller MCACOD 0x90.  With UC
@@ -1069,6 +1146,7 @@ class VirtualMachine:
             "transcript": transcript,
         }
 
+    @injection_progress
     def inject_aer(self):
         """Inject a correctable error into the dedicated PCIe endpoint."""
         command_line = hmp_inject.aer_command("ras-aer", "BAD_DLLP", False)
@@ -1089,6 +1167,7 @@ class VirtualMachine:
             "transcript": transcript,
         }
 
+    @injection_progress
     def inject_scenario(self, scenario: dict) -> None:
         """Inject only after the matching guest consumer reports readiness."""
         name = scenario["name"]
@@ -1254,10 +1333,14 @@ class VirtualMachine:
             stderr=subprocess.STDOUT, start_new_session=True,
         )
         self.watchdog.start()
+        self.progress_stop.clear()
+        self.progress_thread = threading.Thread(target=self._forward_progress, daemon=True)
+        self.progress_thread.start()
         print("[guest] QEMU process started; waiting for guest boot",
               file=sys.stderr, flush=True)
         deadline = time.monotonic() + self.timeout
         payload = b""
+        complete = False
         client = None
         mce_injected = False
         aer_injected = False
@@ -1334,14 +1417,18 @@ class VirtualMachine:
                 payload += chunk
                 if b"\n" in payload:
                     payload = payload.split(b"\n", 1)[0]
+                    complete = True
                     break
+            if not complete and time.monotonic() >= deadline:
+                raise LabError(f"Timeout after {self.timeout}s: guest result document incomplete")
             if not payload:
                 if time.monotonic() >= deadline:
                     raise LabError(f"Timeout after {self.timeout}s: guest returned no result document")
                 raise LabError("guest returned no result document")
             qmp_evidence["scenarios"] = self.injection_evidence
             return json.loads(payload.decode("utf-8")), command, qmp_evidence
-        except (LabError, OSError, ValueError, subprocess.SubprocessError):
+        except (LabError, OSError, ValueError, subprocess.SubprocessError) as error:
+            self.progress(f"Guest interrupted: {error}; last phase={self.watchdog.phase}")
             self.watchdog.snapshot("failure before stopping QEMU", detailed=True)
             raise
         finally:
@@ -1351,6 +1438,11 @@ class VirtualMachine:
 
     def stop(self):
         """Stop only the process group created by this instance."""
+        self.progress_stop.set()
+        if self.progress_thread is not None:
+            self.progress_thread.join(timeout=3)
+            self.progress_thread = None
+        self._print_guest_progress()
         if self.fuzz_process is not None and self.fuzz_process.poll() is None:
             os.killpg(self.fuzz_process.pid, signal.SIGKILL)
             self.fuzz_process.wait(timeout=10)
@@ -1459,8 +1551,10 @@ def run_test(args, manifest):
             pathlib.Path(args.source_dir).resolve(), args.timeout, args.profile,
         )
         machine.fuzz_mode = getattr(args, "fuzz_mode", "random")
+        machine.verbose_console = getattr(args, "verbose_console", False)
         machine.fuzz_seed = getattr(args, "fuzz_seed", 1)
         try:
+            machine.progress(f"Image selected: {image}; SHA256={descriptor['image'].get('sha256') or 'not supplied'}")
             if not args.quiet:
                 print("Preparing guest and building rasdaemon payload",
                       file=sys.stderr, flush=True)
@@ -1512,7 +1606,8 @@ def run_test(args, manifest):
                         if "ras-qemu-result: " in line:
                             try:
                                 test = json.loads(line.split("ras-qemu-result: ", 1)[1])
-                                document.add_guest_test(test)
+                                if test["name"] not in {item["name"] for item in document.data["tests"]}:
+                                    document.add_guest_test(test)
                             except (ValueError, KeyError, TypeError):
                                 pass
 
@@ -1522,16 +1617,14 @@ def run_test(args, manifest):
             })
             document.data["tests"][-1].update(kernel="FAIL" if machine.watchdog.failure else "SKIP",
                                                rasdaemon="SKIP")
-            expected = [scenario["name"] for scenario in machine.scenarios]
-            expected += [name for name in ("mce-hardware-first", "aer-native", "block-io-native")
-                         if features.scenario_arch(name) == args.arch]
-            expected = ["fuzz"] if args.profile == "fuzz" else expected
+            expected = features.planned_tests(args.profile, args.arch, machine.scenarios)
             reported = {test["name"] for test in document.data["tests"]}
 
-            if args.profile in ("injection", "fuzz"):
+            if args.profile in ("baseline", "injection", "fuzz"):
                 for name in expected:
                     if name not in reported:
-                        active = machine.watchdog.phase.startswith(name)
+                        active = (machine.watchdog.phase.startswith(name) or
+                                  name in machine.watchdog.active_tests)
                         status = "failed" if active else "skipped"
                         reason = (str(error) if active else
                                   f"Not run after guest/infrastructure failure: {error}")
@@ -1545,7 +1638,7 @@ def run_test(args, manifest):
             apply_injection_failures(document.data["tests"], machine.injection_evidence)
 
             result_dir.mkdir(parents=True, exist_ok=True)
-            for filename in ("fuzz.log", "fuzz-corpus.jsonl"):
+            for filename in ("fuzz.log", "fuzz-corpus.jsonl", "payload-build.log"):
                 source = os.path.join(machine.work_dir, filename)
 
                 if os.path.isfile(source):
@@ -1559,6 +1652,7 @@ def run_test(args, manifest):
         print("Retained console: %s" % (result_dir / "console.log"),
               file=sys.stderr, flush=True)
     path = document.write(result_dir)
+    machine.progress(f"Results ready: {path}; totals={document.data['totals']}")
     if not args.quiet:
         print(path)
     return 1 if document.data["totals"]["failed"] else 0
@@ -1595,6 +1689,8 @@ def create_parser(manifest):
         help="rasdaemon source checkout to build and test")
     run.add_argument("--work-dir", help="parent for disposable VM data")
     run.add_argument("--timeout", type=int, default=900)
+    run.add_argument("--verbose-console", action="store_true",
+                     help="stream full guest serial output instead of lifecycle events only")
     run.add_argument("--dry-run", action="store_true")
     run.add_argument("--quiet", action="store_true")
     return parser
