@@ -973,10 +973,10 @@ class VirtualMachine:
             "-qmp", "unix:%s,server=on,wait=off" % self.qmp_path,
             "-serial", "file:%s" % self.console_path,
             "-drive", "file=%s,if=none,id=ras-os,format=qcow2" % self.overlay_path,
-            "-device", "virtio-blk-pci,drive=ras-os,bus=pcie.0,addr=0x2,bootindex=1",
+            "-device", "virtio-blk-pci,drive=ras-os,bus=pcie.0",
             "-drive", "file=fat:ro:%s,if=none,id=ras-payload,format=raw,readonly=on" %
             self.payload_dir,
-            "-device", "virtio-blk-pci,drive=ras-payload,bus=pcie.0,addr=0x3",
+            "-device", "virtio-blk-pci,drive=ras-payload,bus=pcie.0",
             "-device", "virtio-serial-pci,bus=pcie.0",
             "-chardev", "socket,id=ras-result,path=%s,server=on,wait=off" %
                         self.result_path,

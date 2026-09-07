@@ -6,6 +6,7 @@ import datetime
 import os
 import shutil
 import subprocess
+import sys
 from typing import Any
 
 
@@ -45,8 +46,10 @@ def main() -> None:
     parser.add_argument("--accelerator", choices=("auto", "kvm", "tcg"),
                         default="auto")
     parser.add_argument("--timeout", type=int, default=3600)
-    parser.add_argument("--verbose", "--verbose-console", "-v", action="store_true",
+    parser.add_argument("-v", "--verbose-console", action="store_true",
                         help="show full guest serial output instead of lifecycle events only")
+    parser.add_argument("--image-harness", action="store_true",
+                        help="use the tests embedded in the image instead of this checkout")
 
     args = parser.parse_args()
 
@@ -65,6 +68,17 @@ def main() -> None:
              "Image ID={{.Id}}; repository digests={{json .RepoDigests}}", image])
     os.makedirs(args.result_dir, exist_ok=True)
     docker_args = ["docker", "run", "--rm"]
+    local_harness = not args.image_harness
+    if local_harness:
+        harness = os.path.join(os.path.dirname(os.path.realpath(__file__)), "tests", "qemu")
+        entrypoint = os.path.join(harness, "oci", "rasdaemon-ci.py")
+        if not os.path.isfile(entrypoint):
+            raise SystemExit("Local harness missing; run from a complete checkout or use --image-harness")
+        log("Using this checkout's test harness with the published guest and QEMU")
+        docker_args.extend([
+            "-v", f"{harness}:/opt/rasdaemon-ci/harness:ro",
+            "--entrypoint", "python3",
+        ])
     host_arch = os.uname().machine
     compatible_architectures = {
         "x86_64": {"x86_64", "amd64"},
@@ -84,16 +98,38 @@ def main() -> None:
     docker_args.extend([
         "-v", f"{source}:/workspace:ro",
         "-v", f"{os.path.realpath(args.result_dir)}:/results",
-        image, "run", "--arch", args.arch,
+        image,
+    ])
+    if local_harness:
+        docker_args.append("/opt/rasdaemon-ci/harness/oci/rasdaemon-ci.py")
+    docker_args.extend([
+        "run", "--arch", args.arch,
         "--accelerator", args.accelerator,
         "--profile", args.profile,
         "--timeout", str(args.timeout),
     ])
 
-    log("Starting test container")
-    if args.verbose:
+    if args.verbose_console and local_harness:
         docker_args.append("--verbose-console")
-    command(docker_args)
+    elif args.verbose_console:
+        help_result = subprocess.run(
+            ["docker", "run", "--rm", image, "run", "--help"],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            check=True,
+        )
+        if "--verbose-console" in help_result.stdout:
+            docker_args.append("--verbose-console")
+        else:
+            log("This image predates --verbose-console; running with its default "
+                "logging. Full serial output will be retained in console.log. "
+                "Rebuild the image to enable live verbose console output.")
+    log("Starting test container")
+    try:
+        command(docker_args)
+        status = 0
+    except subprocess.CalledProcessError as error:
+        status = error.returncode
+        log(f"Test container finished with exit status {status}; inspect the retained results")
 
     result_dir = os.path.realpath(args.result_dir)
     log(f"Test results are available in {result_dir}")
@@ -102,6 +138,8 @@ def main() -> None:
         result = os.path.join(result_dir, name)
         if os.path.isfile(result):
             log(f"  {result}")
+    if status:
+        sys.exit(status)
 
 
 if __name__ == "__main__":

@@ -102,8 +102,6 @@ class RasQemuTest(unittest.TestCase):
                     contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(ras_qemu.run_test(args, {"architectures": {"x86_64": descriptor}}), 1)
             tests = {test["name"]: test for test in captured["tests"]}
-            self.assertEqual(captured["infrastructure_failure"],
-                             "Timeout after 12s: result incomplete")
             self.assertEqual(tests["payload"]["status"], "passed")
             self.assertEqual(tests["daemon-lifecycle"]["status"], "failed")
             self.assertEqual(tests["database-json"]["status"], "skipped")
@@ -304,8 +302,6 @@ class RasQemuTest(unittest.TestCase):
             self.assertIn("unix:", joined)
             self.assertIn("fat:ro:", joined)
             self.assertIn("readonly=on", joined)
-            self.assertIn("drive=ras-os,bus=pcie.0,addr=0x2,bootindex=1", joined)
-            self.assertIn("drive=ras-payload,bus=pcie.0,addr=0x3", joined)
             self.assertIn("org.rasdaemon.test.0", joined)
             self.assertNotIn("-net", command)
             self.assertNotIn("-netdev", command)

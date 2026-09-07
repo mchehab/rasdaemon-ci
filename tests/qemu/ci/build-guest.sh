@@ -179,12 +179,9 @@ echo "guest provisioning accelerator: $accel"
 timeout 30m "qemu-system-$arch" -machine "$machine,accel=$accel" -cpu "$cpu" \
 	"${firmware[@]}" -m 2048 -smp 2 -display none \
 	-no-reboot -monitor none -serial stdio \
-	-drive "file=$work/custom.qcow2,if=none,id=ras-os,format=qcow2" \
-	-device virtio-blk-pci,drive=ras-os,bus=pcie.0,addr=0x2,bootindex=1 \
-	-drive "file=$work/seed.iso,if=none,id=ras-seed,format=raw,readonly=on" \
-	-device virtio-blk-pci,drive=ras-seed,bus=pcie.0,addr=0x3 \
-	-drive "file=$payload_image,if=none,id=ras-payload,format=raw,readonly=on" \
-	-device virtio-blk-pci,drive=ras-payload,bus=pcie.0,addr=0x4 \
+	-drive "file=$work/custom.qcow2,if=virtio,format=qcow2" \
+	-drive "file=$work/seed.iso,if=virtio,format=raw,readonly=on" \
+	-drive "file=$payload_image,if=virtio,format=raw,readonly=on" \
 	-nic user,model=virtio </dev/null 2>&1 | tee "$console" || {
 	echo "guest provisioning failed" >&2
 	tail -n 100 "$console" >&2 || true
