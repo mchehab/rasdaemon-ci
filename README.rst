@@ -227,11 +227,6 @@ architecture. The runtime ownership/check mapping is in
      - aarch64
      - Implemented
      - Shared isolation mechanism checked by page and row PFA consumers.
-   * - pcie-edpc
-     - x86_64
-     - Not implemented
-     - Needs a DPC-capable emulated port and assertions on its control register;
-       the current QEMU test topology does not provide that capability (N/A).
    * - poison-page-stat (internal)
      - aarch64
      - Implemented
@@ -240,11 +235,6 @@ architecture. The runtime ownership/check mapping is in
      - x86_64
      - Implemented
      - Real PostgreSQL service, recording backend and installed CLI readback.
-   * - reri
-     - riscv64
-     - Not possible
-     - QEMU currently has no RERI event producer or injection mechanism. The
-       feature is therefore reported as N/A until QEMU can simulate it.
    * - signal
      - aarch64
      - Implemented
@@ -261,11 +251,6 @@ architecture. The runtime ownership/check mapping is in
      - aarch64
      - Partial
      - Yitian DDR fixture and register dump; other event types remain.
-   * - debug-sql (internal)
-     - aarch64
-     - Not implemented
-     - No functional test or producer is assigned; SQL debug logging is not
-       currently simulated.
 
 Except for the expanded HiSilicon valid-format corpus, the vendor fixtures
 above are representative checks, not exhaustive decoder
@@ -340,6 +325,11 @@ from the PASS/FAIL badge totals.
      - Not implemented (N/A)
      - QEMU currently has no RERI event producer or injection mechanism. This
        remains a planned RISC-V test once QEMU can provide one.
+   * - debug-sql (internal)
+     - aarch64
+     - Not implemented
+     - This is a debug feature that turns on SQL logs. It doesn't make sense
+       having a tester for it.
 
 A manually requested ``--dry-run`` also records the guest execution as N/A,
 because no VM is started by design. Daily runs do start the guest, so that
