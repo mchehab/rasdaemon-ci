@@ -66,12 +66,12 @@ Latest reports
 Functional feature implementation
 ---------------------------------
 
-The scope of RAS Daemon funcional tests CI is to use QEMU virtual machines
+The scope of RAS Daemon functional tests CI is to use QEMU virtual machines
 together with error injection code to verify that each functionality is
 working.
 
-The tables below show the scope of the RAS Daemon functional tests when
-comparing with it running on a real harware. There are three types of
+The tables below show the scope of the RAS Daemon functional tests compared
+with running it on real hardware. There are three types of
 feature check support:
 
 - **Implemented**
@@ -91,13 +91,19 @@ feature check support:
   Indicates that it is either not possible currently to test the feature
   or that testing it is out of the current scope.
 
+The daily HTML report first shows a feature-status summary, followed by run
+health for the x86_64 and aarch64 VMs. Its feature-coverage and ``Features not
+tested`` tables provide the individual checks and reasons for N/A results.
+N/A features and unavailable portions are excluded from PASS/FAIL regression
+totals; they do not indicate a failed test.
+
 .. list-table:: Implemented Feature tests
    :header-rows: 1
    :widths: 22 12 66
 
    * - Feature
      - Owner
-     - Implemented check / remaining work
+     - Implemented check
    * - abrt-report
      - aarch64
      - Receive and inspect the ABRT socket report for an injected memory failure.
@@ -124,7 +130,8 @@ feature check support:
      - Installed database-report CLI must return the injected record's fields.
    * - devlink
      - aarch64
-     - netdevsim health report and a software device's real TX watchdog timeout.
+     - netdevsim health report and a software device's real TX watchdog timeout;
+       these are software/device-model producers, not physical hardware faults.
    * - diskerror
      - aarch64
      - QEMU blkdebug I/O failure and matching block error record.
@@ -188,8 +195,9 @@ feature check support:
    * - cxl
      - x86_64
      - Media, DRAM, module, poison, overflow, AER and memory-sparing checks
-       exist. Sparing uses a real mailbox resource query. A generic event
-       producer remains to be implemented and is listed separately as N/A.
+       exist. Sparing uses a real mailbox resource query for an informational
+       event. A generic event producer remains to be implemented and is listed
+       separately as N/A.
    * - erst
      - x86_64
      - Load the x86 MCE ERST submodule, write/read a real ERST CPER, consume
@@ -208,14 +216,14 @@ feature check support:
        Execution and malformed-input coverage are not yet simulated.
    * - jaguar-ns-decode
      - aarch64
-     - Jaguar payload 0 fixture; additional payload layouts not implemented.
+     - Jaguar payload 0 fixture; additional payload layouts remain untested.
    * - nvidia-ns-decode
      - aarch64
      - NVIDIA non-standard fixture and decoded fields; broader format coverage
        remains to be audited.
    * - yitian-ns-decode
      - aarch64
-     - Yitian DDR fixture and register dump; other event types not implemented.
+     - Yitian DDR fixture and register dump; other event types remain untested.
 
 .. list-table:: Not implemented
    :header-rows: 1
@@ -223,7 +231,7 @@ feature check support:
 
    * - Feature
      - Owner
-     - Implemented check / remaining work
+     - Reason
    * - debug-sql (internal)
      - aarch64
      - No functional SQL debug-logging test is assigned.
@@ -231,12 +239,40 @@ feature check support:
      - x86_64
      - Needs a DPC-capable emulated port and assertions on its control register;
        the current QEMU test topology does not provide that capability.
+   * - cxl / cxl-generic
+     - x86_64
+     - The harness has no producer for a generic CXL event. The other CXL
+       event families remain covered by the Partial CXL checks.
    * - reri
      - riscv64
      - QEMU currently has no RERI event producer or injection mechanism. The
        feature remains a planned RISC-V test once QEMU can simulate it.
 
-Additional notes with regards to partial and not implemented scenarios
+QEMU test model
+---------------
+
+The injection profile exercises the real guest kernel, rasdaemon trace
+consumers, SQLite recording, and ``ras-mc-ctl`` reports. The scenarios are
+defined in ``tests/qemu/scenarios.json`` and include native MCE/AER, block-I/O
+errors, GHES/CPER, CXL mailbox and QMP events, guest hwpoison, SIGBUS, software
+EXTLOG, netdevsim health reports, and vendor decoder fixtures. The x86 VM can
+therefore exercise ARM CPER decoding, but this does not represent ARM CPU
+hardware.
+
+Each scenario waits for its required tracepoint and guest readiness before
+injection, then waits for the matching committed database row. Results retain
+decoded database data, daemon output, producer commands or QMP transcripts,
+and host/guest diagnostics. Missing drivers, disabled tracepoints, skipped
+required scenarios, and failed assertions are failures; unavailable producers
+are recorded as N/A.
+
+The kernel configuration requires GHES-to-EDAC, GHES PCIe AER, CXL, PCI, ACPI,
+memory and region support, with ``HWPOISON_INJECT=m`` for disposable-page
+tests. The guest uses ``ghes.edac_force_enable=1`` because QEMU is outside the
+physical-platform allowlist, and the payload enables all rasdaemon
+architectures so CPER consumers can be exercised on the x86 guest.
+
+Additional notes regarding partial and not implemented scenarios
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ERST scope
@@ -279,10 +315,10 @@ can be added.
 ARM reference platform
 ----------------------
 
-As ARM severs come with several flavors with different vendor features, the
+As ARM servers come with several flavors with different vendor features, the
 CI engine was set to emulate a Huawei TaiShan 2280 V2, board BC82AMDD, with
 two 64-core Kunpeng-920 processors and four NUMA nodes. Such servers have a
-firmware which exposes HEST, EINJ, ERST and BERT, among other ACPI tables.
+firmware that exposes HEST, EINJ, ERST and BERT, among other ACPI tables.
 No serial numbers, UUIDs, or raw host ACPI tables are used as test fixtures.
 
 The aarch64 VM remains QEMU's ``virt`` platform, with native host CPU support
