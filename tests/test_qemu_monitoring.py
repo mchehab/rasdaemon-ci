@@ -144,7 +144,7 @@ class ResultTableTest(unittest.TestCase):
         self.assertIn("&lt;script&gt;bad&lt;/script&gt;", page)
         self.assertIn("<h2>Component totals</h2>", page)
         self.assertIn('<tr><th>Kernel</th><td class="PASS">1</td>', page)
-        self.assertIn('<tr><th>rasdaemon</th><td class="PASS">0</td>', page)
+        self.assertIn('<tr><th>rasdaemon</th><td>0</td>', page)
         self.assertIn("| Kernel | 1 | 0 | 0 |", re.sub(r" +", " ", summary))
         self.assertIn("| rasdaemon | 0 | 1 | 0 |", re.sub(r" +", " ", summary))
         self.assertIn("🟢 PASS | 🔴 FAIL", summary)

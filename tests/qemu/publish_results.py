@@ -32,6 +32,7 @@ class PublishedResult:  # pylint: disable=R0903
         self.label = label
         self.directory = directory
         self.data = self._read_json("result.json")
+        self.data["features"] = features.add_known_gaps(self.data.get("features", []))
         self.revision = self._read_text("rasdaemon-source-revision")
 
         if not SOURCE_REVISION.fullmatch(self.revision):
@@ -205,9 +206,17 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
 
         heading = RESULT_HEADING + self._metadata_html(result)
         page = report.replace(RESULT_HEADING, heading, 1)
+        feature_start = page.find("<h2>Feature coverage</h2>")
+        component_start = page.find("<h2>Component totals</h2>", feature_start)
+        if feature_start >= 0 and component_start > feature_start:
+            page = (page[:feature_start] + features.html_table(result.data["features"]) +
+                    page[component_start:])
 
         with open(os.path.join(directory, "index.html"), "w", encoding="utf-8") as stream:
             stream.write(page)
+        with open(os.path.join(directory, "result.json"), "w", encoding="utf-8") as stream:
+            json.dump(result.data, stream, indent=2)
+            stream.write("\n")
 
     def _write_index(self, totals: dict) -> None:
         run_url = html.escape(self.run_url, quote=True)
@@ -228,7 +237,27 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
                         "feature-coverage", "coverage-contract"}:
                     continue
                 other_rows.append((result.label, test))
-        feature_table = features.html_table(sorted(feature_rows, key=lambda row: row["feature"]))
+        feature_rows = sorted(feature_rows, key=lambda row: row["feature"])
+        known_features = {row["feature"] for row in feature_rows}
+        for name, reason in features.UNSUPPORTED.items():
+            if name in known_features:
+                continue
+            owner = features.FEATURES[name][0]
+            feature_rows.append({"feature": name, "arch": owner, "PASS": 0,
+                                 "FAIL": 0, "N/A": 1, "reason": reason,
+                                 "checks": [], "untested": [{"check": name,
+                                                                  "reason": reason}]})
+        feature_rows.sort(key=lambda row: row["feature"])
+        feature_counts = {state: sum(int(bool(row.get(state, 0))) for row in feature_rows)
+                          for state in ("PASS", "FAIL", "N/A")}
+        feature_table = features.html_table(feature_rows)
+        summary_cells = "".join(
+            (f'<td class="{"NA" if state == "N/A" else state}">{feature_counts[state]}</td>'
+             if feature_counts[state] else f'<td>{feature_counts[state]}</td>')
+            for state in ("PASS", "FAIL", "N/A"))
+        feature_summary = ('<h2>Feature status summary</h2><table><thead><tr>'
+                           '<th>PASS</th><th>FAIL</th><th>N/A</th></tr></thead><tbody>'
+                           f'<tr>{summary_cells}</tr></tbody></table>')
         other_body = "".join(
             f'<tr><td>{html.escape(label)}</td><td>{html.escape(test["name"])}</td>'
             f'<td class="{html.escape(test["status"].upper())}">{html.escape(test["status"].upper())}</td>'
@@ -247,15 +276,16 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
  aria-label="Change color theme">◐ Auto</button>
 <h1>{html.escape(self.title)}</h1><p>Latest published result. See the
 <a href="{run_url}">GitHub Actions run</a> for the complete workflow log.</p>
-{feature_table}
-{other_table}
+{feature_summary}
 <h2>Run status</h2><table><thead><tr><th>Features PASS</th><th>Features FAIL</th>
-<th>x86 VM</th><th>ARM64 VM</th></tr></thead><tbody><tr>
-<td>{totals['passed']}</td><td>{totals['failed']}</td>
+<th>Features not tested</th><th>x86 VM</th><th>ARM64 VM</th></tr></thead><tbody><tr>
+<td>{totals['passed']}</td><td>{totals['failed']}</td><td>{feature_counts['N/A']}</td>
 <td>{totals['vm_status']['x86_64']}</td>
 <td>{totals['vm_status']['aarch64']}</td></tr></tbody></table>
 <p>VM status is completed, partial, failed, or unavailable. Unexecuted features
 are not counted as regressions.</p>
+{feature_table}
+{other_table}
 <h2>Reports</h2><ul>{reports}</ul>
 </body></html>'''
 

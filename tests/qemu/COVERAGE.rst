@@ -139,8 +139,9 @@ Remaining event sources
 - devlink_health_report and net_dev_xmit_timeout: the configured devices have
   no deterministic producer. A netdevsim guest integration test is a separate
   option, but is not QEMU hardware-failure coverage.
-- RISC-V reri_event: needs a RISC-V firmware/kernel/image and a working RERI
-  producer; the current CI image and matrix are x86 only.
+- RISC-V reri_event: QEMU currently has no RERI event producer or injection
+  mechanism. Keep this feature N/A until a RISC-V firmware/kernel/image and a
+  working QEMU-supported RERI producer are available.
 - ERST persistence and vendor-specific decoder tables need dedicated reboot
   scenarios or validated vendor CPER fixtures. Generic non-standard event
   coverage does not imply every vendor decoder has been tested.

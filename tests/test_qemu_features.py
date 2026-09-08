@@ -29,9 +29,9 @@ class FeatureResultTest(unittest.TestCase):
             self.assertIn(scenario["name"], x86)
 
     def test_reri_is_not_a_failure(self):
-        row = features.feature_results("aarch64", [], ["reri"])[0]
+        row = features.feature_results("riscv64", [], ["reri"])[0]
         self.assertEqual((row["PASS"], row["FAIL"], row["N/A"]), (0, 0, 1))
-        self.assertIn("no RERI producer", row["reason"])
+        self.assertIn("no RERI event producer", row["reason"])
 
     def test_missing_supported_check_is_a_failure(self):
         row = features.feature_results("aarch64", [], ["arm"])[0]
@@ -58,6 +58,22 @@ class FeatureResultTest(unittest.TestCase):
         self.assertEqual(len(row["untested"]), 1)
         tests[0]["status"] = "failed"
         self.assertEqual(features.feature_results("x86_64", tests, ["cxl"])[0]["FAIL"], 1)
+
+    def test_partial_feature_gaps_are_visible_without_failing(self):
+        """Implemented representative paths retain explicit untested gaps."""
+        tests = [{"name": "erst-persistence", "status": "passed"}]
+        row = features.feature_results("x86_64", tests, ["erst"])[0]
+        self.assertEqual((row["PASS"], row["FAIL"], row["N/A"]), (1, 0, 0))
+        self.assertIn("fatal MCE", row["untested"][0]["reason"])
+
+    def test_publisher_adds_new_gaps_to_old_results(self):
+        """Pages remain accurate when consuming pre-gap result artifacts."""
+        rows = [{"feature": "erst", "arch": "x86_64", "PASS": 1, "FAIL": 0,
+                 "N/A": 0, "checks": ["erst-persistence"], "untested": []}]
+        features.add_known_gaps(rows)
+        self.assertEqual(rows[0]["PASS"], 1)
+        self.assertEqual(rows[0]["FAIL"], 0)
+        self.assertIn("fatal MCE", rows[0]["untested"][0]["reason"])
 
     def test_failed_skipped_and_duplicate_checks_do_not_pass(self):
         for statuses in (("failed",), ("skipped",), ("passed", "passed")):
@@ -99,7 +115,7 @@ class FeatureResultTest(unittest.TestCase):
         self.assertEqual(features.feature_results("aarch64", tests[:-1], ["hisi-ns-decode"])[0]["FAIL"], 1)
 
     def test_reports_include_na_and_reason(self):
-        rows = features.feature_results("aarch64", [], ["reri"])
+        rows = features.feature_results("riscv64", [], ["reri"])
         page = features.html_table(rows)
         self.assertIn("<th>N/A</th>", page)
         self.assertIn("Features not tested", page)

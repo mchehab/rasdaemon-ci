@@ -688,10 +688,12 @@ class ResultDocument:
             failed = values["failed"]
             skipped = values["skipped"]
             not_applicable = values["not_applicable"]
-            total_rows += (f'<tr><th>{label}</th><td class="PASS">{passed}</td>'
-                           f'<td class="FAIL">{failed}</td>'
-                           f'<td class="SKIP">{skipped}</td>'
-                           f'<td class="NA">{not_applicable}</td></tr>')
+            pass_cell = f'<td class="PASS">{passed}</td>' if passed else f'<td>{passed}</td>'
+            fail_cell = f'<td class="FAIL">{failed}</td>' if failed else f'<td>{failed}</td>'
+            skip_cell = f'<td class="SKIP">{skipped}</td>' if skipped else f'<td>{skipped}</td>'
+            na_cell = (f'<td class="NA">{not_applicable}</td>' if not_applicable
+                       else f'<td>{not_applicable}</td>')
+            total_rows += f'<tr><th>{label}</th>{pass_cell}{fail_cell}{skip_cell}{na_cell}</tr>'
         page = '''<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>RAS functional tests</title><link rel="stylesheet" href="results.css">

@@ -43,7 +43,7 @@ FEATURES = {
     "pcie-edpc": ("x86_64", ["consumer-pcie-edpc"]),
     "poison-page-stat": ("aarch64", ["consumer-poison-page-stat"]),
     "postgresql": ("x86_64", ["consumer-postgresql"]),
-    "reri": ("aarch64", ["reri-event"]),
+    "reri": ("riscv64", ["reri-event"]),
     "signal": ("aarch64", ["memory-sigbus"]),
     "sqlite3": ("aarch64", ["consumer-sqlite3"]),
     "trigger": ("aarch64", ["consumer-trigger"]),
@@ -53,12 +53,26 @@ FEATURES = {
 # Explicit platform limitations, not a fallback for missing or broken tests.
 # Remove an entry when the corresponding producer/device becomes supported.
 UNSUPPORTED = {
-    "reri": "The x86_64/aarch64 stack has no RERI producer; RISC-V support is out of scope",
+    "reri": "QEMU currently has no RERI event producer or injection mechanism",
     "pcie-edpc": "The current QEMU test topology has no DPC-capable PCIe port",
 }
 
 UNIMPLEMENTED_CHECKS = {
     "cxl-generic": "No generic CXL event producer has been implemented in the harness",
+}
+
+# Functional checks can be implemented while some producer paths remain
+# impossible or intentionally outside the current two-VM plan. Keep these
+# gaps visible in gh-pages without turning the implemented checks red.
+FEATURE_GAPS = {
+    "amp-ns-decode": "Only the Ampere payload-0 format has a producer; other AMP payload formats remain untested",
+    "debug-sql": "No functional SQL debug-logging test or producer is assigned",
+    "erst": "A fatal MCE followed by reboot and post-boot ERST discovery is not simulated",
+    "extlog": "The producer is software-only; physical firmware EXTLOG delivery is not simulated",
+    "hisi-ns-decode": "Malformed input and execution through every registered format remain untested",
+    "jaguar-ns-decode": "Only Jaguar payload-0 is produced; additional payload layouts remain untested",
+    "nvidia-ns-decode": "Only one NVIDIA non-standard format is produced; broader format coverage remains untested",
+    "yitian-ns-decode": "Only the Yitian DDR register-dump format is produced; other event types remain untested",
 }
 
 
@@ -110,11 +124,15 @@ def feature_results(arch: str, tests: list[dict], inventory: list[str],
         untested = [{"check": check, "reason": UNIMPLEMENTED_CHECKS[check]}
                     for check in checks if check in UNIMPLEMENTED_CHECKS]
         checks = [check for check in checks if check not in UNIMPLEMENTED_CHECKS]
+        if name in FEATURE_GAPS and name not in UNSUPPORTED:
+            untested.append({"check": name + "-additional-coverage",
+                             "reason": FEATURE_GAPS[name]})
         if not checks:
             reason = "No functional test implementation is assigned to this feature"
             rows.append({"feature": name, "arch": owner, "PASS": 0, "FAIL": 0,
                          "N/A": 1, "reason": reason, "checks": [],
-                         "untested": untested or [{"check": name, "reason": reason}]})
+                         "untested": untested or [{"check": name,
+                                                   "reason": FEATURE_GAPS.get(name, reason)}]})
             continue
 
         failed = [check for check in checks if len(grouped.get(check, [])) > 1 or
@@ -148,6 +166,24 @@ def feature_results(arch: str, tests: list[dict], inventory: list[str],
     return rows
 
 
+def add_known_gaps(rows: list[dict]) -> list[dict]:
+    """Add documented coverage gaps to results produced by older harnesses."""
+    for row in rows:
+        feature = row["feature"]
+        reason = FEATURE_GAPS.get(feature)
+        if feature in UNSUPPORTED:
+            reason = UNSUPPORTED[feature]
+        if not reason:
+            continue
+
+        untested = row.setdefault("untested", [])
+        check = (feature + "-additional-coverage"
+                 if feature in FEATURE_GAPS and row.get("checks") else feature)
+        if not any(item.get("check") == check for item in untested):
+            untested.append({"check": check, "reason": reason})
+    return rows
+
+
 def rst_table(headers: list[str], rows: list[list[str]]) -> str:
     """Create an RST grid table for manually consumed text reports."""
     values = [headers] + rows
@@ -169,9 +205,15 @@ def html_table(rows: list[dict]) -> str:
             continue
         name = html.escape(row["feature"])
         reason = html.escape(row["reason"], quote=True)
+        passed = row["PASS"]
+        failed = row["FAIL"]
+        not_applicable = row.get("N/A", 0)
+        pass_cell = f'<td class="PASS">{passed}</td>' if passed else f'<td>{passed}</td>'
+        fail_cell = f'<td class="FAIL">{failed}</td>' if failed else f'<td>{failed}</td>'
+        na_cell = (f'<td class="NA">{not_applicable}</td>' if not_applicable
+                   else f'<td>{not_applicable}</td>')
         body.append(f'<tr title="{reason}"><td>{name}</td>'
-                    f'<td class="PASS">{row["PASS"]}</td><td class="FAIL">{row["FAIL"]}</td>'
-                    f'<td class="NA">{row.get("N/A", 0)}</td><td>{reason}</td></tr>')
+                    f'{pass_cell}{fail_cell}{na_cell}<td>{reason}</td></tr>')
     return ('<h2>Feature coverage</h2><table><thead><tr><th>Feature</th><th>PASS</th>'
             '<th>FAIL</th><th>N/A</th><th>Reason</th></tr></thead><tbody>' +
             "".join(body) + '</tbody></table>' + untested_html(rows))

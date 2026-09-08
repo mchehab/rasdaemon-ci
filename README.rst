@@ -71,12 +71,13 @@ machine-readable files.
 Functional feature implementation
 ---------------------------------
 
-This is the implementation inventory, not a PASS/FAIL report. New checks in
-this branch still need validation on this machine; in particular, the paired
-x86_64/aarch64 daily run and its runtime balance have not been verified.
+This is the implementation inventory, not a PASS/FAIL report. Status describes
+the declared functional test plan and available producer/device simulation;
+it does not depend on whether the latest GitHub run has completed.
 ``Implemented`` means an injection or consumer check and its assertions exist.
-``Partial`` means some paths exist but identified event families or checks
-remain missing. ``Not implemented`` means no functional check exists yet.
+``Partial`` means representative paths exist but identified event families,
+producer types, or lifecycle checks remain missing. ``Not implemented`` means
+no functional check exists yet.
 ``Not possible`` is scoped to the current two-architecture hardware setup,
 not a claim that a feature can never be tested.
 
@@ -84,6 +85,9 @@ The daily report derives its feature names from the tested rasdaemon source.
 Unsupported platform features and unimplemented checks are N/A, not FAIL, and
 do not contribute to regression badges. Detailed reports list them separately
 under ``Features not tested``, including missing portions of partial features.
+The Pages publisher also adds this maintained gap list when reading older daily
+artifacts, so the published status does not depend on which harness revision
+created the artifact.
 Missing results, skipped, failed, and duplicate checks whose implementation
 exists still do not count as PASS. An absent result is not automatically
 classified as an implementation gap.
@@ -156,22 +160,23 @@ architecture. The runtime ownership/check mapping is in
      - QEMU blkdebug I/O failure and matching block error record.
    * - erst
      - x86_64
-     - Implemented
+     - Partial
      - Load the x86 MCE ERST submodule, write/read a real ERST CPER, consume
        both pstore layouts with legacy-first selection, and verify deletion
-       survives remount. Power-cycle persistence is not checked.
+       survives remount. Fatal-MCE reboot and post-boot discovery are not
+       simulated.
    * - extlog
      - x86_64
-     - Implemented
+     - Partial
      - Guest software producer emits the kernel EXTLOG tracepoint; verify
-       decoded fields. Physical firmware EXTLOG delivery is not checked.
+       decoded fields. Physical firmware EXTLOG delivery is not simulated.
    * - hisi-ns-decode
      - aarch64
-     - Implemented
+     - Partial
      - All four registered formats: common, HIP08 OEM type 1, OEM type 2,
        and PCIe local. Batched fixtures cover every named module/submodule,
        known and unknown severity, each validity bit, BDF and register dumps.
-       Execution and malformed-input coverage remain pending.
+       Execution and malformed-input coverage are not yet simulated.
    * - ipmi-bmc (internal)
      - x86_64
      - Implemented
@@ -236,11 +241,10 @@ architecture. The runtime ownership/check mapping is in
      - Implemented
      - Real PostgreSQL service, recording backend and installed CLI readback.
    * - reri
-     - Unavailable
+     - riscv64
      - Not possible
-     - Not possible with the current x86_64/aarch64 stack. Experimental RISC-V
-       support exists elsewhere, but adding it is explicitly out of scope.
-       The aarch64 report retains this unsupported feature as N/A.
+     - QEMU currently has no RERI event producer or injection mechanism. The
+       feature is therefore reported as N/A until QEMU can simulate it.
    * - signal
      - aarch64
      - Implemented
@@ -257,6 +261,11 @@ architecture. The runtime ownership/check mapping is in
      - aarch64
      - Partial
      - Yitian DDR fixture and register dump; other event types remain.
+   * - debug-sql (internal)
+     - aarch64
+     - Not implemented
+     - No functional test or producer is assigned; SQL debug logging is not
+       currently simulated.
 
 Except for the expanded HiSilicon valid-format corpus, the vendor fixtures
 above are representative checks, not exhaustive decoder
@@ -264,13 +273,14 @@ coverage. A feature PASS currently requires the checks listed in the ownership
 mapping; it must not be read as proof that every subtype or malformed input was
 tested. Expand those required checks along with the corresponding scenarios.
 
-N/A checks not implemented
---------------------------
+Known untested portions and unavailable tests
+---------------------------------------------
 
-These are deliberate implementation gaps, shown as N/A in the detailed daily
-report's ``Features not tested`` table. They are not skipped regression tests:
-there is no runnable producer or emulated device for them yet, so they are
-excluded from the PASS/FAIL badge totals.
+These are deliberate coverage gaps, shown in the detailed daily report's
+``Features not tested`` table. Representative checks for a ``Partial`` feature
+still contribute PASS/FAIL results; only the listed missing portions are N/A.
+Unavailable tests have no runnable producer or emulated device and are excluded
+from the PASS/FAIL badge totals.
 
 .. list-table:: Current N/A implementation gaps
    :header-rows: 1
@@ -285,16 +295,51 @@ excluded from the PASS/FAIL badge totals.
      - Not implemented (N/A)
      - The harness has no producer for a generic CXL event. The other CXL
        event families are implemented and continue to be regression tested.
+   * - amp-ns-decode / additional coverage
+     - aarch64
+     - Partial (N/A)
+     - Only Ampere payload 0 has a producer; other AMP payload formats are not
+       currently simulated.
+   * - erst / fatal-MCE reboot
+     - x86_64
+     - Partial (N/A)
+     - The current fixture does not inject a fatal MCE and reboot the VM.
+   * - extlog / firmware delivery
+     - x86_64
+     - Partial (N/A)
+     - The current producer is software-only; firmware EXTLOG delivery is not
+       available in the QEMU plan.
+   * - hisi-ns-decode / malformed and execution coverage
+     - aarch64
+     - Partial (N/A)
+     - Valid decoder fixtures exist, but malformed inputs and execution through
+       every registered format are not yet simulated.
+   * - jaguar-ns-decode / additional coverage
+     - aarch64
+     - Partial (N/A)
+     - Only Jaguar payload 0 has a producer.
+   * - nvidia-ns-decode / additional coverage
+     - aarch64
+     - Partial (N/A)
+     - Only one NVIDIA non-standard format has a producer.
+   * - yitian-ns-decode / additional coverage
+     - aarch64
+     - Partial (N/A)
+     - Only the Yitian DDR register-dump format has a producer.
+   * - debug-sql
+     - aarch64
+     - Not implemented (N/A)
+     - No functional SQL debug-logging test is assigned.
    * - pcie-edpc
      - x86_64
      - Not implemented (N/A)
      - QEMU's current test topology has no DPC-capable PCIe port. The retained
        build-flag check is N/A for this reason; it does not fail daily badges.
    * - reri / reri-event
-     - Unavailable
-     - Not implemented (N/A, out of scope)
-     - The x86_64/aarch64 test setup has no RERI event producer. RISC-V
-       emulation support is intentionally not added by this work.
+     - riscv64
+     - Not implemented (N/A)
+     - QEMU currently has no RERI event producer or injection mechanism. This
+       remains a planned RISC-V test once QEMU can provide one.
 
 A manually requested ``--dry-run`` also records the guest execution as N/A,
 because no VM is started by design. Daily runs do start the guest, so that
@@ -325,16 +370,17 @@ MCE-core-to-ERST lifecycle test remains future work.
 RERI limitation
 ~~~~~~~~~~~~~~~
 
-A RISC-V CPU emulation alone does not supply a RERI error source. An
+A RISC-V CPU emulation alone does not supply a RERI error source. QEMU
+currently has no RERI event producer or injection mechanism. An
 `experimental RAS stack
 <https://lists.infradead.org/pipermail/linux-riscv/2026-January/083224.html>`_
 documents RERI emulation using QEMU together with OpenSBI, EDK2 and Linux
 changes. That stack delivers errors through GHES/CPER; rasdaemon's ``reri``
 decoder expects the separate ``ras:reri_event`` tracepoint. Their connection
 would have to be verified or implemented before claiming RERI decoder coverage.
-The inspected local QEMU and Linux trees contain no RERI producer. A third VM,
-experimental firmware stack, or software RERI producer is not being implemented
-in this work, at the user's request.
+The inspected local QEMU and Linux trees contain no RERI producer.
+Once QEMU exposes a producer, a RISC-V firmware, kernel and guest scenario
+can be added.
 
 TaiShan reference platform
 --------------------------
