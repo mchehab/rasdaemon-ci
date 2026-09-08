@@ -9,6 +9,57 @@ results intended for human review.
 Latest reports
 --------------
 
+.. |feature-pass| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-feature-pass.svg
+   :alt: Features passed
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/
+.. |feature-fail| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-feature-fail.svg
+   :alt: Features failed
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/
+.. |kernel-pass| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-kernel-pass.svg
+   :alt: Kernel checks passed
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/
+.. |kernel-fail| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-kernel-fail.svg
+   :alt: Kernel checks failed
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/
+.. |rasdaemon-pass| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-rasdaemon-pass.svg
+   :alt: rasdaemon checks passed
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/
+.. |rasdaemon-fail| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-rasdaemon-fail.svg
+   :alt: rasdaemon checks failed
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/
+.. |x86-vm| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-x86-vm-fail.svg
+   :alt: x86_64 VM status
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/x86_64/
+.. |arm64-vm| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-arm64-vm-fail.svg
+   :alt: ARM64 VM status
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/aarch64/
+
+.. list-table:: Daily functional results
+   :header-rows: 1
+
+   * - Scope
+     - PASS
+     - FAIL
+   * - Features
+     - |feature-pass|
+     - |feature-fail|
+   * - Kernel checks
+     - |kernel-pass|
+     - |kernel-fail|
+   * - rasdaemon checks
+     - |rasdaemon-pass|
+     - |rasdaemon-fail|
+
+.. list-table:: VM health
+   :header-rows: 1
+
+   * - Architecture
+     - Status
+   * - x86_64
+     - |x86-vm|
+   * - ARM64
+     - |arm64-vm|
+
 * `Daily functional-test report
   <https://mchehab.github.io/rasdaemon-ci/daily/>`_
 
