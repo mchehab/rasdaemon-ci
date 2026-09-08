@@ -117,10 +117,15 @@ def feature_results(arch: str, tests: list[dict], inventory: list[str],
                          "untested": untested or [{"check": name, "reason": reason}]})
             continue
 
-        failed = [check for check in checks if len(grouped.get(check, [])) == 1 and
-                  grouped[check][0]["status"] == "failed"]
-        unavailable = [check for check in checks if len(grouped.get(check, [])) != 1 or
-                       grouped[check][0]["status"] == "skipped"]
+        failed = [check for check in checks if len(grouped.get(check, [])) > 1 or
+                  (len(grouped.get(check, [])) == 1 and
+                   grouped[check][0]["status"] == "failed")]
+        unavailable = [check for check in checks if not grouped.get(check) or
+                       (len(grouped[check]) == 1 and
+                        grouped[check][0]["status"] not in
+                        ("passed", "failed", "not_applicable"))]
+        not_applicable = [check for check in checks if len(grouped.get(check, [])) == 1 and
+                          grouped[check][0]["status"] == "not_applicable"]
         if infrastructure_failure and unavailable and not failed:
             reason = "Not run due to infrastructure failure: " + infrastructure_failure
             rows.append({"feature": name, "arch": owner, "PASS": 0, "FAIL": 0,
@@ -128,12 +133,16 @@ def feature_results(arch: str, tests: list[dict], inventory: list[str],
                          "untested": untested})
             continue
         failed.extend(unavailable)
-        passed = bool(checks) and not failed
-        reason = "All implemented functional checks passed" if passed else (
-            "Missing, failed or skipped checks: " + ", ".join(failed)
-            if checks else "Feature has no functional coverage assignment")
-        rows.append({"feature": name, "arch": owner, "PASS": int(passed),
-                     "FAIL": int(not passed), "N/A": 0, "reason": reason,
+        if not_applicable and not failed:
+            rows.append({"feature": name, "arch": owner, "PASS": 0, "FAIL": 0,
+                         "N/A": 1, "reason": "Checks not applicable: " + ", ".join(not_applicable),
+                         "checks": checks, "untested": untested})
+            continue
+
+        reason = ("Missing, failed or skipped checks: " + ", ".join(failed) if failed
+                  else "All implemented functional checks passed")
+        rows.append({"feature": name, "arch": owner, "PASS": int(not failed),
+                     "FAIL": int(bool(failed)), "N/A": 0, "reason": reason,
                      "checks": checks, "untested": untested})
 
     return rows

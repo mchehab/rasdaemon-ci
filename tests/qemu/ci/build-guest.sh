@@ -111,7 +111,7 @@ if test "$arch" = x86_64; then
   - libpq5
   - mariadb-server
   - postgresql
-  - python3-pymysql
+  - python3-mysqldb
   - python3-psycopg2'
 fi
 

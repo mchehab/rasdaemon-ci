@@ -66,6 +66,25 @@ class FeatureResultTest(unittest.TestCase):
             self.assertEqual(row["FAIL"], 1)
             self.assertEqual(row["N/A"], 0)
 
+    def test_explicit_na_is_neither_success_nor_failure(self):
+        """N/A must not hide another check's failure or inflate passing totals."""
+        tests = [{"name": "aer-native", "status": "not_applicable"},
+                 {"name": "ghes-aer", "status": "passed"}]
+        row = features.feature_results("x86_64", tests, ["aer"])[0]
+        self.assertEqual((row["PASS"], row["FAIL"], row["N/A"]), (0, 0, 1))
+        tests[1]["status"] = "failed"
+        row = features.feature_results("x86_64", tests, ["aer"])[0]
+        self.assertEqual((row["PASS"], row["FAIL"], row["N/A"]), (0, 1, 0))
+
+    def test_partial_run_keeps_completed_verdicts(self):
+        """A later timeout only neutralizes checks that did not run."""
+        tests = [{"name": "ghes-arm", "status": "passed"},
+                 {"name": "block-io-native", "status": "failed"}]
+        rows = features.feature_results("aarch64", tests,
+                                        ["arm", "diskerror", "mc-event"], "timeout")
+        self.assertEqual([(row["PASS"], row["FAIL"], row["N/A"]) for row in rows],
+                         [(1, 0, 0), (0, 1, 0), (0, 0, 1)])
+
     def test_pass_has_one_owner(self):
         tests = [{"name": "ghes-arm", "status": "passed"}]
         rows = features.feature_results("aarch64", tests, ["arm"])

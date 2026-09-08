@@ -1052,10 +1052,10 @@ class VirtualMachine:
             return {}
         markers = {}
         for match in re.finditer(
-                r"ras-qemu-agent: ([a-z0-9-]+)-ready(?: ([^\r\n]*))?\r?\n",
+                r"ras-qemu-agent: ([a-z0-9-]+)-ready(?=[ \r\n\[])([^\r\n]*)\r?\n",
                 console):
             values = {}
-            for key, value in re.findall(r"([a-z_]+)=([^ ]+)",
+            for key, value in re.findall(r"([a-z_]+)=([^ \r\n\[]+)",
                                          match.group(2) or ""):
                 values[key] = value
             markers[match.group(1)] = values
@@ -1232,6 +1232,16 @@ class VirtualMachine:
             if "cper" in scenario:
                 guid = scenario["cper"]["guid"]
                 payload = bytes.fromhex(scenario["cper"]["payload"])
+            elif name == "ghes-arm":
+                # Encode MPIDR explicitly: older arm helpers accept --mpidr
+                # but serialize a different argument, silently targeting CPU0.
+                guid = "e19e3d16-bc11-11e4-9caa-c2051d5d46b0"
+                vendor = bytes.fromhex(scenario["vendor_hex"])
+                header = struct.pack("<IHHIB3xQQII", 1, 1, 0, 72 + len(vendor),
+                                     0, scenario["expected"]["mpidr"], 0, 0, 0)
+                error = struct.pack("<BBHBBHQQQ", 0, 32, 5, 2, 2, 3,
+                                    0x91000f, 0xdeadbeef, 0xabba0bad)
+                payload = header + error + vendor
             elif name == "ghes-memory" or scenario.get("producer") == "pfa":
                 guid = "a5bc1114-6f64-4ede-b863-3e83ed7c83b1"
                 payload = bytearray(80)
@@ -1516,6 +1526,10 @@ def run_test(args, manifest):
     probe = CapabilityProbe(manifest, args.cache_dir)
     checks = probe.inspect(args.arch)
     document = ResultDocument(args.arch, args.accelerator, args.profile)
+    # Keep VM execution health separate from functional feature verdicts.  A
+    # completed suite may contain real feature regressions; an interrupted
+    # suite must not turn all unexecuted features into FAIL.
+    document.data["vm_status"] = "failed"
     document.data["feature_inventory"] = features.feature_inventory(args.source_dir)
     document.data["capabilities"] = [check.as_dict() for check in checks]
     config_status = os.path.join(HARNESS_DIR, "..", "kernel", "config-status.tsv")
@@ -1612,12 +1626,24 @@ def run_test(args, manifest):
                     reported = {test["name"] for test in guest_tests}
                     missing = sorted(required - reported)
                     if missing:
+                        document.data["vm_status"] = "partial"
+                        document.data["infrastructure_failure"] = (
+                            "VM stopped before reporting: " + ", ".join(missing))
                         document.add_test("coverage-contract", "failed",
                                           "Scenarios were not reported: " + ", ".join(missing))
+                    else:
+                        document.data["vm_status"] = "completed"
+                else:
+                    document.data["vm_status"] = "completed"
         except (LabError, OSError, subprocess.SubprocessError,
                 json.JSONDecodeError) as error:
             if machine.watchdog.phase == "boot":
                 document.data["infrastructure_failure"] = str(error)
+                document.data["vm_status"] = "failed"
+            else:
+                document.data["vm_status"] = "partial"
+                document.data["infrastructure_failure"] = (
+                    "VM aborted during tests: " + str(error))
             if os.path.isfile(machine.console_path):
                 with open(machine.console_path, encoding="utf-8", errors="replace") as stream:
                     for line in stream:

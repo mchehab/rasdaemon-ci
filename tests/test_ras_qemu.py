@@ -454,6 +454,67 @@ class InjectionEvidenceTest(unittest.TestCase):
 
     descriptor = staticmethod(RasQemuTest.descriptor)
 
+    def test_arm_cper_targets_cpu1_and_retains_vendor_bytes(self) -> None:
+        """The serialized CPER must not silently isolate the boot CPU."""
+        with tempfile.TemporaryDirectory() as temporary:
+            machine = ras_qemu.VirtualMachine(self.descriptor(), "aarch64", "tcg",
+                                               "guest", temporary, temporary, 30, "injection")
+            scenario = next(item for item in machine.scenarios if item["name"] == "ghes-arm")
+            completed = unittest.mock.Mock(returncode=0, stdout="injected")
+
+            with patch.object(ras_qemu.os.path, "isfile", return_value=True), \
+                    patch.object(ras_qemu.subprocess, "run", return_value=completed):
+                machine.inject_scenario(scenario)
+
+            raw = machine.injection_evidence["ghes-arm"]["raw_cper"]
+            pattern = r"^    [0-9a-f]{8}  ([0-9a-f ]+?)  [.]"
+            data = bytes.fromhex(" ".join(re.findall(pattern, raw, re.MULTILINE)))
+            payload = data[92:]
+            self.assertEqual(struct.unpack_from("<IHHI", payload), (1, 1, 0, len(payload)))
+            self.assertEqual(struct.unpack_from("<Q", payload, 16)[0], 1)
+            self.assertEqual(payload[40:48], bytes.fromhex("0020050002020300"))
+            self.assertEqual(payload[72:].hex(), scenario["vendor_hex"])
+
+    def test_recorded_scenario_retains_daemon_exit_status(self) -> None:
+        """A shutdown failure must expose the process status in its evidence."""
+        scenario = {"name": "ghes-memory", "event": "ras/mc_event",
+                    "table": "mc_event"}
+        results = unittest.mock.Mock()
+        recorded = agent.RecordedScenario(results, "/build", {}, scenario)
+        process = unittest.mock.Mock(pid=1234, returncode=7)
+
+        def started(_log):
+            recorded.process = process
+
+        with patch("builtins.open", unittest.mock.mock_open()), \
+             patch.object(recorded, "start", side_effect=started), \
+             patch.object(recorded, "ready"), patch.object(recorded, "inject_page"), \
+             patch.object(recorded, "wait_record"), patch.object(recorded, "cleanup"), \
+             patch.object(recorded.consumers, "check"), patch.object(agent.os, "killpg"):
+            recorded.execute()
+
+        result = results.add.call_args
+        self.assertEqual(result.args[1], "failed")
+        self.assertEqual(result.args[2],
+                         "rasdaemon did not shut down cleanly (exit status 7)")
+        self.assertEqual(result.args[3]["rasdaemon_returncode"], 7)
+
+    def test_postgresql_setup_creates_selected_schema(self) -> None:
+        """Provision the schema passed to rasdaemon as well as its database."""
+        scenario = {"name": "consumer-postgresql", "event": "ras/memory_failure_event",
+                    "table": "memory_failure_event", "backend": "postgresql"}
+        recorded = agent.RecordedScenario(unittest.mock.Mock(), "/build", {}, scenario)
+        completed = subprocess.CompletedProcess([], 0, "")
+
+        with patch.object(agent.consumers.subprocess, "run", return_value=completed) as runner:
+            recorded.consumers.prepare_database("postgresql")
+
+        commands = [invocation.args[0] for invocation in runner.call_args_list]
+        self.assertIn(["runuser", "-u", "postgres", "--", "psql", "-v", "ON_ERROR_STOP=1",
+                       "-d", "ras_ci", "-c", "CREATE SCHEMA ras_ci AUTHORIZATION ras_ci;"],
+                      commands)
+        self.assertEqual(recorded.environment["RAS_PG_SCHEMA"], "ras_ci")
+
     def test_cxl_pcie_internal_error_masks(self) -> None:
         """Unmask only the PCIe carrier bit and reject ignored writes."""
         scenarios = [("cxl-aer-ce", "ECAP_AER+14.L", 0xe000, 0x4000),
@@ -532,6 +593,12 @@ class InjectionEvidenceTest(unittest.TestCase):
                 stream.write("01:00.0\n")
 
             self.assertEqual(machine.ready_markers()["ghes-aer"]["bdf"], "0000:01:00.0")
+
+            with open(machine.console_path, "a", encoding="utf-8") as stream:
+                stream.write("ras-qemu-agent: vendor-hisilicon-common-case-13-ready"
+                             "[ 41.3] {12}[Hardware Error]: dump\n")
+
+            self.assertIn("vendor-hisilicon-common-case-13", machine.ready_markers())
 
     def test_raw_memory_cper_is_corrected_and_has_no_valid_address(self) -> None:
         """Verify CPER severity, section lengths and safe validation bits."""

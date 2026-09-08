@@ -2,6 +2,7 @@
 """Check consumer side effects separately, using the event test's single injection."""
 
 import json
+import glob
 import os
 import socket
 import subprocess
@@ -18,7 +19,7 @@ class ConsumerChecks:
         self.thread: threading.Thread | None = None
         self.stopping = threading.Event()
         self.trigger_path = scenario.paths["database"] + ".trigger.json"
-        self.cpu_online: str | None = None
+        self.cpu_states: dict[str, str] = {}
 
     def receive(self) -> None:
         """Drain ABRT's Unix socket so reporting cannot block the event loop."""
@@ -66,9 +67,11 @@ class ConsumerChecks:
             self.scenario.environment.update(AMPERE_OEM_SEL_ENABLE="yes",
                                              OPENBMC_UNIFIED_SEL_ENABLE="yes")
         if self.scenario.scenario["name"] == "ghes-arm":
-            with open("/sys/devices/system/cpu/cpu1/online", encoding="ascii") as stream:
-                self.cpu_online = stream.read().strip()
-            if self.cpu_online != "1":
+            for path in glob.glob("/sys/devices/system/cpu/cpu[0-9]*/online"):
+                with open(path, encoding="ascii") as stream:
+                    self.cpu_states[path] = stream.read().strip()
+
+            if self.cpu_states.get("/sys/devices/system/cpu/cpu1/online") != "1":
                 raise RuntimeError("CPU isolation requires an initially online CPU1")
             self.scenario.environment.update(CPU_ISOLATION_ENABLE="yes", CPU_CE_THRESHOLD="1",
                                              CPU_ISOLATION_LIMIT="1")
@@ -113,7 +116,10 @@ class ConsumerChecks:
             commands = [["systemctl", "start", "postgresql"],
                         ["runuser", "-u", "postgres", "--", "psql", "-v", "ON_ERROR_STOP=1",
                          "-c", "CREATE USER ras_ci WITH PASSWORD 'ras_ci';"],
-                        ["runuser", "-u", "postgres", "--", "createdb", "-O", "ras_ci", "ras_ci"]]
+                        ["runuser", "-u", "postgres", "--", "createdb", "-O", "ras_ci", "ras_ci"],
+                        ["runuser", "-u", "postgres", "--", "psql", "-v", "ON_ERROR_STOP=1",
+                         "-d", "ras_ci", "-c",
+                         "CREATE SCHEMA ras_ci AUTHORIZATION ras_ci;"]]
             environment.update(RAS_PG_HOST="127.0.0.1", RAS_PG_USER="ras_ci",
                                RAS_PG_PASSWORD="ras_ci", RAS_PG_DATABASE="ras_ci",
                                RAS_PG_SCHEMA="ras_ci")
@@ -130,7 +136,7 @@ class ConsumerChecks:
         """Read the selected SQL backend through the installed report interface."""
         command = ["/usr/sbin/ras-mc-ctl", "database", "--errors", "--json",
                    "--table", self.scenario.scenario["table"]]
-        completed = subprocess.run(command, check=False, text=True, timeout=10,
+        completed = subprocess.run(command, check=False, text=True, timeout=30,
                                    env=dict(os.environ, **self.scenario.environment),
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         self.scenario.evidence["database_query"] = {"command": command,
@@ -144,12 +150,19 @@ class ConsumerChecks:
 
     def close(self) -> None:
         """Stop only the receiver and socket owned by this scenario."""
-        if self.cpu_online is not None:
+        if self.cpu_states:
             path = "/sys/devices/system/cpu/cpu1/online"
             with open(path, encoding="ascii") as stream:
                 self.scenario.evidence["cpu1_after_injection"] = stream.read().strip()
-            with open(path, "w", encoding="ascii") as stream:
-                stream.write(self.cpu_online + "\n")
+            # Restore every CPU, including an unintended isolation target, so
+            # one faulty fixture cannot poison all following event checks.
+            for cpu_path, state in self.cpu_states.items():
+                with open(cpu_path, encoding="ascii") as stream:
+                    current = stream.read().strip()
+
+                if current != state:
+                    with open(cpu_path, "w", encoding="ascii") as stream:
+                        stream.write(state + "\n")
         self.stopping.set()
         if self.thread:
             self.thread.join(timeout=3)
@@ -173,7 +186,8 @@ class ConsumerChecks:
             valid = evidence.get("cpu1_after_injection") == "0"
             self.result("cpu-fault-isolation", event_status == "passed" and valid,
                         "CPU1 must transition from online to offline after corrected ARM errors",
-                        {"before": self.cpu_online, "after": evidence.get("cpu1_after_injection"),
+                        {"before": self.cpu_states.get("/sys/devices/system/cpu/cpu1/online"),
+                         "after": evidence.get("cpu1_after_injection"),
                          "output": evidence.get("rasdaemon_output", "")})
             vendor = self.scenario.scenario["vendor_hex"]
             valid = any(row.get("vendor_info") == vendor for row in evidence["rows"])
@@ -218,24 +232,47 @@ class ConsumerChecks:
                     {"database": self.scenario.paths["database"], "rows": rows})
         self.check_report(passed, pfn)
 
-    def check_sel(self, event_status: str) -> None:
-        """Read actual QEMU BMC records and verify each consumer's wire format."""
-        path = self.scenario.paths["database"] + ".sel"
-        command = ["ipmitool", "sel", "writeraw", path]
-        evidence = {"command": command}
+    @staticmethod
+    def read_sel() -> tuple[list[bytes], dict]:
+        """Read SEL wire records and retain the complete BMC command transcript."""
+        # writeraw serializes ipmitool's parsed structure, which reverses the
+        # OEM manufacturer ID. Get SEL Entry preserves the actual wire bytes.
+        evidence = {"commands": []}
         records = []
         try:
-            completed = subprocess.run(command, check=False, text=True, timeout=30,
-                                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            evidence.update(output=completed.stdout, returncode=completed.returncode)
-            if completed.returncode == 0:
-                with open(path, "rb") as stream:
-                    raw = stream.read()
-                if len(raw) % 16 == 0:
-                    records = [raw[offset:offset + 16] for offset in range(0, len(raw), 16)]
-        except (OSError, subprocess.TimeoutExpired) as error:
+            record_id = 0
+
+            for _index in range(128):
+                command = ["ipmitool", "raw", "0x0a", "0x43", "0", "0",
+                           str(record_id & 255), str(record_id >> 8), "0", "0xff"]
+                completed = subprocess.run(command, check=False, text=True, timeout=30,
+                                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                evidence["commands"].append({"command": command, "output": completed.stdout,
+                                             "returncode": completed.returncode})
+
+                if completed.returncode:
+                    raise RuntimeError("Cannot read BMC SEL entry")
+
+                raw = bytes.fromhex(completed.stdout)
+
+                if len(raw) != 18:
+                    raise RuntimeError("BMC SEL response must contain a next ID and 16-byte record")
+
+                records.append(raw[2:])
+                record_id = int.from_bytes(raw[:2], "little")
+
+                if record_id == 0xffff:
+                    break
+            else:
+                raise RuntimeError("BMC SEL traversal exceeded 128 records")
+        except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as error:
             evidence["error"] = str(error)
         evidence["records"] = [record.hex(" ") for record in records]
+        return records, evidence
+
+    def check_sel(self, event_status: str) -> None:
+        """Verify each consumer's wire format against the actual QEMU BMC records."""
+        records, evidence = self.read_sel()
         bdf = self.scenario.evidence.get("bdf", "0000:00:00.0")
         segment, bus, devfn = bdf.split(":")
         device, function = devfn.split(".")
@@ -257,7 +294,8 @@ class ConsumerChecks:
                 continue
             matches = [record for record in records
                        if all(record[index] == value for index, value in fields.items())]
-            self.result(name, event_status == "passed" and len(matches) == 1,
+            self.result(name, event_status == "passed" and "error" not in evidence and
+                        len(matches) == 1,
                         "BMC SEL must contain exactly one matching corrected AER record",
                         dict(evidence, bdf=bdf, expected_bytes=fields))
 

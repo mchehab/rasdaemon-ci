@@ -36,6 +36,9 @@ under ``Features not tested``, including missing portions of partial features.
 Missing results, skipped, failed, and duplicate checks whose implementation
 exists still do not count as PASS. An absent result is not automatically
 classified as an implementation gap.
+Explicit N/A results count as neither PASS nor FAIL. If a VM stops partway
+through a suite, completed feature verdicts still contribute to the totals;
+checks not run because of that interruption remain N/A.
 Compilation flags and other internal checks remain separate from feature
 coverage. Each feature has one owning architecture; consumer assertions reuse
 events where practical, without repeating the feature verdict on the other

@@ -649,13 +649,19 @@ def block_error_smoke(results, build, environment):
         evidence = {"device": str(device), "trace_event": event,
                     "trace_enabled_before_injection": enabled,
                     "dd_returncode": write.returncode,
+                    "rasdaemon_returncode": process.returncode,
                     "dd_output": write.stdout, "sqlite_count": count,
                     "sqlite_output": query.stdout,
                     "rasdaemon_output": output[-32768:]}
         passed = write.returncode != 0 and process.returncode == 0 and count > 0
-        results.add("block-io-native", "passed" if passed else "failed",
-                    "" if passed else
-                    "blkdebug EIO did not produce a disk_errors row",
+        reason = ""
+        if not write.returncode:
+            reason = "blkdebug write unexpectedly succeeded"
+        elif not count:
+            reason = "blkdebug EIO did not produce a disk_errors row"
+        elif process.returncode:
+            reason = f"rasdaemon did not shut down cleanly (exit status {process.returncode})"
+        results.add("block-io-native", "passed" if passed else "failed", reason,
                     evidence, time.monotonic() - started)
         if passed:
             ras_mc_ctl = shutil.which("ras-mc-ctl") or "/usr/sbin/ras-mc-ctl"
@@ -1212,9 +1218,11 @@ class RecordedScenario:
                 self.wait_record()
                 os.killpg(self.process.pid, signal.SIGTERM)
                 self.process.wait(timeout=15)
+                self.evidence["rasdaemon_returncode"] = self.process.returncode
 
                 if self.process.returncode:
-                    raise RuntimeError("rasdaemon did not shut down cleanly")
+                    raise RuntimeError("rasdaemon did not shut down cleanly "
+                                       f"(exit status {self.process.returncode})")
 
             self.evidence["sqlite_count"] = len(self.evidence["rows"])
             if self.scenario.get("producer") == "pfa":

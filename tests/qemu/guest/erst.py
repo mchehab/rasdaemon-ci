@@ -53,6 +53,7 @@ class ErstCheck:
         self.wait_ready = wait_ready
         self.evidence = {"commands": [], "layouts": [], "persistence": "filesystem remount"}
         self.mounts: list[str] = []
+        self.restore_pstore = False
 
     def command(self, command: list[str]) -> None:
         """Keep every command and its output, including failed setup commands."""
@@ -87,7 +88,7 @@ class ErstCheck:
             process = subprocess.Popen(command, stdout=stream, stderr=subprocess.STDOUT,
                                        env=dict(os.environ, **environment), start_new_session=True)
             try:
-                event = "/sys/kernel/tracing/events/mce/mce_record/enable"
+                event = "/sys/kernel/tracing/instances/rasdaemon/events/mce/mce_record/enable"
                 self.wait_ready(process, logfile, [event])
                 os.killpg(process.pid, signal.SIGTERM)
                 process.wait(timeout=15)
@@ -112,6 +113,13 @@ class ErstCheck:
         """Store through ERST, then read through flat and nested pstore mounts."""
         root = "/sys/fs/pstore"
         self.command(["modprobe", "erst_dbg"])
+        # A second mount reuses the boot-time pstore superblock and its empty
+        # file list. Drop that mount in this disposable guest so mounting after
+        # the write actually re-reads ERST. Restore the original mount on exit.
+        if os.path.ismount(root):
+            self.command(["umount", root])
+            self.restore_pstore = True
+
         record_id = 0x5241534349
         record = pstore_record(record_id)
         self.evidence.update(record_id=record_id, cper_hex=record.hex(),
@@ -127,7 +135,11 @@ class ErstCheck:
         with open("/dev/erst_dbg", "rb", buffering=0) as stream:
             returned = stream.read(16384)
         self.evidence["erst_readback_hex"] = returned.hex()
-        if returned != record:
+        # Linux erst_write() stamps the serialization signature into the
+        # persistence-information field before writing the record to storage.
+        expected = bytearray(record)
+        expected[108:110] = b"ER"
+        if returned != expected:
             raise RuntimeError("ERST readback differs from the written CPER")
 
         os.makedirs(root, exist_ok=True)
@@ -176,6 +188,11 @@ class ErstCheck:
                         self.command(["umount", target])
                     except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
                         status, reason = "failed", f"ERST cleanup: {error}"
+                if self.restore_pstore:
+                    try:
+                        self.command(["mount", "-t", "pstore", "pstore", "/sys/fs/pstore"])
+                    except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
+                        status, reason = "failed", f"ERST restore mount: {error}"
 
         self.results.add("erst-persistence", status, reason, self.evidence,
                          time.monotonic() - started,
