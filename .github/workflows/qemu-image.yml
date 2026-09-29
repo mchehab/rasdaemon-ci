@@ -17,6 +17,12 @@ jobs:
     outputs:
       build: ${{ steps.changed.outputs.build }}
     steps:
+      - name: Check out CI harness
+        uses: actions/checkout@v7
+
+      - name: Test CI harness
+        run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+
       - name: Check changes
         id: changed
         env:

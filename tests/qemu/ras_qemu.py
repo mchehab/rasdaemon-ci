@@ -122,6 +122,37 @@ def copy_text_console(source, destination):
     destination.write_text(text, encoding="utf-8")
 
 
+def print_failure_diagnostics(data, result_dir):
+    """Make retained failure reasons and bounded evidence visible in job logs."""
+    failures = [test for test in data["tests"] if test["status"] == "failed"]
+    infrastructure = data.get("infrastructure_failure")
+    if not infrastructure and not failures:
+        return
+    prefix = f"[{data['architecture']}]"
+    if infrastructure:
+        print(f"{prefix} Infrastructure failure: {infrastructure}",
+              file=sys.stderr, flush=True)
+    if data.get("qemu_command"):
+        print(f"{prefix} QEMU command: {shlex.join(data['qemu_command'])}",
+              file=sys.stderr, flush=True)
+    for test in failures:
+        print(f"{prefix} FAIL {test['name']}: {test.get('reason', '')}",
+              file=sys.stderr, flush=True)
+        if test.get("evidence"):
+            evidence = json.dumps(test["evidence"], indent=2, sort_keys=True)
+            print(evidence[-16384:], file=sys.stderr, flush=True)
+    for filename in ("payload-build.log", "qemu.log", "console.log", "fuzz.log"):
+        path = result_dir / filename
+        if not path.is_file():
+            continue
+        with path.open("rb") as stream:
+            stream.seek(max(0, path.stat().st_size - 16384))
+            tail = stream.read().decode("utf-8", errors="replace")
+        tail = NON_TEXT_CONTROL.sub("", ANSI_ESCAPE.sub("", tail))
+        print(f"{prefix} {filename} (last 16384 bytes):\n{tail}",
+              file=sys.stderr, flush=True)
+
+
 def image_env_name(arch):
     """Return the per-architecture image override variable."""
     return "RAS_QEMU_IMAGE_" + arch.upper().replace("-", "_")
@@ -912,9 +943,10 @@ class VirtualMachine:
                 raise LabError("host payload build failed: %s\n%s" %
                                (shlex.join(command), log_path.read_text()[-32768:]))
         config = (build / "config.h").read_text(encoding="utf-8")
-        for macro in re.findall(r"^#mesondefine (HAVE_\w+)",
-                                (self.source_dir / "config.h.in").read_text(encoding="utf-8"),
-                                re.MULTILINE):
+        # Meson generates config.h in the build directory. Read its defined
+        # and undefined HAVE_* entries instead of depending on a source template.
+        for macro in re.findall(r"^(?:#define|#undef|/\* #undef) (HAVE_\w+)",
+                                config, re.MULTILINE):
             enabled = bool(re.search(r"^#define " + macro + r"(?: 1)?$", config, re.MULTILINE))
             if self.arch != "x86_64" and macro in ("HAVE_MYSQL", "HAVE_POSTGRESQL"):
                 state = "unexpectedly enabled" if enabled else "disabled as requested"
@@ -1559,6 +1591,7 @@ def run_test(args, manifest):
         document.add_test("prerequisites", "skipped", str(error))
         document.data["tests"][-1].update(kernel="N/A", rasdaemon="N/A")
         document.write(result_dir)
+        print_failure_diagnostics(document.data, result_dir)
         return 1
 
     required = [check for check in checks
@@ -1570,6 +1603,7 @@ def run_test(args, manifest):
         document.add_test("prerequisites", "skipped", "; ".join(missing))
         document.data["tests"][-1].update(kernel="N/A", rasdaemon="N/A")
         document.write(result_dir)
+        print_failure_diagnostics(document.data, result_dir)
         return 1
     document.add_test("prerequisites", "passed")
     document.data["tests"][-1].update(kernel="N/A", rasdaemon="N/A")
@@ -1639,6 +1673,8 @@ def run_test(args, manifest):
                     document.data["vm_status"] = "completed"
         except (LabError, OSError, subprocess.SubprocessError,
                 json.JSONDecodeError) as error:
+            machine.progress(f"Infrastructure failure during {machine.watchdog.phase}: "
+                             f"{type(error).__name__}: {error}")
             if machine.watchdog.phase == "boot":
                 document.data["infrastructure_failure"] = str(error)
                 document.data["vm_status"] = "failed"
@@ -1694,11 +1730,12 @@ def run_test(args, manifest):
                                   result_dir / "console.log")
             if machine.qemu_log_path.exists():
                 shutil.copy2(machine.qemu_log_path, result_dir / "qemu.log")
-    if not args.quiet:
+    if not args.quiet and (result_dir / "console.log").is_file():
         print("Retained console: %s" % (result_dir / "console.log"),
               file=sys.stderr, flush=True)
     path = document.write(result_dir)
     machine.progress(f"Results ready: {path}; totals={document.data['totals']}")
+    print_failure_diagnostics(document.data, result_dir)
     if not args.quiet:
         print(path)
     return 1 if document.data["totals"]["failed"] else 0

@@ -35,7 +35,7 @@ def parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     """Validate mounts and execute the QEMU harness."""
     args = parser().parse_args(argv)
-    source = os.environ.get("RASDAEMON_SOURCE", "/workspace")
+    source = os.environ.get("RASDAEMON_SOURCE", os.path.expanduser("~/rasdaemon"))
     results = os.environ.get("RASDAEMON_RESULTS", "/results")
     runner = "/opt/rasdaemon-ci/harness/ras_qemu.py"
     if not os.path.isfile(runner):
