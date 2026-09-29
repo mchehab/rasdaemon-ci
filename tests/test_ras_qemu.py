@@ -20,6 +20,11 @@ SPEC = importlib.util.spec_from_file_location("ras_qemu", MODULE_PATH)
 ras_qemu = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(ras_qemu)
 
+OCI_PATH = pathlib.Path(__file__).parent / "qemu" / "oci" / "rasdaemon-ci.py"
+OCI_SPEC = importlib.util.spec_from_file_location("rasdaemon_ci", OCI_PATH)
+rasdaemon_ci = importlib.util.module_from_spec(OCI_SPEC)
+OCI_SPEC.loader.exec_module(rasdaemon_ci)
+
 AGENT_PATH = pathlib.Path(__file__).parent / "qemu" / "guest" / "agent.py"
 AGENT_SPEC = importlib.util.spec_from_file_location("agent", AGENT_PATH)
 agent = importlib.util.module_from_spec(AGENT_SPEC)
@@ -46,6 +51,19 @@ class RasQemuTest(unittest.TestCase):
     def test_architecture_aliases(self):
         self.assertEqual(ras_qemu.architecture_name("amd64"), "x86_64")
         self.assertEqual(ras_qemu.architecture_name("arm64"), "aarch64")
+
+    def test_container_uses_ci_mount_contract(self):
+        """Resolve the source under the image user's home without a fixed username."""
+        with patch.dict(os.environ, {}, clear=True), \
+                patch.object(rasdaemon_ci.os.path, "expanduser", return_value="/home/ci/rasdaemon"), \
+                patch.object(rasdaemon_ci.os.path, "isfile", return_value=True), \
+                patch.object(rasdaemon_ci.os, "makedirs"), \
+                patch.object(rasdaemon_ci.subprocess, "call", return_value=0) as call:
+            self.assertEqual(rasdaemon_ci.main(["run", "--arch", "aarch64"]), 0)
+        command = call.call_args.args[0]
+        self.assertEqual(command[command.index("--source-dir") + 1], "/home/ci/rasdaemon")
+        self.assertEqual(command[command.index("--result-dir") + 1], "/results")
+        self.assertEqual(call.call_args.kwargs["cwd"], "/home/ci/rasdaemon")
 
     def test_progress_filters_noise_and_buffers_incomplete_lines(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -111,6 +129,81 @@ class RasQemuTest(unittest.TestCase):
         """An unsupported device must not turn its retained build check red."""
         self.assertIn("HAVE_PCIE_EDPC", ras_qemu.OPTIONAL_BUILD_MACROS)
         self.assertIn("DPC-capable", ras_qemu.OPTIONAL_BUILD_MACROS["HAVE_PCIE_EDPC"])
+
+    def test_payload_uses_generated_config_without_source_template(self):
+        """Keep disabled flags visible after upstream removes config.h.in."""
+        for arch in ("x86_64", "aarch64"):
+            with self.subTest(arch=arch), tempfile.TemporaryDirectory() as temporary:
+                root = pathlib.Path(temporary)
+                source = root / "source"
+                source.mkdir()
+                build = root / "host-build"
+                build.mkdir()
+                (build / "config.h").write_text(
+                    '#define HAVE_SQLITE3\n#define HAVE_ARM 1\n'
+                    '#undef HAVE_MYSQL\n/* #undef HAVE_POSTGRESQL */\n'
+                    '#undef HAVE_PCIE_EDPC\n#undef HAVE_BMC_GENERIC\n')
+                install = root / "host-install" / "usr"
+                install.mkdir(parents=True)
+                (install / "rasdaemon").write_bytes(b"installed binary")
+                vm = ras_qemu.VirtualMachine(self.descriptor(), arch, "tcg",
+                                            root / "image", root, source, 10)
+                with patch.object(ras_qemu.platform, "machine", return_value=arch), \
+                        patch.object(ras_qemu.subprocess, "Popen") as process, \
+                        patch.object(ras_qemu.subprocess, "run", return_value=
+                                     types.SimpleNamespace(returncode=0, stdout="revision")), \
+                        contextlib.redirect_stderr(io.StringIO()):
+                    process.return_value.returncode = 0
+                    vm._stage_source()
+                checks = {check["name"]: check for check in vm.build_checks}
+                self.assertEqual(checks["Build HAVE_SQLITE3"]["status"], "passed")
+                self.assertEqual(checks["Build HAVE_ARM"]["status"], "passed")
+                self.assertEqual(checks["Build HAVE_BMC_GENERIC"]["status"], "failed")
+                self.assertEqual(checks["Build HAVE_PCIE_EDPC"]["status"], "not_applicable")
+                for macro in ("HAVE_MYSQL", "HAVE_POSTGRESQL"):
+                    self.assertEqual(checks["Build " + macro]["status"],
+                                     "passed" if arch == "aarch64" else "failed")
+                self.assertTrue((vm.payload_dir / "rasdaemon-install.tar").is_file())
+
+    def test_prepare_failure_is_reported_in_job_log(self):
+        """The failure from the supplied CI artifacts must be visible without a VM."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            args = types.SimpleNamespace(arch="x86_64", cache_dir=root,
+                                         accelerator="tcg", profile="baseline",
+                                         source_dir=root, result_dir=root / "results",
+                                         work_dir=None, timeout=12, quiet=False, dry_run=False)
+            checks = [ras_qemu.Check(name, True, "available", str(root / "image"))
+                      for name in ("qemu", "qemu-img", "image", "tcg")]
+
+            def fail_prepare(machine):
+                (machine.work_dir / "payload-build.log").write_text("payload installed\n")
+                raise FileNotFoundError("/workspace/config.h.in")
+
+            with patch.object(ras_qemu.CapabilityProbe, "inspect", return_value=checks), \
+                    patch.object(ras_qemu.features, "feature_inventory", return_value=[]), \
+                    patch.object(ras_qemu.VirtualMachine, "prepare", fail_prepare), \
+                    contextlib.redirect_stderr(io.StringIO()) as output, \
+                    contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(ras_qemu.run_test(args, self.manifest()), 1)
+            self.assertIn("Infrastructure failure", output.getvalue())
+            self.assertIn("FileNotFoundError: /workspace/config.h.in", output.getvalue())
+            self.assertIn("FAIL guest: /workspace/config.h.in", output.getvalue())
+            self.assertIn("payload installed", output.getvalue())
+            self.assertNotIn("Retained console:", output.getvalue())
+
+    def test_failure_logs_include_bounded_console_and_evidence(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            (root / "console.log").write_text("old noise\n" * 4000 + "kernel panic\n")
+            document = ras_qemu.ResultDocument("aarch64", "tcg", "injection")
+            document.add_test("sqlite", "failed", "missing event", {"sqlite_count": 0})
+            with contextlib.redirect_stderr(io.StringIO()) as output:
+                ras_qemu.print_failure_diagnostics(document.data, root)
+            self.assertIn("FAIL sqlite: missing event", output.getvalue())
+            self.assertIn('"sqlite_count": 0', output.getvalue())
+            self.assertIn("kernel panic", output.getvalue())
+            self.assertLess(len(output.getvalue()), 17000)
 
     def test_manifest_rejects_missing_field(self):
         with tempfile.TemporaryDirectory() as temporary:

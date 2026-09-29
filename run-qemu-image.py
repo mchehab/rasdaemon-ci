@@ -66,6 +66,12 @@ def main() -> None:
     command(["docker", "pull", image])
     command(["docker", "image", "inspect", "--format",
              "Image ID={{.Id}}; repository digests={{json .RepoDigests}}", image])
+    container_source = subprocess.check_output(
+        ["docker", "run", "--rm", "--entrypoint", "/bin/sh", image,
+         "-c", 'printf "%s/rasdaemon" "$HOME"'], text=True,
+    ).strip()
+    if not os.path.isabs(container_source):
+        raise SystemExit("The image must provide an absolute HOME directory")
     os.makedirs(args.result_dir, exist_ok=True)
     docker_args = ["docker", "run", "--rm"]
     local_harness = not args.image_harness
@@ -96,7 +102,8 @@ def main() -> None:
     else:
         log("/dev/kvm is unavailable; the test container will use TCG")
     docker_args.extend([
-        "-v", f"{source}:/workspace:ro",
+        "-v", f"{source}:{container_source}:ro",
+        "-e", f"RASDAEMON_SOURCE={container_source}",
         "-v", f"{os.path.realpath(args.result_dir)}:/results",
         image,
     ])

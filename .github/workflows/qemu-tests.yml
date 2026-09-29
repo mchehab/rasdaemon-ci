@@ -76,8 +76,12 @@ jobs:
           if test -r /dev/kvm && test -w /dev/kvm; then
             docker_args+=(--device /dev/kvm)
           fi
+          container_source=$(docker run --rm --entrypoint /bin/sh "$IMAGE_REF" \
+            -c 'printf "%s/rasdaemon" "$HOME"')
+          test "${container_source:0:1}" = /
           docker run "${docker_args[@]}" \
-            -v "$PWD/rasdaemon-source:/workspace:ro" \
+            -v "$PWD/rasdaemon-source:$container_source:ro" \
+            -e "RASDAEMON_SOURCE=$container_source" \
             -v "$PWD/build/qemu-results/$TEST_ARCH:/results" \
             "$IMAGE_REF" \
             run --arch "$TEST_ARCH" --accelerator auto \
@@ -89,6 +93,34 @@ jobs:
           TEST_ARCH: ${{ matrix.arch }}
         run: |
           set -eux
+
+          python3 - "build/qemu-results/$TEST_ARCH/result.json" <<'PYTHON'
+          import json
+          import pathlib
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          if path.is_file():
+              data = json.loads(path.read_text())
+              if data.get("infrastructure_failure"):
+                  print("Infrastructure failure: " + data["infrastructure_failure"], flush=True)
+              for test in data.get("tests", []):
+                  if test["status"] == "failed":
+                      print("FAIL " + test["name"] + ": " + test.get("reason", ""), flush=True)
+                      if test.get("evidence"):
+                          print(json.dumps(test["evidence"], indent=2)[-16384:], flush=True)
+              if data.get("infrastructure_failure") or any(
+                      test["status"] == "failed" for test in data.get("tests", [])):
+                  for name in ("payload-build.log", "qemu.log", "console.log", "fuzz.log"):
+                      log = path.parent / name
+                      if log.is_file():
+                          with log.open("rb") as stream:
+                              stream.seek(max(0, log.stat().st_size - 16384))
+                              tail = stream.read().decode("utf-8", errors="replace")
+                          print(name + " (last 16384 bytes):\n" + tail, flush=True)
+          else:
+              print("Infrastructure failure: no result.json was produced", flush=True)
+          PYTHON
 
           if test -f "build/qemu-results/$TEST_ARCH/results.html"; then
             echo "Download rasdaemon-qemu-results-$TEST_ARCH and open results.html for feature and detailed results." >> "$GITHUB_STEP_SUMMARY"
