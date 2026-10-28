@@ -61,7 +61,7 @@ class ConsumerChecks:
         if self.scenario.scenario.get("producer") == "pfa":
             prefix = "ROW" if "row" in self.scenario.scenario["name"] else "PAGE"
             self.scenario.environment[prefix + "_CE_ACTION"] = "hard"
-            self.scenario.environment[prefix + "_CE_THRESHOLD"] = "1"
+            self.scenario.environment[prefix + "_CE_THRESHOLD"] = "2"
         if self.scenario.scenario["name"] == "ghes-aer":
             self.scenario.environment.update(BMC_GENERIC_ENABLE="yes")
         if self.scenario.scenario["name"] == "consumer-arm-sel":
@@ -74,7 +74,7 @@ class ConsumerChecks:
 
             if self.cpu_states.get("/sys/devices/system/cpu/cpu1/online") != "1":
                 raise RuntimeError("CPU isolation requires an initially online CPU1")
-            self.scenario.environment.update(CPU_ISOLATION_ENABLE="yes", CPU_CE_THRESHOLD="1",
+            self.scenario.environment.update(CPU_ISOLATION_ENABLE="yes", CPU_CE_THRESHOLD="3",
                                              CPU_ISOLATION_LIMIT="1")
         if self.scenario.scenario["name"] != "memory-failure":
             return
@@ -186,12 +186,15 @@ class ConsumerChecks:
             self.check_sel(event_status)
         if self.scenario.scenario["name"] == "ghes-arm":
             evidence = self.scenario.evidence
-            valid = evidence.get("cpu1_after_injection") == "0"
+            output = evidence.get("rasdaemon_output", "")
+            threshold_hit = "Corrected Errors exceeded threshold 3, try to offline cpu1" in output
+            valid = evidence.get("cpu1_after_injection") == "0" and threshold_hit
             self.result("cpu-fault-isolation", event_status == "passed" and valid,
-                        "CPU1 must transition from online to offline after corrected ARM errors",
+                        "Three corrected ARM errors must hit the threshold and offline CPU1",
                         {"before": self.cpu_states.get("/sys/devices/system/cpu/cpu1/online"),
                          "after": evidence.get("cpu1_after_injection"),
-                         "output": evidence.get("rasdaemon_output", "")})
+                         "threshold": 3, "threshold_hit": threshold_hit,
+                         "expected_error_count": 3, "output": output})
             vendor = self.scenario.scenario["vendor_hex"]
             valid = any(row.get("vendor_info") == vendor for row in evidence["rows"])
             output = evidence.get("rasdaemon_output", "")

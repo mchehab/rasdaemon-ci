@@ -1123,7 +1123,18 @@ class RecordedScenario:
 
             rows = self.records()
 
-            if self.scenario["name"] == "memory-failure":
+            if self.scenario.get("producer") == "pfa":
+                matching_rows = [row for row in rows
+                                 if matching_record(self.scenario, row, self.evidence)]
+                if len(matching_rows) >= self.scenario.get("repeat", 1):
+                    self.evidence["rows"] = [
+                        {key: value.hex() if isinstance(value, bytes) else value
+                         for key, value in row.items()} for row in rows
+                    ]
+                    self.evidence["matching_pfa_events"] = len(matching_rows)
+                    return
+
+            elif self.scenario["name"] == "memory-failure":
                 expected_pfns = [page["pfn"] for page in
                                  self.evidence.get("poisoned_pages", [])]
                 matched_pfns = {
@@ -1466,6 +1477,11 @@ def execute(profile):
                 block_error_smoke(results, build, environment)
             scenarios = json.loads(read_text(os.path.join(payload, "scenarios.json")))
             scenarios.extend(hisi.scenarios())
+            late_scenarios = {"consumer-memory-ce-pfa": 0,
+                              "consumer-memory-row-ce-pfa": 1,
+                              "ghes-arm": 2}
+            scenarios.sort(key=lambda scenario: late_scenarios.get(
+                scenario["name"], -1))
 
             for scenario in scenarios:
                 if features.scenario_arch(scenario["name"]) == os.uname().machine:

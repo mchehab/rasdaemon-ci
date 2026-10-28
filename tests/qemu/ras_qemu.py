@@ -854,6 +854,11 @@ class VirtualMachine:
         self.scenarios.extend(hisi.scenarios())
         self.scenarios = [scenario for scenario in self.scenarios
                           if features.scenario_arch(scenario["name"]) == self.arch]
+        late_scenarios = {"consumer-memory-ce-pfa": 0,
+                          "consumer-memory-row-ce-pfa": 1,
+                          "ghes-arm": 2}
+        self.scenarios.sort(key=lambda scenario: late_scenarios.get(
+            scenario["name"], -1))
 
         self.injection_evidence: dict[str, dict] = {}
         self.build_checks: list[dict] = []
@@ -1331,12 +1336,22 @@ class VirtualMachine:
         helper_path = environment.get("RAS_QEMU_GHES_PYTHONPATH")
         if helper_path:
             environment["PYTHONPATH"] = helper_path + os.pathsep + environment.get("PYTHONPATH", "")
-        completed = subprocess.run(command, check=False, text=True, env=environment,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.STDOUT, timeout=45)
-        evidence["output"] = completed.stdout
-        if completed.returncode:
-            raise LabError("GHES injection failed: %s" % completed.stdout.strip())
+        repeat = scenario.get("repeat", 1)
+        if not isinstance(repeat, int) or repeat < 1 or repeat > 4:
+            raise LabError(f"Invalid GHES repeat count for {name}: {repeat!r}")
+        injections = []
+        for index in range(repeat):
+            completed = subprocess.run(command, check=False, text=True, env=environment,
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.STDOUT, timeout=45)
+            injections.append({"attempt": index + 1, "returncode": completed.returncode,
+                               "output": completed.stdout})
+            if completed.returncode:
+                evidence["injections"] = injections
+                evidence["output"] = "\n".join(item["output"] for item in injections)
+                raise LabError("GHES injection failed: %s" % completed.stdout.strip())
+        evidence["injections"] = injections
+        evidence["output"] = "\n".join(item["output"] for item in injections)
 
     def poll_fuzz(self) -> None:
         """Run the weekly generator without blocking watchdog or result collection."""

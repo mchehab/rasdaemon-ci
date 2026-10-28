@@ -273,13 +273,15 @@
     "name": "consumer-memory-ce-pfa",
     "event": "ras/mc_event",
     "table": "mc_event",
-    "producer": "pfa"
+    "producer": "pfa",
+    "repeat": 2
   },
   {
     "name": "consumer-memory-row-ce-pfa",
     "event": "ras/mc_event",
     "table": "mc_event",
-    "producer": "pfa"
+    "producer": "pfa",
+    "repeat": 2
   },
   {
     "name": "extlog-memory",
