@@ -1,0 +1,365 @@
+{
+  "accelerator": "tcg",
+  "architecture": "x86_64",
+  "capabilities": [
+    {
+      "available": true,
+      "name": "qemu",
+      "reason": "available",
+      "value": "QEMU emulator version 11.1.50"
+    },
+    {
+      "available": true,
+      "name": "qemu-img",
+      "reason": "available",
+      "value": "/opt/qemu/bin/qemu-img"
+    },
+    {
+      "available": true,
+      "name": "image",
+      "reason": "manifest cache",
+      "value": "/opt/rasdaemon-ci/rasdaemon-guest-x86_64.qcow2"
+    },
+    {
+      "available": false,
+      "name": "firmware-code",
+      "reason": "no matching pair found",
+      "value": ""
+    },
+    {
+      "available": false,
+      "name": "firmware-vars",
+      "reason": "no matching pair found",
+      "value": ""
+    },
+    {
+      "available": false,
+      "name": "kvm",
+      "reason": "/dev/kvm is absent",
+      "value": "/dev/kvm"
+    },
+    {
+      "available": true,
+      "name": "tcg",
+      "reason": "available",
+      "value": ""
+    }
+  ],
+  "component_totals": {
+    "kernel": {
+      "failed": 0,
+      "not_applicable": 1,
+      "passed": 10,
+      "skipped": 0
+    },
+    "rasdaemon": {
+      "failed": 0,
+      "not_applicable": 11,
+      "passed": 0,
+      "skipped": 0
+    }
+  },
+  "feature_inventory": [
+    "abrt-report",
+    "aer",
+    "amp-ns-decode",
+    "ampere-oem-sel",
+    "arm",
+    "arm-vendor-data",
+    "bmc-generic",
+    "cpu-fault-isolation",
+    "cxl",
+    "db",
+    "debug-sql",
+    "devlink",
+    "diskerror",
+    "erst",
+    "extlog",
+    "hisi-ns-decode",
+    "ipmi-bmc",
+    "jaguar-ns-decode",
+    "mc-event",
+    "mce",
+    "memory-ce-pfa",
+    "memory-failure",
+    "memory-row-ce-pfa",
+    "mysql",
+    "non-standard",
+    "nvidia-ns-decode",
+    "openbmc-unified-sel",
+    "page-isolation",
+    "pcie-edpc",
+    "poison-page-stat",
+    "postgresql",
+    "reri",
+    "signal",
+    "sqlite3",
+    "trigger",
+    "yitian-ns-decode"
+  ],
+  "features": [
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "x86_64",
+      "checks": [
+        "aer-native",
+        "ghes-aer"
+      ],
+      "feature": "aer",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "x86_64",
+      "checks": [
+        "consumer-bmc-generic"
+      ],
+      "feature": "bmc-generic",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "x86_64",
+      "checks": [
+        "cxl-media",
+        "cxl-dram",
+        "cxl-module",
+        "cxl-poison",
+        "cxl-overflow",
+        "cxl-aer-ce",
+        "cxl-aer-ue",
+        "cxl-memory-sparing"
+      ],
+      "feature": "cxl",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": [
+        {
+          "check": "cxl-generic",
+          "reason": "No generic CXL event producer has been implemented in the harness"
+        }
+      ]
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "x86_64",
+      "checks": [
+        "erst-persistence"
+      ],
+      "feature": "erst",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": [
+        {
+          "check": "erst-additional-coverage",
+          "reason": "A fatal MCE followed by reboot and post-boot ERST discovery is not simulated"
+        }
+      ]
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "x86_64",
+      "checks": [
+        "extlog-memory"
+      ],
+      "feature": "extlog",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": [
+        {
+          "check": "extlog-additional-coverage",
+          "reason": "The producer is software-only; physical firmware EXTLOG delivery is not simulated"
+        }
+      ]
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "x86_64",
+      "checks": [
+        "consumer-bmc-generic"
+      ],
+      "feature": "ipmi-bmc",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "x86_64",
+      "checks": [
+        "mce-hardware-first"
+      ],
+      "feature": "mce",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "x86_64",
+      "checks": [
+        "consumer-mysql"
+      ],
+      "feature": "mysql",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "x86_64",
+      "checks": [],
+      "feature": "pcie-edpc",
+      "reason": "The current QEMU test topology has no DPC-capable PCIe port",
+      "untested": [
+        {
+          "check": "pcie-edpc",
+          "reason": "The current QEMU test topology has no DPC-capable PCIe port"
+        }
+      ]
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "x86_64",
+      "checks": [
+        "consumer-postgresql"
+      ],
+      "feature": "postgresql",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    }
+  ],
+  "finished_at": "2026-11-07T12:37:29.412656+00:00",
+  "format_version": 1,
+  "host": {
+    "architecture": "x86_64",
+    "kernel": "7.0.0-1017-azure"
+  },
+  "infrastructure_failure": "no matching pair found; no matching pair found",
+  "profile": "injection",
+  "started_at": "2026-11-07T12:37:29.412016+00:00",
+  "tests": [
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_ACPI_APEI_GHES config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_ACPI_APEI_PCIEAER config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_EDAC_GHES config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_MEMORY_FAILURE config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_PCIEAER config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_CXL_BUS config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_CXL_PCI config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_CXL_ACPI config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_CXL_MEM config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_CXL_REGION config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "N/A",
+      "name": "prerequisites",
+      "rasdaemon": "N/A",
+      "reason": "Prerequisites check skipped: QEMU tools, guest image integrity, firmware and a usable accelerator are required to start the VM; no matching pair found; no matching pair found",
+      "status": "skipped"
+    }
+  ],
+  "totals": {
+    "failed": 0,
+    "not_applicable": 0,
+    "passed": 10,
+    "skipped": 1
+  },
+  "vm_status": "failed"
+}

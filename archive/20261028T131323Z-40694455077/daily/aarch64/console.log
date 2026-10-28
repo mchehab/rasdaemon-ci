@@ -1,0 +1,1033 @@
+UEFI firmware (version edk2-stable202408-prebuilt.qemu.org built at 16:28:50 on Sep 12 2024)
+ArmTrngLib could not be correctly initialized.
+Error: Image at 000BFD66000 start failed: Not Found
+Error: Image at 000BFC8E000 start failed: Unsupported
+Error: Image at 000BFC13000 start failed: Not Found
+Tpm2SubmitCommand - Tcg2 - Not Found
+Tpm2GetCapabilityPcrs fail!
+Tpm2SubmitCommand - Tcg2 - Not Found
+BdsDxe: loading Boot0001 "UEFI Misc Device" from PciRoot(0x0)/Pci(0x1,0x0)
+BdsDxe: starting Boot0001 "UEFI Misc Device" from PciRoot(0x0)/Pci(0x1,0x0)
+error: no suitable video mode found.
+
+  Booting `Advanced options for Debian GNU/Linux'
+
+
+  Booting `Debian GNU/Linux, with Linux 7.3.0-gc03c1a14507d'
+
+
+Loading Linux 7.3.0-gc03c1a14507d ...
+
+Loading initial ramdisk ...
+
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x000f0510]
+[    0.000000] Linux version 7.3.0-gc03c1a14507d (runner@runnervmidgih) (gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, GNU ld (GNU Binutils for Ubuntu) 2.42) #1 SMP PREEMPT Mon Oct 19 03:30:37 UTC 2026
+[    0.000000] KASLR enabled
+[    0.000000] efi: EFI v2.7 by EDK II
+[    0.000000] efi: SMBIOS 3.0=0xbfed0000 MEMATTR=0xbe583018 ACPI 2.0=0xbcb43018 INITRD=0xbc69ba98 RNG=0xbcb43698 MEMRESERVE=0xbc69bf98 
+[    0.000000] random: crng init done
+[    0.000000] ACPI: Early table checksum verification disabled
+[    0.000000] ACPI: RSDP 0x00000000BCB43018 000024 (v02 BOCHS )
+[    0.000000] ACPI: XSDT 0x00000000BCB43F18 00006C (v01 BOCHS  BXPC     00000001      01000013)
+[    0.000000] ACPI: FACP 0x00000000BCB43B18 000114 (v06 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: DSDT 0x00000000BCB41018 001557 (v02 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: APIC 0x00000000BCB43C98 000108 (v04 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: PPTT 0x00000000BCB43E18 000074 (v02 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: GTDT 0x00000000BCB43098 000068 (v03 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: MCFG 0x00000000BCB43A98 00003C (v01 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: SPCR 0x00000000BCB43818 000050 (v02 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: DBG2 0x00000000BCB43A18 000057 (v00 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: HEST 0x00000000BCB43898 0000E0 (v01 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: IORT 0x00000000BCB43198 000080 (v05 BOCHS  BXPC     00000001 BXPC 00000001)
+[    0.000000] ACPI: SPCR: console: pl011,mmio32,0x9000000,9600
+[    0.000000] NUMA: Faking a node at [mem 0x0000000040000000-0x00000000bfffffff]
+[    0.000000] NODE_DATA(0) allocated [mem 0xbfa4a900-0xbfa4cfff]
+[    0.000000] cma: Reserved 32 MiB at 0x00000000ba600000
+[    0.000000] psci: probing for conduit method from ACPI.
+[    0.000000] psci: PSCIv1.1 detected in firmware.
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] psci: Trusted OS migration not required
+[    0.000000] psci: SMC Calling Convention v1.0
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000040000000-0x00000000bfffffff]
+[    0.000000]   DMA32    empty
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000040000000-0x00000000bc64ffff]
+[    0.000000]   node   0: [mem 0x00000000bc650000-0x00000000bc68ffff]
+[    0.000000]   node   0: [mem 0x00000000bc690000-0x00000000bc76ffff]
+[    0.000000]   node   0: [mem 0x00000000bc770000-0x00000000bcb3ffff]
+[    0.000000]   node   0: [mem 0x00000000bcb40000-0x00000000bfe1ffff]
+[    0.000000]   node   0: [mem 0x00000000bfe20000-0x00000000bfeaffff]
+[    0.000000]   node   0: [mem 0x00000000bfeb0000-0x00000000bfebffff]
+[    0.000000]   node   0: [mem 0x00000000bfec0000-0x00000000bffdffff]
+[    0.000000]   node   0: [mem 0x00000000bffe0000-0x00000000bfffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000040000000-0x00000000bfffffff]
+[    0.000000] percpu: Embedded 35 pages/cpu s105560 r8192 d29608 u143360
+[    0.000000] Detected PIPT I-cache on CPU0
+[    0.000000] CPU features: detected: Address authentication (IMP DEF algorithm)
+[    0.000000] CPU features: detected: GICv3 CPU interface
+[    0.000000] CPU features: detected: HCRX_EL2 register
+[    0.000000] CPU features: detected: Stage-1 Permission Indirection Extension (S1PIE)
+[    0.000000] CPU features: detected: 52-bit Virtual Addressing (LPA2)
+[    0.000000] CPU features: detected: Store Only MTE Tag Check
+[    0.000000] CPU features: detected: Spectre-v4
+[    0.000000] alternatives: applying boot alternatives
+[    0.000000] Kernel command line: BOOT_IMAGE=/boot/vmlinuz-7.3.0-gc03c1a14507d root=PARTUUID=4cba83b2-97b0-4b9b-8794-a7dde491028c ro ghes.edac_force_enable=1
+[    0.000000] printk: log buffer data + meta data: 131072 + 458752 = 589824 bytes
+[    0.000000] Dentry cache hash table entries: 262144 (order: 9, 2097152 bytes, linear)
+[    0.000000] Inode-cache hash table entries: 131072 (order: 8, 1048576 bytes, linear)
+[    0.000000] software IO TLB: SWIOTLB bounce buffer size adjusted to 2MB
+[    0.000000] software IO TLB: area num 2.
+[    0.000000] software IO TLB: mapped [mem 0x00000000bd200000-0x00000000bd400000] (2MB)
+[    0.000000] Fallback order for Node 0: 0 
+[    0.000000] Built 1 zonelists, mobility grouping on.  Total pages: 524288
+[    0.000000] Policy zone: DMA
+[    0.000000] mem auto-init: stack:all(zero), heap alloc:off, heap free:off
+[    0.000000] SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=2, Nodes=1
+[    0.000000] rcu: Preemptible hierarchical RCU implementation.
+[    0.000000] rcu: 	RCU event tracing is enabled.
+[    0.000000] rcu: 	RCU restricting CPUs from NR_CPUS=512 to nr_cpu_ids=2.
+[    0.000000] 	Trampoline variant of Tasks RCU enabled.
+[    0.000000] 	Tracing variant of Tasks RCU enabled.
+[    0.000000] rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+[    0.000000] rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=2
+[    0.000000] RCU Tasks: Setting shift to 1 and lim to 1 rcu_task_cb_adjust=1 rcu_task_cpu_ids=2.
+[    0.000000] NR_IRQS: 64, nr_irqs: 64, preallocated irqs: 0
+[    0.000000] GICv3: 256 SPIs implemented
+[    0.000000] GICv3: 0 Extended SPIs implemented
+[    0.000000] Root IRQ handler: gic_handle_irq
+[    0.000000] GICv3: GICv3 features: 16 PPIs
+[    0.000000] GICv3: GICD_CTLR.DS=1, SCR_EL3.FIQ=0
+[    0.000000] GICv3: CPU0: found redistributor 0 region 0:0x00000000080a0000
+[    0.000000] ITS [mem 0x08080000-0x0809ffff]
+[    0.000000] ITS@0x0000000008080000: allocated 8192 Devices @40110000 (indirect, esz 8, psz 64K, shr 1)
+[    0.000000] ITS@0x0000000008080000: allocated 8192 Interrupt Collections @40120000 (flat, esz 8, psz 64K, shr 1)
+[    0.000000] GICv3: using LPI property table @0x0000000040130000
+[    0.000000] GICv3: CPU0: using allocated LPI pending table @0x0000000040150000
+[    0.000000] rcu: srcu_init: Setting srcu_struct sizes based on contention.
+[    0.000000] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+[    0.000000] arch_timer: cp15 timer running at 1000.00MHz (virt).
+[    0.000000] clocksource: arch_sys_counter: mask: 0x1fffffffffffffff max_cycles: 0x1cd42e4dffb, max_idle_ns: 881590591483 ns
+[    0.000068] sched_clock: 61 bits at 1000MHz, resolution 1ns, wraps every 4398046511103ns
+[    0.019173] Console: colour dummy device 80x25
+[    0.023893] ACPI: Core revision 20260408
+[    0.029694] Calibrating delay loop (skipped), value calculated using timer frequency.. 2000.00 BogoMIPS (lpj=4000000)
+[    0.030310] pid_max: default: 32768 minimum: 301
+[    0.038342] Mount-cache hash table entries: 4096 (order: 3, 32768 bytes, linear)
+[    0.038444] Mountpoint-cache hash table entries: 4096 (order: 3, 32768 bytes, linear)
+[    0.049112] VFS: Finished mounting rootfs on nullfs
+[    0.092173] rcu: Hierarchical SRCU implementation.
+[    0.092233] rcu: 	Max phase no-delay instances is 1000.
+[    0.093737] Timer migration: 1 hierarchy levels; 8 children per group; 1 crossnode level
+[    0.098090] Remapping and enabling EFI services.
+[    0.102444] smp: Bringing up secondary CPUs ...
+[    0.110740] Detected PIPT I-cache on CPU1
+[    0.112582] GICv3: CPU1: found redistributor 1 region 0:0x00000000080c0000
+[    0.113475] GICv3: CPU1: using allocated LPI pending table @0x0000000040160000
+[    0.115533] CPU1: Booted secondary processor 0x0000000001 [0x000f0510]
+[    0.121101] smp: Brought up 1 node, 2 CPUs
+[    0.121145] SMP: Total of 2 processors activated.
+[    0.121176] CPU: All CPU(s) started at EL1
+[    0.121768] CPU features: detected: Branch Target Identification
+[    0.121823] CPU features: detected: 32-bit EL0 Support
+[    0.121837] CPU features: detected: 32-bit EL1 Support
+[    0.121847] CPU features: detected: ARMv8.4 Translation Table Level
+[    0.121865] CPU features: detected: Instruction cache invalidation not required for I/D coherence
+[    0.121883] CPU features: detected: Data cache clean to the PoU not required for I/D coherence
+[    0.121927] CPU features: detected: Common not Private translations
+[    0.121936] CPU features: detected: CRC32 instructions
+[    0.121944] CPU features: detected: Data independent timing control (DIT)
+[    0.121953] CPU features: detected: E0PD
+[    0.121961] CPU features: detected: Enhanced Counter Virtualization
+[    0.121970] CPU features: detected: Enhanced Counter Virtualization (CNTPOFF)
+[    0.121978] CPU features: detected: Enhanced Privileged Access Never
+[    0.121986] CPU features: detected: Enhanced Virtualization Traps
+[    0.121995] CPU features: detected: FPMR
+[    0.122003] CPU features: detected: Fine Grained Traps
+[    0.122013] CPU features: detected: Guarded Control Stack (GCS)
+[    0.122063] CPU features: detected: Generic authentication (IMP DEF algorithm)
+[    0.122173] CPU features: detected: RCpc load-acquire (LDAPR)
+[    0.122211] CPU features: detected: 52-bit Virtual Addressing for KVM (LPA2)
+[    0.122220] CPU features: detected: LSE atomic instructions
+[    0.122231] CPU features: detected: Memory Copy and Memory Set instructions
+[    0.122241] CPU features: detected: Privileged Access Never
+[    0.122271] CPU features: detected: PMUv3
+[    0.122279] CPU features: detected: SCTLR2
+[    0.122287] CPU features: detected: RAS Extension Support
+[    0.122338] CPU features: detected: RASv1p1 Extension Support
+[    0.122347] CPU features: detected: Random Number Generator
+[    0.122355] CPU features: detected: Speculation barrier (SB)
+[    0.122363] CPU features: detected: Stage-2 Force Write-Back
+[    0.122372] CPU features: detected: Trap EL0 IMPLEMENTATION DEFINED functionality
+[    0.122381] CPU features: detected: TLB range maintenance instructions
+[    0.122389] CPU features: detected: WFx with timeout
+[    0.122397] CPU features: detected: XNX
+[    0.122464] CPU features: detected: FAR on MTE Tag Check Fault
+[    0.122473] CPU features: detected: Scalable Matrix Extension
+[    0.122481] CPU features: detected: FA64
+[    0.122489] CPU features: detected: SME2
+[    0.122518] CPU features: detected: Speculative Store Bypassing Safe (SSBS)
+[    0.122527] CPU features: detected: Scalable Vector Extension
+[    0.133848] alternatives: applying system-wide alternatives
+[    0.152307] CPU features: detected: Hardware dirty bit management on CPU0-1
+[    0.153217] SVE: maximum available vector length 256 bytes per vector
+[    0.153352] SVE: default vector length 64 bytes per vector
+[    0.153439] SME: minimum available vector length 16 bytes per vector
+[    0.153453] SME: maximum available vector length 256 bytes per vector
+[    0.153465] SME: default vector length 32 bytes per vector
+[    0.172886] Memory: 1933708K/2097152K available (19648K kernel code, 6906K rwdata, 15708K rodata, 14784K init, 720K bss, 126240K reserved, 32768K cma-reserved)
+[    0.199670] devtmpfs: initialized
+[    0.222715] posixtimers hash table entries: 1024 (order: 2, 16384 bytes, linear)
+[    0.223528] futex hash table entries: 512 (32768 bytes on 1 NUMA nodes, total 32 KiB, linear).
+[    0.226851] 2G module region forced by RANDOMIZE_MODULE_REGION_FULL
+[    0.226930] 0 pages in range for non-PLT usage
+[    0.226973] 509776 pages in range for PLT usage
+[    0.253909] DMI: SMBIOS 3.0.0 present.
+[    0.254233] DMI: QEMU QEMU Virtual Machine, BIOS edk2-stable202408-prebuilt.qemu.org 08/13/2024
+[    0.254474] DMI: Memory slots populated: 1/1
+[    0.279101] NET: Registered PF_NETLINK/PF_ROUTE protocol family
+[    0.293419] DMA: preallocated 256 KiB GFP_KERNEL|GFP_DMA pool for atomic allocations
+[    0.293856] audit: initializing netlink subsys (disabled)
+[    0.296137] audit: type=2000 audit(0.256:1): state=initialized audit_enabled=0 res=1
+[    0.303486] thermal_sys: Registered thermal governor 'step_wise'
+[    0.303575] thermal_sys: Registered thermal governor 'power_allocator'
+[    0.304531] cpuidle: using governor menu
+[    0.307104] hw-breakpoint: found 6 breakpoint and 4 watchpoint registers.
+[    0.307906] ASID allocator initialised with 65536 entries
+[    0.325600] acpiphp: ACPI Hot Plug PCI Controller Driver version: 0.5
+[    0.328662] Serial: AMBA PL011 UART driver
+[    0.341140] HugeTLB: registered 1.00 GiB page size, pre-allocated 0 pages
+[    0.341179] HugeTLB: 0 KiB vmemmap can be freed for a 1.00 GiB page
+[    0.341339] HugeTLB: registered 32.0 MiB page size, pre-allocated 0 pages
+[    0.341354] HugeTLB: 0 KiB vmemmap can be freed for a 32.0 MiB page
+[    0.341367] HugeTLB: registered 2.00 MiB page size, pre-allocated 0 pages
+[    0.341376] HugeTLB: 0 KiB vmemmap can be freed for a 2.00 MiB page
+[    0.341390] HugeTLB: registered 64.0 KiB page size, pre-allocated 0 pages
+[    0.341399] HugeTLB: 0 KiB vmemmap can be freed for a 64.0 KiB page
+[    0.365372] ACPI: Added _OSI(Module Device)
+[    0.365425] ACPI: Added _OSI(Processor Device)
+[    0.365437] ACPI: Added _OSI(Processor Aggregator Device)
+[    0.395862] ACPI: 1 ACPI AML tables successfully acquired and loaded
+[    0.404911] ACPI: \_SB_: platform _OSC: OS support mask [002a6efe]
+[    0.406375] ACPI: Interpreter enabled
+[    0.406407] ACPI: Using GIC for interrupt routing
+[    0.407040] ACPI: MCFG table detected, 1 entries
+[    0.409409] HEST: Table parsing has been initialized.
+[    0.412440] GHES: Failed to enable APEI firmware first mode.
+[    0.475559] ACPI: CPU0 has been hot-added
+[    0.476591] ACPI: CPU1 has been hot-added
+[    0.487069] ARMH0011:00: ttyAMA0 MMIO32:0x0000000009000000 (irq = 12, base_baud = 0) is a SBSA
+[    0.490319] printk: console [ttyAMA0] enabled
+[    0.544089] ACPI: PCI: Interrupt link L000 configured for IRQ 35
+[    0.544386] ACPI: PCI: Interrupt link L001 configured for IRQ 36
+[    0.544562] ACPI: PCI: Interrupt link L002 configured for IRQ 37
+[    0.544713] ACPI: PCI: Interrupt link L003 configured for IRQ 38
+[    0.545169] ACPI: PCI Root Bridge [PCI0] (domain 0000 [bus 00-ff])
+[    0.546876] acpi PNP0A08:00: _OSC: OS supports [ExtendedConfig ASPM ClockPM Segments MSI HPX-Type3]
+[    0.553202] acpi PNP0A08:00: _OSC: platform does not support [LTR]
+[    0.555529] acpi PNP0A08:00: _OSC: OS now controls [PME AER PCIeCapability]
+[    0.560867] acpi PNP0A08:00: ECAM area [mem 0x4010000000-0x401fffffff] reserved by PNP0C02:00
+[    0.561264] acpi PNP0A08:00: ECAM at [mem 0x4010000000-0x401fffffff] for [bus 00-ff]
+[    0.562241] ACPI: Remapped I/O 0x000000003eff0000 to [io  0x0000-0xffff window]
+[    0.566691] PCI host bridge to bus 0000:00
+[    0.567335] pci_bus 0000:00: root bus resource [mem 0x10000000-0x3efeffff window]
+[    0.567387] pci_bus 0000:00: root bus resource [io  0x0000-0xffff window]
+[    0.567410] pci_bus 0000:00: root bus resource [mem 0x8000000000-0xffffffffff window]
+[    0.567523] pci_bus 0000:00: root bus resource [bus 00-ff]
+[    0.569075] pci 0000:00:00.0: [1b36:0008] type 00 class 0x060000 conventional PCI endpoint
+[    0.575657] pci 0000:00:01.0: [1af4:1001] type 00 class 0x010000 conventional PCI endpoint
+[    0.576563] pci 0000:00:01.0: BAR 0 [io  0x0100-0x017f]
+[    0.576637] pci 0000:00:01.0: BAR 1 [mem 0x10204000-0x10204fff]
+[    0.576686] pci 0000:00:01.0: BAR 4 [mem 0x8000100000-0x8000103fff 64bit pref]
+[    0.578966] pci 0000:00:02.0: [1af4:1001] type 00 class 0x010000 conventional PCI endpoint
+[    0.579487] pci 0000:00:02.0: BAR 0 [io  0x0080-0x00ff]
+[    0.579553] pci 0000:00:02.0: BAR 1 [mem 0x10203000-0x10203fff]
+[    0.579583] pci 0000:00:02.0: BAR 4 [mem 0x8000104000-0x8000107fff 64bit pref]
+[    0.581187] pci 0000:00:03.0: [1af4:1003] type 00 class 0x078000 conventional PCI endpoint
+[    0.581962] pci 0000:00:03.0: BAR 0 [io  0x0180-0x01bf]
+[    0.582018] pci 0000:00:03.0: BAR 1 [mem 0x10202000-0x10202fff]
+[    0.582075] pci 0000:00:03.0: BAR 4 [mem 0x8000108000-0x800010bfff 64bit pref]
+[    0.584228] pci 0000:00:04.0: [1b36:000c] type 01 class 0x060400 PCIe Root Port
+[    0.585813] pci 0000:00:04.0: BAR 0 [mem 0x10201000-0x10201fff]
+[    0.585930] pci 0000:00:04.0: PCI bridge to [bus 01]
+[    0.586470] pci 0000:00:04.0:   bridge window [mem 0x10000000-0x101fffff]
+[    0.587813] pci 0000:00:04.0:   bridge window [mem 0x8000000000-0x80000fffff 64bit pref]
+[    0.588090] pci 0000:00:04.0: enabling Extended Tags
+[    0.591733] pci 0000:00:05.0: [1234:1112] type 00 class 0x0c0701 conventional PCI endpoint
+[    0.591847] pci 0000:00:05.0: BAR 0 [io  0x01c0-0x01c7]
+[    0.593000] pci 0000:00:06.0: [1af4:1001] type 00 class 0x010000 conventional PCI endpoint
+[    0.593524] pci 0000:00:06.0: BAR 0 [io  0x0000-0x007f]
+[    0.593599] pci 0000:00:06.0: BAR 1 [mem 0x10200000-0x10200fff]
+[    0.593840] pci 0000:00:06.0: BAR 4 [mem 0x800010c000-0x800010ffff 64bit pref]
+[    0.597185] pci 0000:01:00.0: [1af4:1044] type 00 class 0x00ff00 PCIe Endpoint
+[    0.598840] pci 0000:01:00.0: BAR 1 [mem 0x10000000-0x10000fff]
+[    0.598948] pci 0000:01:00.0: BAR 4 [mem 0x8000000000-0x8000003fff 64bit pref]
+[    0.599074] pci 0000:01:00.0: enabling Extended Tags
+[    0.604236] pci 0000:00:04.0: bridge window [io  0x1000-0x0fff] to [bus 01] add_size 1000
+[    0.604664] pci 0000:00:04.0: bridge window [mem 0x00100000-0x001fffff 64bit pref] to [bus 01] add_size 100000 add_align 100000
+[    0.604739] pci 0000:00:04.0: bridge window [mem 0x00100000-0x001fffff] to [bus 01] add_size 100000 add_align 100000
+[    0.605713] pci 0000:00:04.0: bridge window [mem 0x10000000-0x101fffff]: assigned
+[    0.605873] pci 0000:00:04.0: bridge window [mem 0x8000000000-0x80001fffff 64bit pref]: assigned
+[    0.605934] pci 0000:00:01.0: BAR 4 [mem 0x8000200000-0x8000203fff 64bit pref]: assigned
+[    0.606176] pci 0000:00:02.0: BAR 4 [mem 0x8000204000-0x8000207fff 64bit pref]: assigned
+[    0.606220] pci 0000:00:03.0: BAR 4 [mem 0x8000208000-0x800020bfff 64bit pref]: assigned
+[    0.606260] pci 0000:00:06.0: BAR 4 [mem 0x800020c000-0x800020ffff 64bit pref]: assigned
+[    0.606297] pci 0000:00:01.0: BAR 1 [mem 0x10200000-0x10200fff]: assigned
+[    0.606329] pci 0000:00:02.0: BAR 1 [mem 0x10201000-0x10201fff]: assigned
+[    0.606356] pci 0000:00:03.0: BAR 1 [mem 0x10202000-0x10202fff]: assigned
+[    0.606383] pci 0000:00:04.0: BAR 0 [mem 0x10203000-0x10203fff]: assigned
+[    0.606834] pci 0000:00:04.0: bridge window [io  0x1000-0x1fff]: assigned
+[    0.606888] pci 0000:00:06.0: BAR 1 [mem 0x10204000-0x10204fff]: assigned
+[    0.607138] pci 0000:00:01.0: BAR 0 [io  0x2000-0x207f]: assigned
+[    0.607608] pci 0000:00:02.0: BAR 0 [io  0x2080-0x20ff]: assigned
+[    0.608061] pci 0000:00:06.0: BAR 0 [io  0x2100-0x217f]: assigned
+[    0.608814] pci 0000:00:03.0: BAR 0 [io  0x2180-0x21bf]: assigned
+[    0.609736] pci 0000:00:05.0: BAR 0 [io  0x21c0-0x21c7]: assigned
+[    0.610038] pci 0000:01:00.0: BAR 4 [mem 0x8000000000-0x8000003fff 64bit pref]: assigned
+[    0.610782] pci 0000:01:00.0: BAR 1 [mem 0x10000000-0x10000fff]: assigned
+[    0.610943] pci 0000:00:04.0: PCI bridge to [bus 01]
+[    0.611043] pci 0000:00:04.0:   bridge window [io  0x1000-0x1fff]
+[    0.612024] pci 0000:00:04.0:   bridge window [mem 0x10000000-0x101fffff]
+[    0.612607] pci 0000:00:04.0:   bridge window [mem 0x8000000000-0x80001fffff 64bit pref]
+[    0.613628] pci_bus 0000:00: resource 4 [mem 0x10000000-0x3efeffff window]
+[    0.613701] pci_bus 0000:00: resource 5 [io  0x0000-0xffff window]
+[    0.613724] pci_bus 0000:00: resource 6 [mem 0x8000000000-0xffffffffff window]
+[    0.613772] pci_bus 0000:01: resource 0 [io  0x1000-0x1fff]
+[    0.613793] pci_bus 0000:01: resource 1 [mem 0x10000000-0x101fffff]
+[    0.613813] pci_bus 0000:01: resource 2 [mem 0x8000000000-0x80001fffff 64bit pref]
+[    0.637433] iommu: Default domain type: Translated
+[    0.637491] iommu: DMA domain TLB invalidation policy: strict mode
+[    0.641610] SCSI subsystem initialized
+[    0.648481] ACPI: bus type USB registered
+[    0.649105] usbcore: registered new interface driver usbfs
+[    0.649590] usbcore: registered new interface driver hub
+[    0.649816] usbcore: registered new device driver usb
+[    0.652599] pps_core: LinuxPPS API ver. 1 registered
+[    0.652629] pps_core: Software ver. 5.3.6 - Copyright 2005-2007 Rodolfo Giometti <giometti@linux.it>
+[    0.652701] PTP clock support registered
+[    0.653360] EDAC MC: Ver: 3.0.0
+[    0.656654] scmi_core: SCMI protocol bus registered
+[    0.659988] efivars: Registered efivars operations
+[    0.668065] FPGA manager framework
+[    0.680367] vgaarb: loaded
+[    0.684641] clocksource: Switched to clocksource arch_sys_counter
+[    0.690407] VFS: Disk quotas dquot_6.6.0
+[    0.690549] VFS: Dquot-cache hash table entries: 512 (4096 bytes)
+[    0.693220] acpi PNP0C02:00: Could not reserve [mem 0x4010000000-0x401fffffff window]
+[    0.693770] pnp: PnP ACPI init
+[    0.695248] pnp: PnP ACPI: found 0 devices
+[    0.728829] NET: Registered PF_INET protocol family
+[    0.730153] IP idents hash table entries: 32768 (order: 6, 262144 bytes, linear)
+[    0.735719] tcp_listen_portaddr_hash hash table entries: 1024 (order: 2, 16384 bytes, linear)
+[    0.735836] Table-perturb hash table entries: 65536 (order: 6, 262144 bytes, linear)
+[    0.735908] TCP established hash table entries: 16384 (order: 5, 131072 bytes, linear)
+[    0.736217] TCP bind hash table entries: 16384 (order: 7, 524288 bytes, linear)
+[    0.737009] TCP: Hash tables configured (established 16384 bind 16384)
+[    0.738289] UDP hash table entries: 1024 (order: 4, 65536 bytes, linear)
+[    0.739623] NET: Registered PF_UNIX/PF_LOCAL protocol family
+[    0.747209] RPC: Registered named UNIX socket transport module.
+[    0.747272] RPC: Registered udp transport module.
+[    0.747286] RPC: Registered tcp transport module.
+[    0.747298] RPC: Registered tcp-with-tls transport module.
+[    0.747309] RPC: Registered tcp NFSv4.1 backchannel transport module.
+[    0.747586] PCI: CLS 0 bytes, default 64
+[    0.750389] kvm [1]: HYP mode not available
+[    0.759383] Unpacking initramfs...
+[    0.770334] Initialise system trusted keyrings
+[    0.776919] workingset: timestamp_bits=42 (anon: 37) max_order=19 bucket_order=0 (anon: 0)
+[    0.779521] squashfs: version 4.0 (2009/01/31) Phillip Lougher
+[    0.789719] NFS: Registering the id_resolver key type
+[    0.790032] Key type id_resolver registered
+[    0.790066] Key type id_legacy registered
+[    0.790413] nfs4filelayout_init: NFSv4 File Layout Driver Registering...
+[    0.790549] nfs4flexfilelayout_init: NFSv4 Flexfile Layout Driver Registering...
+[    0.801466] Key type asymmetric registered
+[    0.801608] Asymmetric key parser 'x509' registered
+[    0.801926] Block layer SCSI generic (bsg) driver version 0.4 loaded (major 242)
+[    0.802075] io scheduler mq-deadline registered
+[    0.802138] io scheduler kyber registered
+[    0.802517] io scheduler bfq registered
+[    0.896851] ledtrig-cpu: registered to indicate activity on CPUs
+[    0.908261] ACPI: \_SB_.L000: Enabled at IRQ 35
+[    0.930061] pcieport 0000:00:04.0: PME: Signaling with IRQ 50
+[    0.934275] pcieport 0000:00:04.0: AER: enabled with IRQ 50
+[    0.957861] IPMI message handler: version 39.2
+[    0.958100] ipmi device interface
+[    0.961231] ipmi_si: IPMI System Interface driver
+[    0.961952] ipmi_si dmi-ipmi-si.0: ipmi_platform: probing via SMBIOS
+[    0.962182] ipmi_platform: ipmi_si: SMBIOS: io 0x0 regsize 1 spacing 1 irq 0
+[    0.962419] ipmi_si: Adding SMBIOS-specified kcs state machine
+[    0.970584] ACPI: \_SB_.L001: Enabled at IRQ 36
+[    0.970772] ipmi_si 0000:00:05.0: probing via PCI
+[    0.970853] ipmi_si 0000:00:05.0: enabling device (0000 -> 0001)
+[    0.971423] ipmi_si 0000:00:05.0: [io  0x21c0-0x21c7] regsize 1 spacing 1 irq 46
+[    0.971532] ipmi_si: Adding PCI-specified kcs state machine
+[    0.972121] ipmi_si: Trying PCI-specified kcs state machine at i/o address 0x21c0, slave address 0x0, irq 46
+[    0.983112] ipmi_si 0000:00:05.0: Using irq 46
+[    0.995688] ipmi_si 0000:00:05.0: IPMI message handler: Found new BMC (man_id: 0x000000, prod_id: 0x0000, dev_id: 0x20)
+[    0.998965] ipmi_si 0000:00:05.0: IPMI kcs interface initialized
+[    0.999079] ipmi_si: Trying SMBIOS-specified kcs state machine at i/o address 0x0, slave address 0x20, irq 0
+[    0.999141] ipmi_si dmi-ipmi-si.0: Could not set up I/O space
+[    1.012145] input: Power Button as /devices/platform/PNP0C0C:00/input/input0
+[    1.017602] ACPI: button: Power Button [PWRB]
+[    1.341767] virtio-pci 0000:00:01.0: enabling device (0005 -> 0007)
+[    1.356637] ACPI: \_SB_.L002: Enabled at IRQ 37
+[    1.356773] virtio-pci 0000:00:02.0: enabling device (0005 -> 0007)
+[    1.365346] ACPI: \_SB_.L003: Enabled at IRQ 38
+[    1.365465] virtio-pci 0000:00:03.0: enabling device (0005 -> 0007)
+[    1.373988] virtio-pci 0000:00:06.0: enabling device (0005 -> 0007)
+[    1.441424] Serial: 8250/16550 driver, 4 ports, IRQ sharing enabled
+[    1.458306] msm_serial: driver initialized
+[    1.460232] SuperH (H)SCI(F) driver initialized
+[    1.461320] STM32 USART driver initialized
+[    1.546238] loop: module loaded
+[    1.546911] virtio_blk virtio0: 2/0/0 default/read/poll queues
+[    1.555941] virtio_blk virtio0: [vda] 6291456 512-byte logical blocks (3.22 GB/3.00 GiB)
+[    1.590035]  vda: vda1 vda15
+[    1.595263] virtio_blk virtio1: 2/0/0 default/read/poll queues
+[    1.602034] virtio_blk virtio1: [vdb] 1032192 512-byte logical blocks (528 MB/504 MiB)
+[    1.608879]  vdb: vdb1
+[    1.613237] virtio_blk virtio3: 2/0/0 default/read/poll queues
+[    1.615329] virtio_blk virtio3: [vdc] 32768 512-byte logical blocks (16.8 MB/16.0 MiB)
+[    1.630229] megasas: 07.734.00.00-rc1
+[    1.673035] tun: Universal TUN/TAP device driver, 1.6
+[    1.677083] VFIO - User Level meta-driver version: 0.3
+[    1.704125] usbcore: registered new interface driver usb-storage
+[    1.739443] rtc-efi rtc-efi.0: registered as rtc0
+[    1.740202] rtc-efi rtc-efi.0: setting system clock to 2026-10-28T13:33:21 UTC (1793194401)
+[    1.748171] i2c_dev: i2c /dev entries driver
+[    1.800954] ghes_edac: This system has 1 DIMM sockets.
+[    1.801688] EDAC MC0: Giving out device to module ghes_edac.c controller ghes_edac: DEV ghes (INTERRUPT)
+[    1.842649] pstore: Using crash dump compression: deflate
+[    1.842790] pstore: Registered efi_pstore as persistent store backend
+[    1.849926] usbcore: registered new interface driver usbhid
+[    1.849972] usbhid: USB HID core driver
+[    1.865165] hw perfevents: enabled with armv8_pmuv3_0 PMU driver, 7 (0,8000003f) counters available
+[    1.884928] NET: Registered PF_INET6 protocol family
+[    1.894024] Segment Routing with IPv6
+[    1.894218] In-situ OAM (IOAM) with IPv6
+[    1.895014] NET: Registered PF_PACKET protocol family
+[    1.896111] Key type dns_resolver registered
+[    1.971326] registered taskstats version 1
+[    1.973865] Loading compiled-in X.509 certificates
+[    2.016947] Demotion targets for Node 0: null
+[    2.024222] clk: Disabling unused clocks
+[    2.025087] PM: genpd: Disabling unused power domains
+[    2.417250] Freeing initrd memory: 18912K
+[    2.840925] Freeing unused kernel memory: 14784K
+[    2.842583] Run /init as init process
+Loading, please wait...
+Starting systemd-udevd version 257.13-1~deb13u1
+
+Begin: Loading essential drivers ... done.
+Begin: Running /scripts/init-premount ... done.
+Begin: Mounting root file system ... Begin: Running /scripts/local-top ... done.
+Begin: Running /scripts/local-premount ... done.
+Begin: Will now check root file system ... fsck from util-linux 2.41.5
+[/sbin/fsck.ext4 (1) -- /dev/vda1] fsck.ext4 -a -C0 /dev/vda1 
+/dev/vda1: clean, 30634/188416 files, 272290/753408 blocks
+done.
+[   13.810558] EXT4-fs (vda1): mounted filesystem b72ed279-9e56-47ec-acb5-6ae4a74a6e29 ro with ordered data mode. Quota mode: none.
+done.
+Begin: Running /scripts/local-bottom ... GROWROOT: NOCHANGE: partition 1 could only be grown by 2015 [fudge=2048]
+done.
+Begin: Running /scripts/init-bottom ... done.
+[   15.433793] systemd[1]: systemd 257.13-1~deb13u1 running in system mode (+PAM +AUDIT +SELINUX +APPARMOR +IMA +IPE +SMACK +SECCOMP +GCRYPT -GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBCRYPTSETUP_PLUGINS +LIBFDISK +PCRE2 +PWQUALITY +P11KIT +QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD +BPF_FRAMEWORK +BTF -XKBCOMMON -UTMP +SYSVINIT +LIBARCHIVE)
+[   15.434187] systemd[1]: Detected virtualization qemu.
+[   15.434519] systemd[1]: Detected architecture arm64.
+
+Welcome to Debian GNU/Linux 13 (trixie)!
+
+
+[   15.449573] systemd[1]: Hostname set to <rasdaemon-ci>.
+[   16.718799] systemd[1]: bpf-restrict-fs: BPF LSM hook not enabled in the kernel, BPF LSM not supported.
+[   17.616662] systemd-sysv-generator[168]: SysV service '/etc/init.d/openipmi' lacks a native systemd unit file, automatically generating a unit file for compatibility.
+[   17.618307] systemd-sysv-generator[168]: Please update package to include a native systemd unit file.
+[   17.618433] systemd-sysv-generator[168]: ⚠️ This compatibility logic is deprecated, expect removal soon. ⚠️
+[   19.559124] systemd[1]: Condition check resulted in system.slice - System Slice being skipped.
+[   19.560821] systemd[1]: Condition check resulted in -.slice - Root Slice being skipped.
+[   19.578352] systemd[1]: Queued start job for default target graphical.target.
+[   19.671809] systemd[1]: Created slice system-getty.slice - Slice /system/getty.
+[  OK  ] Created slice system-getty.slice - Slice /system/getty.
+
+[  OK  ] Created slice system-modprobe.slice - Slice /system/modprobe.
+
+[   19.684795] systemd[1]: Created slice system-modprobe.slice - Slice /system/modprobe.
+[  OK  ] Created slice system-serial\x2dget…slice - Slice /system/serial-getty.
+
+[   19.694160] systemd[1]: Created slice system-serial\x2dgetty.slice - Slice /system/serial-getty.
+[   19.704272] systemd[1]: Created slice system-systemd\x2dfsck.slice - Slice /system/systemd-fsck.
+[  OK  ] Created slice system-systemd\x2dfs…slice - Slice /system/systemd-fsck.
+
+[  OK  ] Created slice user.slice - User and Session Slice.
+
+[   19.711728] systemd[1]: Created slice user.slice - User and Session Slice.
+[   19.716037] systemd[1]: Started systemd-ask-password-console.path - Dispatch Password Requests to Console Directory Watch.
+[  OK  ] Started systemd-ask-password-conso…equests to Console Directory Watch.
+
+[  OK  ] Started systemd-ask-password-wall.…d Requests to Wall Directory Watch.
+
+[   19.719194] systemd[1]: Started systemd-ask-password-wall.path - Forward Password Requests to Wall Directory Watch.
+         Expecting device dev-disk-by\x2dpa…4526-04c5-4a33-bc80-1daae5d27bb6...
+
+[   19.721892] systemd[1]: proc-sys-fs-binfmt_misc.automount - Arbitrary Executable File Formats File System Automount Point skipped, unmet condition check ConditionPathExists=/proc/sys/fs/binfmt_misc
+[   19.722984] systemd[1]: Expecting device dev-disk-by\x2dpartuuid-f25e4526\x2d04c5\x2d4a33\x2dbc80\x2d1daae5d27bb6.device - /dev/disk/by-partuuid/f25e4526-04c5-4a33-bc80-1daae5d27bb6...
+[   19.724868] systemd[1]: Expecting device dev-ttyAMA0.device - /dev/ttyAMA0...
+         Expecting device dev-ttyAMA0.device - /dev/ttyAMA0...
+
+[  OK  ] Reached target paths.target - Path Units.
+
+[   19.727186] systemd[1]: Reached target paths.target - Path Units.
+[  OK  ] Reached target remote-fs.target - Remote File Systems.
+
+[  OK  ] Reached target slices.target - Slice Units.
+
+[   19.729066] systemd[1]: Reached target remote-fs.target - Remote File Systems.
+[   19.730535] systemd[1]: Reached target slices.target - Slice Units.
+[  OK  ] Reached target swap.target - Swaps.
+[   19.732056] systemd[1]: Reached target swap.target - Swaps.
+
+[  OK  ] Listening on systemd-creds.socket - Credential Encryption/Decryption.
+
+[   19.751284] systemd[1]: Listening on systemd-creds.socket - Credential Encryption/Decryption.
+[  OK  ] Listening on systemd-initctl.socke…- initctl Compatibility Named Pipe.
+
+[   19.755084] systemd[1]: Listening on systemd-initctl.socket - initctl Compatibility Named Pipe.
+[  OK  ] Listening on systemd-journald-dev-…socket - Journal Socket (/dev/log).
+
+[   19.759207] systemd[1]: Listening on systemd-journald-dev-log.socket - Journal Socket (/dev/log).
+[  OK  ] Listening on systemd-journald.socket - Journal Sockets.
+
+[   19.762862] systemd[1]: Listening on systemd-journald.socket - Journal Sockets.
+[  OK  ] Listening on systemd-networkd.socket - Network Service Netlink Socket.
+
+[   19.767428] systemd[1]: Listening on systemd-networkd.socket - Network Service Netlink Socket.
+[   19.769939] systemd[1]: systemd-pcrextend.socket - TPM PCR Measurements skipped, unmet condition check ConditionSecurity=measured-uki
+[   19.770267] systemd[1]: systemd-pcrlock.socket - Make TPM PCR Policy skipped, unmet condition check ConditionSecurity=measured-uki
+[   19.772147] systemd[1]: Listening on systemd-udevd-control.socket - udev Control Socket.
+[  OK  ] Listening on systemd-udevd-control.socket - udev Control Socket.
+
+[  OK  ] Listening on systemd-udevd-kernel.socket - udev Kernel Socket.
+
+[   19.775299] systemd[1]: Listening on systemd-udevd-kernel.socket - udev Kernel Socket.
+         Mounting dev-hugepages.mount - Huge Pages File System...
+
+[   19.805905] systemd[1]: Mounting dev-hugepages.mount - Huge Pages File System...
+         Mounting dev-mqueue.mount - POSIX Message Queue File System...
+
+[   19.830196] systemd[1]: Mounting dev-mqueue.mount - POSIX Message Queue File System...
+         Mounting run-lock.mount - Legacy Locks Directory /run/lock...
+
+[   19.874260] systemd[1]: Mounting run-lock.mount - Legacy Locks Directory /run/lock...
+[   19.939822] systemd[1]: Mounting sys-kernel-debug.mount - Kernel Debug File System...
+         Mounting sys-kernel-debug.mount - Kernel Debug File System...
+
+         Mounting sys-kernel-tracing.mount - Kernel Trace File System...
+
+[   20.006638] systemd[1]: Mounting sys-kernel-tracing.mount - Kernel Trace File System...
+         Mounting tmp.mount - Temporary Directory /tmp...
+
+[   20.105097] systemd[1]: Mounting tmp.mount - Temporary Directory /tmp...
+         Starting kmod-static-nodes.service…eate List of Static Device Nodes...
+
+[   20.189906] systemd[1]: Starting kmod-static-nodes.service - Create List of Static Device Nodes...
+         Starting modprobe@configfs.service - Load Kernel Module configfs...
+[   20.255290] systemd[1]: Starting modprobe@configfs.service - Load Kernel Module configfs...
+
+[   20.364030] systemd[1]: Starting modprobe@drm.service - Load Kernel Module drm...
+         Starting modprobe@drm.service - Load Kernel Module drm...
+
+         Starting modprobe@efi_pstore.servi… - Load Kernel Module efi_pstore...
+
+[   20.465845] systemd[1]: Starting modprobe@efi_pstore.service - Load Kernel Module efi_pstore...
+[   20.511844] systemd[1]: Starting modprobe@fuse.service - Load Kernel Module fuse...
+         Starting modprobe@fuse.service - Load Kernel Module fuse...
+
+[   20.518826] systemd[1]: netplan-ovs-cleanup.service - OpenVSwitch configuration for cleanup skipped, unmet condition check ConditionFileIsExecutable=/usr/bin/ovs-vsctl
+[   20.520216] systemd[1]: systemd-fsck-root.service - File System Check on Root Device skipped, unmet condition check ConditionPathExists=!/run/initramfs/fsck-root
+[   20.525892] systemd[1]: systemd-hibernate-clear.service - Clear Stale Hibernate Storage Info skipped, unmet condition check ConditionPathExists=/sys/firmware/efi/efivars/HibernateLocation-8cf2644b-4b0b-428f-9387-6d876050dc67
+         Starting systemd-journald.service - Journal Service...
+
+[   20.700315] systemd[1]: Starting systemd-journald.service - Journal Service...
+[   20.766240] fuse: init (API version 7.46)
+[   20.795822] systemd[1]: Starting systemd-modules-load.service - Load Kernel Modules...
+         Starting systemd-modules-load.service - Load Kernel Modules...
+
+[   20.830459] ACPI: bus type drm_connector registered
+         Starting systemd-network-generator…k Units from Kernel Command Line...
+
+[   20.861739] systemd[1]: Starting systemd-network-generator.service - Generate Network Units from Kernel Command Line...
+[   20.865643] systemd[1]: systemd-pcrmachine.service - TPM PCR Machine ID Measurement skipped, unmet condition check ConditionSecurity=measured-uki
+         Starting systemd-remount-fs.servic…unt Root and Kernel File Systems...
+[   20.907271] systemd[1]: Starting systemd-remount-fs.service - Remount Root and Kernel File Systems...
+
+[   20.926216] systemd[1]: systemd-tpm2-setup-early.service - Early TPM SRK Setup skipped, unmet condition check ConditionSecurity=measured-uki
+         Starting systemd-udev-load-credent…Load udev Rules from Credentials...
+
+[   20.978656] systemd[1]: Starting systemd-udev-load-credentials.service - Load udev Rules from Credentials...
+         Starting systemd-udev-trigger.service - Coldplug All udev Devices...
+
+[   21.083346] systemd[1]: Starting systemd-udev-trigger.service - Coldplug All udev Devices...
+[  OK  ] Mounted dev-hugepages.mount - Huge Pages File System.
+
+[   21.381838] systemd[1]: Mounted dev-hugepages.mount - Huge Pages File System.
+[  OK  ] Mounted dev-mqueue.mount - POSIX Message Queue File System.
+
+[   21.470735] systemd[1]: Mounted dev-mqueue.mount - POSIX Message Queue File System.
+[  OK  ] Mounted run-lock.mount - Legacy Locks Directory /run/lock.
+
+[   21.486413] systemd[1]: Mounted run-lock.mount - Legacy Locks Directory /run/lock.
+[  OK  ] Mounted sys-kernel-debug.mount - Kernel Debug File System.
+
+[   21.499419] systemd[1]: Mounted sys-kernel-debug.mount - Kernel Debug File System.
+[  OK  ] Mounted sys-kernel-tracing.mount - Kernel Trace File System.
+
+[   21.521283] systemd[1]: Mounted sys-kernel-tracing.mount - Kernel Trace File System.
+[  OK  ] Mounted tmp.mount - Temporary Directory /tmp.
+
+[   21.534343] systemd[1]: Mounted tmp.mount - Temporary Directory /tmp.
+[  OK  ] Finished kmod-static-nodes.service…Create List of Static Device Nodes.
+
+[   21.577182] systemd[1]: Finished kmod-static-nodes.service - Create List of Static Device Nodes.
+[   21.595817] EXT4-fs (vda1): re-mounted b72ed279-9e56-47ec-acb5-6ae4a74a6e29 r/w.
+[   21.655005] systemd[1]: modprobe@configfs.service: Deactivated successfully.
+[   21.660170] systemd[1]: Finished modprobe@configfs.service - Load Kernel Module configfs.
+[  OK  ] Finished modprobe@configfs.service - Load Kernel Module configfs.
+
+[   21.665882] systemd-journald[193]: Collecting audit messages is disabled.
+[   21.672275] systemd[1]: modprobe@drm.service: Deactivated successfully.
+[  OK  ] Finished modprobe@drm.service - Load Kernel Module drm.
+
+[   21.677136] systemd[1]: Finished modprobe@drm.service - Load Kernel Module drm.
+[   21.690733] systemd[1]: modprobe@efi_pstore.service: Deactivated successfully.
+[  OK  ] Finished modprobe@efi_pstore.service - Load Kernel Module efi_pstore.
+
+[   21.697574] systemd[1]: Finished modprobe@efi_pstore.service - Load Kernel Module efi_pstore.
+[   21.711331] systemd[1]: modprobe@fuse.service: Deactivated successfully.
+[  OK  ] Finished modprobe@fuse.service - Load Kernel Module fuse.
+
+[   21.718405] systemd[1]: Finished modprobe@fuse.service - Load Kernel Module fuse.
+[  OK  ] Finished systemd-modules-load.service - Load Kernel Modules.
+
+[   21.738241] systemd[1]: Finished systemd-modules-load.service - Load Kernel Modules.
+[  OK  ] Finished systemd-network-generator…ork Units from Kernel Command Line.
+[   21.763466] systemd[1]: Finished systemd-network-generator.service - Generate Network Units from Kernel Command Line.
+
+[  OK  ] Finished systemd-remount-fs.servic…mount Root and Kernel File Systems.
+
+[   21.802671] systemd[1]: Finished systemd-remount-fs.service - Remount Root and Kernel File Systems.
+[  OK  ] Finished systemd-udev-load-credent…- Load udev Rules from Credentials.
+
+[   21.826776] systemd[1]: Finished systemd-udev-load-credentials.service - Load udev Rules from Credentials.
+[  OK  ] Reached target network-pre.target - Preparation for Network.
+
+[   21.853177] systemd[1]: Reached target network-pre.target - Preparation for Network.
+         Starting systemd-growfs-root.service - Grow Root File System...
+
+[   21.901528] systemd[1]: Starting systemd-growfs-root.service - Grow Root File System...
+[   21.912293] systemd[1]: systemd-hwdb-update.service - Rebuild Hardware Database skipped, unmet condition check ConditionNeedsUpdate=/etc
+[   21.921915] systemd[1]: systemd-pstore.service - Platform Persistent Storage Archival skipped, unmet condition check ConditionDirectoryNotEmpty=/sys/fs/pstore
+         Starting systemd-random-seed.service - Load/Save OS Random Seed...
+
+[   21.975367] systemd[1]: Starting systemd-random-seed.service - Load/Save OS Random Seed...
+         Starting systemd-sysctl.service - Apply Kernel Variables...
+
+[   22.054975] systemd[1]: Starting systemd-sysctl.service - Apply Kernel Variables...
+         Starting systemd-tmpfiles-setup-de… Device Nodes in /dev gracefully...
+
+[   22.132980] systemd[1]: Starting systemd-tmpfiles-setup-dev-early.service - Create Static Device Nodes in /dev gracefully...
+[   22.141175] systemd[1]: systemd-tpm2-setup.service - TPM SRK Setup skipped, unmet condition check ConditionSecurity=measured-uki
+[   22.207454] EXT4-fs (vda1): resizing filesystem from 753408 to 753408 blocks
+         Mounting sys-fs-fuse-connections.mount - FUSE Control File System...
+
+[   22.338074] systemd[1]: Mounting sys-fs-fuse-connections.mount - FUSE Control File System...
+         Mounting sys-kernel-config.mount - Kernel Configuration File System...
+
+[   22.439266] systemd[1]: Mounting sys-kernel-config.mount - Kernel Configuration File System...
+[  OK  ] Finished systemd-growfs-root.service - Grow Root File System.
+
+[   22.498225] systemd[1]: Finished systemd-growfs-root.service - Grow Root File System.
+[  OK  ] Finished systemd-random-seed.service - Load/Save OS Random Seed.
+
+[   22.562149] systemd[1]: Finished systemd-random-seed.service - Load/Save OS Random Seed.
+[   22.850216] systemd[1]: Mounted sys-fs-fuse-connections.mount - FUSE Control File System.
+[  OK  ] Mounted sys-fs-fuse-connections.mount - FUSE Control File System.
+
+[  OK  ] Finished systemd-sysctl.service - Apply Kernel Variables.
+
+[   23.066192] systemd[1]: Finished systemd-sysctl.service - Apply Kernel Variables.
+[  OK  ] Mounted sys-kernel-config.mount - Kernel Configuration File System.
+
+[   23.094433] systemd[1]: Mounted sys-kernel-config.mount - Kernel Configuration File System.
+[  OK  ] Finished systemd-tmpfiles-setup-de…ic Device Nodes in /dev gracefully.
+
+[   23.154111] systemd[1]: Finished systemd-tmpfiles-setup-dev-early.service - Create Static Device Nodes in /dev gracefully.
+[   23.164045] systemd[1]: systemd-sysusers.service - Create System Users skipped, no trigger condition checks were met.
+         Starting systemd-resolved.service - Network Name Resolution...
+
+[   23.265779] systemd[1]: Starting systemd-resolved.service - Network Name Resolution...
+         Starting systemd-timesyncd.service - Network Time Synchronization...
+[   23.339595] systemd[1]: Starting systemd-timesyncd.service - Network Time Synchronization...
+
+         Starting systemd-tmpfiles-setup-de…eate Static Device Nodes in /dev...
+
+[   23.388312] systemd[1]: Starting systemd-tmpfiles-setup-dev.service - Create Static Device Nodes in /dev...
+[  OK  ] Started systemd-journald.service - Journal Service.
+
+[   23.446809] systemd[1]: Started systemd-journald.service - Journal Service.
+[  OK  ] Finished systemd-tmpfiles-setup-de…Create Static Device Nodes in /dev.
+
+[  OK  ] Reached target local-fs-pre.target…Preparation for Local File Systems.
+
+         Starting systemd-journal-flush.ser…sh Journal to Persistent Storage...
+
+         Starting systemd-udevd.service - R…ager for Device Events and Files...
+
+[   24.791348] systemd-journald[193]: Received client request to flush runtime journal.
+[  OK  ] Finished systemd-journal-flush.ser…lush Journal to Persistent Storage.
+
+[  OK  ] Started systemd-timesyncd.service - Network Time Synchronization.
+
+[  OK  ] Reached target time-set.target - System Time Set.
+
+[  OK  ] Started systemd-udevd.service - Ru…anager for Device Events and Files.
+
+         Starting systemd-networkd.service - Network Configuration...
+
+[  OK  ] Started systemd-resolved.service - Network Name Resolution.
+
+[  OK  ] Reached target nss-lookup.target - Host and Network Name Lookups.
+
+[  OK  ] Listening on systemd-rfkill.socket…ll Switch Status /dev/rfkill Watch.
+
+[   27.242327] cfg80211: Loading compiled-in X.509 certificates for regulatory database
+[   27.334544] Loaded X.509 cert 'sforshee: 00b28ddf47aef9cea7'
+[   27.335337] Loaded X.509 cert 'wens: 61c038651aabdcf94bd0ac7ff06c7248db18c600'
+[   27.337537] faux_driver regulatory: Direct firmware load for regulatory.db failed with error -2
+[   27.337863] cfg80211: failed to load regulatory.db
+[  OK  ] Started systemd-networkd.service - Network Configuration.
+
+[  OK  ] Reached target network.target - Network.
+
+         Starting systemd-networkd-persiste…tent Storage in systemd-networkd...
+
+[  OK  ] Finished systemd-networkd-persiste…istent Storage in systemd-networkd.
+
+[*     ] (1 of 3) Job dev-ttyAMA0.device/start running (10s / 1min 30s)
+
+
+[**    ] (1 of 3) Job dev-ttyAMA0.device/start running (10s / 1min 30s)
+
+
+[***   ] (1 of 3) Job dev-ttyAMA0.device/start running (11s / 1min 30s)
+
+
+[ ***  ] (2 of 3) Job systemd-udev-trigger.s…ice/start running (11s / no limit)
+
+
+[  *** ] (2 of 3) Job systemd-udev-trigger.s…ice/start running (12s / no limit)
+
+
+[   ***] (2 of 3) Job systemd-udev-trigger.s…ice/start running (12s / no limit)
+
+
+[    **] (3 of 3) Job dev-disk-by\x2dpartuui…ice/start running (13s / 1min 30s)
+
+
+[  OK  ] Finished systemd-udev-trigger.service - Coldplug All udev Devices.
+
+[     *] (1 of 2) Job dev-ttyAMA0.device/start running (15s / 1min 30s)
+
+
+[    **] (1 of 2) Job dev-ttyAMA0.device/start running (15s / 1min 30s)
+
+
+[  OK  ] Found device dev-ttyAMA0.device - /dev/ttyAMA0.
+
+[  OK  ] Found device dev-disk-by\x2dpartuu…5e4526-04c5-4a33-bc80-1daae5d27bb6.
+
+         Starting systemd-fsck@dev-disk-by\…4526-04c5-4a33-bc80-1daae5d27bb6...
+
+[  OK  ] Finished systemd-fsck@dev-disk-by\…5e4526-04c5-4a33-bc80-1daae5d27bb6.
+
+         Mounting boot-efi.mount - /boot/efi...
+
+[  OK  ] Mounted boot-efi.mount - /boot/efi.
+
+[  OK  ] Reached target local-fs.target - Local File Systems.
+
+[  OK  ] Listening on systemd-sysext.socket… System Extension Image Management.
+
+         Starting systemd-tmpfiles-setup.se…ate System Files and Directories...
+
+[  OK  ] Finished systemd-tmpfiles-setup.se…reate System Files and Directories.
+
+[  OK  ] Reached target sysinit.target - System Initialization.
+
+[  OK  ] Started apt-listchanges.timer - Tr…e apt-listchanges database for APT.
+
+[  OK  ] Started dpkg-db-backup.timer - Daily dpkg database backup timer.
+
+[  OK  ] Started e2scrub_all.timer - Period…Metadata Check for All Filesystems.
+
+[  OK  ] Started fstrim.timer - Discard unused filesystem blocks once a week.
+
+[  OK  ] Started man-db.timer - Daily man-db regeneration.
+
+[  OK  ] Started systemd-tmpfiles-clean.tim…y Cleanup of Temporary Directories.
+
+[  OK  ] Reached target timers.target - Timer Units.
+
+[  OK  ] Listening on dbus.socket - D-Bus System Message Bus Socket.
+
+[  OK  ] Listening on sshd-unix-local.socke…temd-ssh-generator, AF_UNIX Local).
+
+[  OK  ] Listening on systemd-hostnamed.socket - Hostname Service Socket.
+
+[  OK  ] Listening on uuidd.socket - UUID daemon activation socket.
+
+[  OK  ] Reached target sockets.target - Socket Units.
+
+[  OK  ] Reached target basic.target - Basic System.
+
+         Starting dbus.service - D-Bus System Message Bus...
+
+         Starting e2scrub_reap.service - Re…ne ext4 Metadata Check Snapshots...
+
+         Starting grub-common.service - Record successful boot for GRUB...
+
+         Starting openipmi.service - LSB: OpenIPMI Driver init script...
+
+         Starting ras-qemu-agent.service - …aemon QEMU regression test agent...
+
+         Starting ssh.service - OpenBSD Secure Shell server...
+
+         Starting systemd-logind.service - User Login Management...
+
+         Starting systemd-user-sessions.service - Permit User Sessions...
+
+[  OK  ] Started dbus.service - D-Bus System Message Bus.
+
+[   41.465007] ras-qemu-agent[293]: + set -o pipefail
+[   41.484735] ras-qemu-agent[293]: + mount_dir=/run/rasdaemon-payload
+[   41.487414] ras-qemu-agent[293]: + mkdir -p /run/rasdaemon-payload
+[   41.586732] ras-qemu-agent[293]: + deadline=60
+[   41.617049] ras-qemu-agent[293]: + test 60 -gt 0
+[   41.769908] ras-qemu-agent[306]: ++ lsblk -nrpo NAME,FSTYPE
+[  OK  ] Finished e2scrub_reap.service - Re…line ext4 Metadata Check Snapshots.
+
+[   41.809897] ras-qemu-agent[307]: ++ awk '$2 ~ /^(vfat|fat|msdos)$/ {print $1}'
+[  OK  ] Finished systemd-user-sessions.service - Permit User Sessions.
+
+[   42.422344] ras-qemu-agent[293]: + for device in $(lsblk -nrpo NAME,FSTYPE | awk '$2 ~ /^(vfat|fat|msdos)$/ {print $1}')
+[   42.430846] ras-qemu-agent[293]: + mount -o ro /dev/vda15 /run/rasdaemon-payload
+[   42.737871] ras-qemu-agent[322]: mount warning:
+[   42.747563] ras-qemu-agent[322]:       * vda15: Can't mount, would change RO state
+[   42.757812] ras-qemu-agent[293]: + for device in $(lsblk -nrpo NAME,FSTYPE | awk '$2 ~ /^(vfat|fat|msdos)$/ {print $1}')
+[   42.765390] ras-qemu-agent[293]: + mount -o ro /dev/vdb1 /run/rasdaemon-payload
+[  OK  ] Started getty@tty1.service - Getty on tty1.
+
+[  OK  ] Started serial-getty@ttyAMA0.service - Serial Getty on ttyAMA0.
+
+[  OK  ] Reached target getty.target - Login Prompts.
+
+[   43.154472] ras-qemu-agent[293]: + test -f /run/rasdaemon-payload/agent.py
+[   43.167639] ras-qemu-agent[293]: + exec /usr/bin/python3 /run/rasdaemon-payload/agent.py
+[  OK  ] Started ssh.service - OpenBSD Secure Shell server.
+
+[  OK  ] Finished grub-common.service - Record successful boot for GRUB.
+
+[FAILED] Failed to start openipmi.service - LSB: OpenIPMI Driver init script.
+
+See 'systemctl status openipmi.service' for details.
+
+[  OK  ] Started systemd-logind.service - User Login Management.
+
+[  OK  ] Started unattended-upgrades.service - Unattended Upgrades Shutdown.
+
+[   47.998594] ras-qemu-agent[293]: [2026-10-28T13:34:07.774988+00:00] [aarch64] ras-qemu-agent: Guest userspace ready; running kernel 7.3.0-gc03c1a14507d
+[   48.003750] ras-qemu-agent[293]: [2026-10-28T13:34:07.786412+00:00] [aarch64] ras-qemu-agent: Test payload started
+[   48.337384] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 0.0, "evidence": {}, "kernel": "N/A", "name": "payload", "rasdaemon": "N/A", "reason": "", "status": "passed"}
+[   48.346792] ras-qemu-agent[293]: [2026-10-28T13:34:08.154372+00:00] [aarch64] ras-qemu-agent: Test payload finished: PASS; duration=0.367s; reason=completed
+[   48.350918] ras-qemu-agent[293]: [2026-10-28T13:34:08.155907+00:00] [aarch64] ras-qemu-agent: Test install-payload started
+[   48.629566] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 0.281, "evidence": {"command": ["tar", "-xf", "/tmp/ras-payload-f3posj32/rasdaemon-install.tar", "-C", "/"], "output": "", "returncode": 0}, "kernel": "N/A", "name": "install-payload", "rasdaemon": "N/A", "reason": "", "status": "passed"}
+[   48.635918] ras-qemu-agent[293]: [2026-10-28T13:34:08.439504+00:00] [aarch64] ras-qemu-agent: Test install-payload finished: PASS; duration=0.281s; reason=completed
+[   48.710231] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 0.0, "evidence": {"path": "/sys/kernel/tracing"}, "kernel": "N/A", "name": "tracefs", "rasdaemon": "N/A", "reason": "", "status": "passed"}
+[   48.714035] ras-qemu-agent[293]: [2026-10-28T13:34:08.522529+00:00] [aarch64] ras-qemu-agent: Test tracefs finished: PASS; duration=0.000s; reason=completed
+[   48.907068] ras-qemu-agent[293]: [2026-10-28T13:34:08.644228+00:00] [aarch64] ras-qemu-agent: rasdaemon payload version=rasdaemon 1.0.0; source HEAD=unknown (not a Git checkout)
+[   48.935790] ras-qemu-agent[293]: [2026-10-28T13:34:08.747164+00:00] [aarch64] ras-qemu-agent: Test block-io-native started
+
+
+Debian GNU/Linux 13 rasdaemon-ci ttyAMA0
+
+rasdaemon-ci login: [   53.012009] ras-qemu-agent[293]: [2026-10-28T13:34:12.815923+00:00] [aarch64] ras-qemu-agent: rasdaemon ready: pid=355; backend=sqlite3
+[   53.125223] I/O error, dev vdc, sector 0 op 0x1:(WRITE) flags 0x8800 phys_seg 1 prio class 2
+[   53.131727] I/O error, dev vdc, sector 0 op 0x1:(WRITE) flags 0x800 phys_seg 0 prio class 2
+[   53.145461] I/O error, dev vdc, sector 0 op 0x0:(READ) flags 0x800000 phys_seg 1 prio class 2
+[   53.145717] Buffer I/O error on dev vdc, logical block 0, async page read
+[   53.147670] I/O error, dev vdc, sector 0 op 0x0:(READ) flags 0x800000 phys_seg 1 prio class 2
+[   53.147791] Buffer I/O error on dev vdc, logical block 0, async page read
+[   53.148122]  vdc: unable to read partition table
+[   53.224235] I/O error, dev vdc, sector 0 op 0x0:(READ) flags 0x880700 phys_seg 1 prio class 2
+[   53.225930] I/O error, dev vdc, sector 0 op 0x0:(READ) flags 0x800000 phys_seg 1 prio class 2
+[   53.226034] Buffer I/O error on dev vdc, logical block 0, async page read
+[   53.361649] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 4.098, "evidence": {"dd_output": "dd: error writing '/dev/disk/by-id/virtio-ras-block-error': Input/output error\ndd: fsync failed for '/dev/disk/by-id/virtio-ras-block-error': Input/output error\n1+0 records in\n0+0 records out\n0 bytes copied, 0.0140711 s, 0.0 kB/s\n", "dd_returncode": 1, "device": "/dev/disk/by-id/virtio-ras-block-error", "rasdaemon_output": "rasdaemon: Read 9 config vars from /var/tmp/rasdaemon-qemu/rasdaemon-block.env.\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: Can't register mce handler\nrasdaemon: module x86-mce-erst init failed: -2\nrasdaemon: Cpu fault isolation is disabled\nrasdaemon: Page offline choice on Corrected Errors is off\nrasdaemon: Row offline choice on Corrected Errors is off\nrasdaemon: Enabling DB backend: sqlite3\nrasdaemon: block:block_rq_error event enabled\nrasdaemon: Enabled event block:block_rq_error\nrasdaemon: cxl:cxl_aer_correctable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_correctable_error\nrasdaemon: cxl:cxl_aer_uncorrectable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_uncorrectable_error\nrasdaemon: cxl:cxl_dram event enabled\nrasdaemon: Enabled event cxl:cxl_dram\nrasdaemon: cxl:cxl_general_media event enabled\nrasdaemon: Enabled event cxl:cxl_general_media\nrasdaemon: cxl:cxl_generic_event event enabled\nrasdaemon: Enabled event cxl:cxl_generic_event\nrasdaemon: cxl:cxl_memory_module event enabled\nrasdaemon: Enabled event cxl:cxl_memory_module\nrasdaemon: cxl:cxl_memory_sparing event enabled\nrasdaemon: Enabled event cxl:cxl_memory_sparing\nrasdaemon: cxl:cxl_overflow event enabled\nrasdaemon: Enabled event cxl:cxl_overflow\nrasdaemon: cxl:cxl_poison event enabled\nrasdaemon: Enabled event cxl:cxl_poison\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: net:net_dev_xmit_timeout event enabled\nrasdaemon: Enabled event net:net_dev_xmit_timeout\nrasdaemon: ras:aer_event event enabled\nrasdaemon: Enabled event ras:aer_event\nrasdaemon: \t no AER_CE_TRIGGER (0xffffdeafefa7)\nrasdaemon: ras:arm_event event enabled\nrasdaemon: Enabled event ras:arm_event\nrasdaemon: ras:extlog_mem_event event not exist\nrasdaemon: Can't get traces from ras:extlog_mem_event\nrasdaemon: ras:mc_event event enabled\nrasdaemon: Enabled event ras:mc_event\nrasdaemon: ras:memory_failure_event event enabled\nrasdaemon: Enabled event ras:memory_failure_event\nrasdaemon: ras:non_standard_event event enabled\nrasdaemon: Enabled event ras:non_standard_event\nrasdaemon: ras:reri_event event not exist\nrasdaemon: Can't get traces from ras:reri_event\nrasdaemon: signal:signal_generate event enabled\nrasdaemon: Enabled event signal:signal_generate\nrasdaemon: devlink:devlink_health_report event enabled\nrasdaemon: Enabled event devlink:devlink_health_report\nrasdaemon: Recording aer_event events\nrasdaemon: Recording arm_event events\nrasdaemon: Recording cxl_poison_event events\nrasdaemon: Recording cxl_aer_ue_event events\nrasdaemon: Recording cxl_aer_ce_event events\nrasdaemon: Recording cxl_overflow_event events\nrasdaemon: Recording cxl_generic_event events\nrasdaemon: Recording cxl_general_media_event events\nrasdaemon: Recording cxl_dram_event events\nrasdaemon: Recording cxl_memory_module_event events\nrasdaemon: Recording cxl_memory_sparing_event events\nrasdaemon: Recording devlink_event events\nrasdaemon: Recording disk_errors events\nrasdaemon: Recording extlog_event events\nrasdaemon: Recording mc_event events\nrasdaemon: Recording memory_failure_event events\nrasdaemon: Recording non_standard_event events\nrasdaemon: Recording reri_event events\nrasdaemon: Recording signal_event events\nrasdaemon: Recording mce_record events\nrasdaemon: Recording amp_payload0_event events\nrasdaemon: Recording amp_payload1_event events\nrasdaemon: Recording amp_payload2_event events\nrasdaemon: Recording amp_payload3_event events\nrasdaemon: Recording ampereone_payload0_event events\nrasdaemon: Recording ampereone_payload1_event events\nrasdaemon: Recording ampereone_payload2_event events\nrasdaemon: Recording ampereone_payload3_event events\nrasdaemon: Recording ampereone_payload4_event events\nrasdaemon: Recording ampereone_payload5_event events\nrasdaemon: Recording ampereone_payload6_event events\nrasdaemon: Recording hip08_oem_type1_event_v2 events\nrasdaemon: Recording hip08_oem_type2_event_v2 events\nrasdaemon: Recording hip08_pcie_local_event_v2 events\nrasdaemon: Recording hisi_common_section_v2 events\nrasdaemon: Recording jm_payload0_event events\nrasdaemon: Recording nvidia_ns_event events\nrasdaemon: Recording nvidia_vera_ns_event events\nrasdaemon: Recording yitian_ddr_reg_dump_event events\nrasdaemon: Database backend started: sqlite3.\nrasdaemon: Listening to events for cpus 0 to 1\nrasdaemon: diskerror_event store: 0xaaab12f46708\nrasdaemon: register inserted at db\n          <idle>-0     [001] d.h2.     0.000005 block_rq_error [ERROR] 2026-10-28 13:34:13 +0000 \nrasdaemon: diskerror_event store: 0xaaab12f46708\nrasdaemon: register inserted at db\n           <...>-293   [000] d.h3.     0.000005 block_rq_error [ERROR] 2026-10-28 13:34:13 +0000 \nrasdaemon: diskerror_event store: 0xaaab12f46708\nrasdaemon: register inserted at db\n           <...>-293   [000] d.h2.     0.000005 block_rq_error [ERROR] 2026-10-28 13:34:13 +0000 \nrasdaemon: diskerror_event store: 0xaaab12f46708\nrasdaemon: register inserted at db\n          <idle>-0     [001] d.h2.     0.000005 block_rq_error [ERROR] 2026-10-28 13:34:13 +0000 \nrasdaemon: diskerror_event store: 0xaaab12f46708\nrasdaemon: register inserted at db\n           <...>-293   [001] d.h2.     0.000005 block_rq_error [ERROR] 2026-10-28 13:34:13 +0000 \nrasdaemon: diskerror_event store: 0xaaab12f46708\nrasdaemon: register inserted at db\n           <...>-193   [001] d.h2.     0.000005 block_rq_error [ERROR] 2026-10-28 13:34:13 +0000 \nrasdaemon: Received signal Terminated. Stopping rasdaemon.\n", "rasdaemon_returncode": 0, "sqlite_count": 6, "sqlite_output": "6\n", "trace_enabled_before_injection": "1", "trace_event": "block_rq_error"}, "kernel": "PASS", "name": "block-io-native", "rasdaemon": "PASS", "reason": "", "status": "passed"}
+[   53.387763] ras-qemu-agent[293]: [2026-10-28T13:34:13.172482+00:00] [aarch64] ras-qemu-agent: Test block-io-native finished: PASS; duration=4.098s; reason=completed
+[   53.390759] ras-qemu-agent[293]: [2026-10-28T13:34:13.175811+00:00] [aarch64] ras-qemu-agent: Test block-database-report started
+[   57.389473] ras-qemu-agent[293]: ras-qemu-agent: heartbeat phase=Test block-database-report started
+[   60.331670] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 6.962, "evidence": {"command": ["/usr/sbin/ras-mc-ctl", "database", "--errors", "--table", "disk_errors", "--json"], "output": "{\"format_version\": 1, \"mode\": \"errors\", \"records\": [{\"fields\": {\"cmd\": \"\", \"dev\": \"254:32\", \"error\": \"I/O error\", \"id\": 1, \"nr_sector\": 8, \"rwbs\": \"WS\", \"sector\": 0}, \"hostname\": \"rasdaemon-ci\", \"table\": \"disk_errors\", \"timestamp\": \"2026-10-28T13:34:13+00:00\"}, {\"fields\": {\"cmd\": \"\", \"dev\": \"254:32\", \"error\": \"I/O error\", \"id\": 2, \"nr_sector\": 0, \"rwbs\": \"WS\", \"sector\": 0}, \"hostname\": \"rasdaemon-ci\", \"table\": \"disk_errors\", \"timestamp\": \"2026-10-28T13:34:13+00:00\"}, {\"fields\": {\"cmd\": \"\", \"dev\": \"254:32\", \"error\": \"I/O error\", \"id\": 3, \"nr_sector\": 8, \"rwbs\": \"R\", \"sector\": 0}, \"hostname\": \"rasdaemon-ci\", \"table\": \"disk_errors\", \"timestamp\": \"2026-10-28T13:34:13+00:00\"}, {\"fields\": {\"cmd\": \"\", \"dev\": \"254:32\", \"error\": \"I/O error\", \"id\": 4, \"nr_sector\": 8, \"rwbs\": \"R\", \"sector\": 0}, \"hostname\": \"rasdaemon-ci\", \"table\": \"disk_errors\", \"timestamp\": \"2026-10-28T13:34:13+00:00\"}, {\"fields\": {\"cmd\": \"\", \"dev\": \"254:32\", \"error\": \"I/O error\", \"id\": 5, \"nr_sector\": 8, \"rwbs\": \"RA\", \"sector\": 0}, \"hostname\": \"rasdaemon-ci\", \"table\": \"disk_errors\", \"timestamp\": \"2026-10-28T13:34:13+00:00\"}, {\"fields\": {\"cmd\": \"\", \"dev\": \"254:32\", \"error\": \"I/O error\", \"id\": 6, \"nr_sector\": 8, \"rwbs\": \"R\", \"sector\": 0}, \"hostname\": \"rasdaemon-ci\", \"table\": \"disk_errors\", \"timestamp\": \"2026-10-28T13:34:13+00:00\"}]}\n", "returncode": 0}, "kernel": "N/A", "name": "block-database-report", "rasdaemon": "PASS", "reason": "", "status": "passed"}
+[   60.339093] ras-qemu-agent[293]: [2026-10-28T13:34:20.138731+00:00] [aarch64] ras-qemu-agent: Test block-database-report finished: PASS; duration=6.962s; reason=completed
+[   60.411524] ras-qemu-agent[293]: [2026-10-28T13:34:20.222651+00:00] [aarch64] ras-qemu-agent: Test ghes-memory started
+[   62.717027] ras-qemu-agent[293]: [2026-10-28T13:34:22.523798+00:00] [aarch64] ras-qemu-agent: rasdaemon ready: pid=364; backend=sqlite3
+[   62.719148] ras-qemu-agent[293]: [2026-10-28T13:34:22.524548+00:00] [aarch64] ras-qemu-agent: ghes-memory-ready
+[   63.558699] {1}[Hardware Error]: Hardware error from APEI Generic Hardware Error Source: 1
+[   63.558784] {1}[Hardware Error]: It has been corrected by h/w and requires no further action
+[   63.558809] {1}[Hardware Error]: event severity: corrected
+[   63.558866] {1}[Hardware Error]:  Error 0, type: corrected
+[   63.558946] {1}[Hardware Error]:   section_type: memory error
+[   63.559089] {1}[Hardware Error]:   error_type: 2, single-bit ECC
+[   63.560109] EDAC MC0: 1 CE single-bit ECC on unknown memory ( page:0x0 offset:0x0 grain:1 syndrome:0x0 - APEI location: )
+[   63.660870] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 3.248, "evidence": {"cleanup_errors": [], "event": "ras/mc_event", "injection_ready": true, "kernel_observed": true, "kernel_trace": "# tracer: nop\n#\n# entries-in-buffer/entries-written: 1/1   #P:2\n#\n#                                _-----=> irqs-off/BH-disabled\n#                               / _----=> need-resched\n#                              | / _---=> hardirq/softirq\n#                              || / _--=> preempt-depth\n#                              ||| / _-=> migrate-disable\n#                              |||| /     delay\n#           TASK-PID     CPU#  |||||  TIMESTAMP  FUNCTION\n#              | |         |   |||||     |         |\n     kworker/0:2-59      [000] d..2.    63.560018: mc_event: 1 Corrected error: single-bit ECC on unknown memory (mc:0 location:-1:-1:-1 address:0x00000000 grain:1 syndrome:0x00000000 APEI location: )\n", "rasdaemon_output": "rasdaemon: Read 9 config vars from /var/tmp/rasdaemon-qemu/ghes-memory.env.\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: Can't register mce handler\nrasdaemon: module x86-mce-erst init failed: -2\nrasdaemon: Cpu fault isolation is disabled\nrasdaemon: Page offline choice on Corrected Errors is off\nrasdaemon: Row offline choice on Corrected Errors is off\nrasdaemon: Enabling DB backend: sqlite3\nrasdaemon: block:block_rq_error event enabled\nrasdaemon: Enabled event block:block_rq_error\nrasdaemon: cxl:cxl_aer_correctable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_correctable_error\nrasdaemon: cxl:cxl_aer_uncorrectable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_uncorrectable_error\nrasdaemon: cxl:cxl_dram event enabled\nrasdaemon: Enabled event cxl:cxl_dram\nrasdaemon: cxl:cxl_general_media event enabled\nrasdaemon: Enabled event cxl:cxl_general_media\nrasdaemon: cxl:cxl_generic_event event enabled\nrasdaemon: Enabled event cxl:cxl_generic_event\nrasdaemon: cxl:cxl_memory_module event enabled\nrasdaemon: Enabled event cxl:cxl_memory_module\nrasdaemon: cxl:cxl_memory_sparing event enabled\nrasdaemon: Enabled event cxl:cxl_memory_sparing\nrasdaemon: cxl:cxl_overflow event enabled\nrasdaemon: Enabled event cxl:cxl_overflow\nrasdaemon: cxl:cxl_poison event enabled\nrasdaemon: Enabled event cxl:cxl_poison\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: net:net_dev_xmit_timeout event enabled\nrasdaemon: Enabled event net:net_dev_xmit_timeout\nrasdaemon: ras:aer_event event enabled\nrasdaemon: Enabled event ras:aer_event\nrasdaemon: \t no AER_CE_TRIGGER (0xffffccb71fa7)\nrasdaemon: ras:arm_event event enabled\nrasdaemon: Enabled event ras:arm_event\nrasdaemon: ras:extlog_mem_event event not exist\nrasdaemon: Can't get traces from ras:extlog_mem_event\nrasdaemon: ras:mc_event event enabled\nrasdaemon: Enabled event ras:mc_event\nrasdaemon: ras:memory_failure_event event enabled\nrasdaemon: Enabled event ras:memory_failure_event\nrasdaemon: ras:non_standard_event event enabled\nrasdaemon: Enabled event ras:non_standard_event\nrasdaemon: ras:reri_event event not exist\nrasdaemon: Can't get traces from ras:reri_event\nrasdaemon: signal:signal_generate event enabled\nrasdaemon: Enabled event signal:signal_generate\nrasdaemon: devlink:devlink_health_report event enabled\nrasdaemon: Enabled event devlink:devlink_health_report\nrasdaemon: Recording aer_event events\nrasdaemon: Recording arm_event events\nrasdaemon: Recording cxl_poison_event events\nrasdaemon: Recording cxl_aer_ue_event events\nrasdaemon: Recording cxl_aer_ce_event events\nrasdaemon: Recording cxl_overflow_event events\nrasdaemon: Recording cxl_generic_event events\nrasdaemon: Recording cxl_general_media_event events\nrasdaemon: Recording cxl_dram_event events\nrasdaemon: Recording cxl_memory_module_event events\nrasdaemon: Recording cxl_memory_sparing_event events\nrasdaemon: Recording devlink_event events\nrasdaemon: Recording disk_errors events\nrasdaemon: Recording extlog_event events\nrasdaemon: Recording mc_event events\nrasdaemon: Recording memory_failure_event events\nrasdaemon: Recording non_standard_event events\nrasdaemon: Recording reri_event events\nrasdaemon: Recording signal_event events\nrasdaemon: Recording mce_record events\nrasdaemon: Recording amp_payload0_event events\nrasdaemon: Recording amp_payload1_event events\nrasdaemon: Recording amp_payload2_event events\nrasdaemon: Recording amp_payload3_event events\nrasdaemon: Recording ampereone_payload0_event events\nrasdaemon: Recording ampereone_payload1_event events\nrasdaemon: Recording ampereone_payload2_event events\nrasdaemon: Recording ampereone_payload3_event events\nrasdaemon: Recording ampereone_payload4_event events\nrasdaemon: Recording ampereone_payload5_event events\nrasdaemon: Recording ampereone_payload6_event events\nrasdaemon: Recording hip08_oem_type1_event_v2 events\nrasdaemon: Recording hip08_oem_type2_event_v2 events\nrasdaemon: Recording hip08_pcie_local_event_v2 events\nrasdaemon: Recording hisi_common_section_v2 events\nrasdaemon: Recording jm_payload0_event events\nrasdaemon: Recording nvidia_ns_event events\nrasdaemon: Recording nvidia_vera_ns_event events\nrasdaemon: Recording yitian_ddr_reg_dump_event events\nrasdaemon: Database backend started: sqlite3.\nrasdaemon: Listening to events for cpus 0 to 1\nrasdaemon:     mc_event_stat: memory corrected error report 1/sec\nrasdaemon: mc_event store: 0xaaaafca970e8\nrasdaemon: register inserted at db\n           <...>-59    [000] d..2.     0.000006 mc_event [ERROR] 2026-10-28 13:34:23 +0000 1 Corrected error: single-bit ECC on unknown memory (mc: 0 grain: 0 APEI location: )\nrasdaemon: Received signal Terminated. Stopping rasdaemon.\n", "rasdaemon_returncode": 0, "rows": [{"address": 0, "driver_detail": "APEI location: ", "err_count": 1, "err_msg": "single-bit ECC", "err_type": "Corrected", "grain": 0, "id": 1, "label": "unknown memory", "lower_layer": -1, "mc": 0, "middle_layer": -1, "syndrome": 0, "timestamp": "2026-10-28 13:34:23 +0000", "top_layer": -1}], "sqlite_count": 1, "table": "mc_event", "trace_enabled_before_injection": "1"}, "kernel": "PASS", "name": "ghes-memory", "rasdaemon": "PASS", "reason": "", "status": "passed"}
+[   63.683242] ras-qemu-agent[293]: [2026-10-28T13:34:23.472032+00:00] [aarch64] ras-qemu-agent: Test ghes-memory finished: PASS; duration=3.248s; reason=completed
+[   63.686118] ras-qemu-agent[293]: [2026-10-28T13:34:23.473282+00:00] [aarch64] ras-qemu-agent: Test ghes-memory-report started
+[   67.384738] ras-qemu-agent[293]: ras-qemu-agent: heartbeat phase=Test ghes-memory-report started
+[   69.663081] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 5.997, "evidence": {"command": ["/usr/sbin/ras-mc-ctl", "database", "--errors", "--table", "mc_event", "--json"], "output": "{\"format_version\": 1, \"mode\": \"errors\", \"records\": [{\"fields\": {\"address\": 0, \"driver_detail\": \"APEI location: \", \"err_count\": 1, \"err_msg\": \"single-bit ECC\", \"err_type\": \"Corrected\", \"grain\": 0, \"id\": 1, \"label\": \"unknown memory\", \"lower_layer\": -1, \"mc\": 0, \"middle_layer\": -1, \"syndrome\": 0, \"top_layer\": -1}, \"hostname\": \"rasdaemon-ci\", \"table\": \"mc_event\", \"timestamp\": \"2026-10-28T13:34:23+00:00\"}]}\n", "returncode": 0}, "kernel": "N/A", "name": "ghes-memory-report", "rasdaemon": "PASS", "reason": "", "status": "passed"}
+[   69.667772] ras-qemu-agent[293]: [2026-10-28T13:34:29.470901+00:00] [aarch64] ras-qemu-agent: Test ghes-memory-report finished: PASS; duration=5.997s; reason=completed
+[   69.670106] ras-qemu-agent[293]: [2026-10-28T13:34:29.472133+00:00] [aarch64] ras-qemu-agent: Test ghes-arm started
+[   69.708628] ras-qemu-agent[293]: [2026-10-28T13:34:29.519632+00:00] [aarch64] ras-qemu-agent: Test consumer-cpu-fault-isolation started
+[   69.710898] ras-qemu-agent[293]: [2026-10-28T13:34:29.520273+00:00] [aarch64] ras-qemu-agent: Test arm-vendor-data started
+[   71.978299] ras-qemu-agent[293]: [2026-10-28T13:34:31.784354+00:00] [aarch64] ras-qemu-agent: rasdaemon ready: pid=369; backend=sqlite3
+[   71.981534] ras-qemu-agent[293]: [2026-10-28T13:34:31.786012+00:00] [aarch64] ras-qemu-agent: ghes-arm-ready
+[   72.654210] {2}[Hardware Error]: Hardware error from APEI Generic Hardware Error Source: 1
+[   72.654269] {2}[Hardware Error]: It has been corrected by h/w and requires no further action
+[   72.654282] {2}[Hardware Error]: event severity: corrected
+[   72.654296] {2}[Hardware Error]:  Error 0, type: corrected
+[   72.654358] {2}[Hardware Error]:   section_type: ARM processor error
+[   72.654463] {2}[Hardware Error]:   MIDR: 0x0000000000000000
+[   72.654539] {2}[Hardware Error]:   Multiprocessor Affinity Register (MPIDR): 0x0000000000000001
+[   72.654592] {2}[Hardware Error]:   Error info structure 0:
+[   72.654609] {2}[Hardware Error]:   num errors: 771
+[   72.654721] {2}[Hardware Error]:    error_type: 0x02: cache error
+[   72.654745] {2}[Hardware Error]:    error_info: 0x000000000091000f
+[   72.654784] {2}[Hardware Error]:     transaction type: Data Access
+[   72.654816] {2}[Hardware Error]:     cache error, operation type: Data write
+[   72.654851] {2}[Hardware Error]:     cache level: 2
+[   72.654877] {2}[Hardware Error]:     processor context not corrupted
+[   72.654931] {2}[Hardware Error]:   Vendor specific error info has 48 bytes:
+[   72.655187] {2}[Hardware Error]:    00000000: 00110000 00001234 00005678 00000000  ....4...xV......
+[   72.655218] {2}[Hardware Error]:    00000010: 00000000 00000000 00000000 00000000  ................
+[   72.655237] {2}[Hardware Error]:    00000020: 00000000 00000000 00000000 00000000  ................
+[   72.718623] psci: CPU1 killed (polled 0 ms)
+[   72.862783] Detected PIPT I-cache on CPU1
+[   72.864066] GICv3: CPU1: found redistributor 1 region 0:0x00000000080c0000
+[   72.866179] CPU1: Booted secondary processor 0x0000000001 [0x000f0510]
+[   72.890936] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 3.227, "evidence": {"cleanup_errors": [], "cpu1_after_injection": "0", "event": "ras/arm_event", "injection_ready": true, "kernel_observed": true, "kernel_trace": "# tracer: nop\n#\n# entries-in-buffer/entries-written: 1/1   #P:2\n#\n#                                _-----=> irqs-off/BH-disabled\n#                               / _----=> need-resched\n#                              | / _---=> hardirq/softirq\n#                              || / _--=> preempt-depth\n#                              ||| / _-=> migrate-disable\n#                              |||| /     delay\n#           TASK-PID     CPU#  |||||  TIMESTAMP  FUNCTION\n#              | |         |   |||||     |         |\n     kworker/0:2-59      [000] d..1.    72.655769: arm_event: cpu: 1; error: 1; affinity level: 255; MPIDR: 0000000000000001; MIDR: 0000000000000000; running state: -1; PSCI state: -1; ARM Processor Err Info data len: 32; ARM Processor Err Info raw data: 00 20 05 00 02 02 03 00 0f 00 91 00 00 00 00 00 ef be ad de 00 00 00 00 ad 0b ba ab 00 00 00 00; ARM Processor Err Context Info data len: 0; ARM Processor Err Context Info raw data: ; Vendor Specific Err Info data len: 48; Vendor Specific Err Info raw data: 00 00 11 00 34 12 00 00 78 56 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n", "rasdaemon_output": "rasdaemon: Read 11 config vars from /var/tmp/rasdaemon-qemu/ghes-arm.env.\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: Can't register mce handler\nrasdaemon: module x86-mce-erst init failed: -2\nrasdaemon: Cpu fault isolation is enabled\nrasdaemon: Invalid CPU_ISOLATION_CYCLE: (null)! Use default value 86400.\nrasdaemon: Page offline choice on Corrected Errors is off\nrasdaemon: Row offline choice on Corrected Errors is off\nrasdaemon: Enabling DB backend: sqlite3\nrasdaemon: block:block_rq_error event enabled\nrasdaemon: Enabled event block:block_rq_error\nrasdaemon: cxl:cxl_aer_correctable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_correctable_error\nrasdaemon: cxl:cxl_aer_uncorrectable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_uncorrectable_error\nrasdaemon: cxl:cxl_dram event enabled\nrasdaemon: Enabled event cxl:cxl_dram\nrasdaemon: cxl:cxl_general_media event enabled\nrasdaemon: Enabled event cxl:cxl_general_media\nrasdaemon: cxl:cxl_generic_event event enabled\nrasdaemon: Enabled event cxl:cxl_generic_event\nrasdaemon: cxl:cxl_memory_module event enabled\nrasdaemon: Enabled event cxl:cxl_memory_module\nrasdaemon: cxl:cxl_memory_sparing event enabled\nrasdaemon: Enabled event cxl:cxl_memory_sparing\nrasdaemon: cxl:cxl_overflow event enabled\nrasdaemon: Enabled event cxl:cxl_overflow\nrasdaemon: cxl:cxl_poison event enabled\nrasdaemon: Enabled event cxl:cxl_poison\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: net:net_dev_xmit_timeout event enabled\nrasdaemon: Enabled event net:net_dev_xmit_timeout\nrasdaemon: ras:aer_event event enabled\nrasdaemon: Enabled event ras:aer_event\nrasdaemon: \t no AER_CE_TRIGGER (0xffffe5b98f7e)\nrasdaemon: ras:arm_event event enabled\nrasdaemon: Enabled event ras:arm_event\nrasdaemon: ras:extlog_mem_event event not exist\nrasdaemon: Can't get traces from ras:extlog_mem_event\nrasdaemon: ras:mc_event event enabled\nrasdaemon: Enabled event ras:mc_event\nrasdaemon: ras:memory_failure_event event enabled\nrasdaemon: Enabled event ras:memory_failure_event\nrasdaemon: ras:non_standard_event event enabled\nrasdaemon: Enabled event ras:non_standard_event\nrasdaemon: ras:reri_event event not exist\nrasdaemon: Can't get traces from ras:reri_event\nrasdaemon: signal:signal_generate event enabled\nrasdaemon: Enabled event signal:signal_generate\nrasdaemon: devlink:devlink_health_report event enabled\nrasdaemon: Enabled event devlink:devlink_health_report\nrasdaemon: Recording aer_event events\nrasdaemon: Recording arm_event events\nrasdaemon: Recording cxl_poison_event events\nrasdaemon: Recording cxl_aer_ue_event events\nrasdaemon: Recording cxl_aer_ce_event events\nrasdaemon: Recording cxl_overflow_event events\nrasdaemon: Recording cxl_generic_event events\nrasdaemon: Recording cxl_general_media_event events\nrasdaemon: Recording cxl_dram_event events\nrasdaemon: Recording cxl_memory_module_event events\nrasdaemon: Recording cxl_memory_sparing_event events\nrasdaemon: Recording devlink_event events\nrasdaemon: Recording disk_errors events\nrasdaemon: Recording extlog_event events\nrasdaemon: Recording mc_event events\nrasdaemon: Recording memory_failure_event events\nrasdaemon: Recording non_standard_event events\nrasdaemon: Recording reri_event events\nrasdaemon: Recording signal_event events\nrasdaemon: Recording mce_record events\nrasdaemon: Recording amp_payload0_event events\nrasdaemon: Recording amp_payload1_event events\nrasdaemon: Recording amp_payload2_event events\nrasdaemon: Recording amp_payload3_event events\nrasdaemon: Recording ampereone_payload0_event events\nrasdaemon: Recording ampereone_payload1_event events\nrasdaemon: Recording ampereone_payload2_event events\nrasdaemon: Recording ampereone_payload3_event events\nrasdaemon: Recording ampereone_payload4_event events\nrasdaemon: Recording ampereone_payload5_event events\nrasdaemon: Recording ampereone_payload6_event events\nrasdaemon: Recording hip08_oem_type1_event_v2 events\nrasdaemon: Recording hip08_oem_type2_event_v2 events\nrasdaemon: Recording hip08_pcie_local_event_v2 events\nrasdaemon: Recording hisi_common_section_v2 events\nrasdaemon: Recording jm_payload0_event events\nrasdaemon: Recording nvidia_ns_event events\nrasdaemon: Recording nvidia_vera_ns_event events\nrasdaemon: Recording yitian_ddr_reg_dump_event events\nrasdaemon: Database backend started: sqlite3.\nrasdaemon: Listening to events for cpus 0 to 1\nrasdaemon: 771 error in cpu core caught\nrasdaemon: Handling error on cpu1\nrasdaemon: Current number of Corrected Errors in cpu1 in the cycle is 771\nrasdaemon: Corrected Errors exceeded threshold 1, try to offline cpu1\nrasdaemon: Offline cpu1 succeed, the state is offline\nrasdaemon: arm_event store: 0xaaaafc66b238\nrasdaemon: register inserted at db\n           <...>-59    [000] d..1.     0.000007 arm_event [ERROR] 2026-10-28 13:34:32 +0000 affinity: -1 MPIDR: 0x1 MIDR: 0x0 running_state: -1 psci_state: -1 ARM Processor Err Info data len: 32\n  00000000: 00052000 00030202 0091000f 00000000\n  00000010: deadbeef 00000000 abba0bad 00000000\n  00000020: \nARM processor error info:\n error_types: cache error error_count:771 error_info: 0x000000000091000f transaction type:Data Access cache error, operation type:Data write cache level: 2 processor context not corrupted\n ARM Processor Err Context Info data len: 0\n  00000000:  Vendor Specific Err Info data len: 48\n Error Type: CPM\n Error Subtype: Snoop-Logic\n Error Instance: 0x11\n Processor Socket: 0\n Status: 0x1234\n Address: 0x5678\n MISC0: 0x0\n MISC1: 0x0\n MISC2: 0x0\n MISC3: 0x0\n\n cpu: 1\n severity: Corrected\nrasdaemon: Received signal Terminated. Stopping rasdaemon.\n", "rasdaemon_returncode": 0, "rows": [{"affinity": -1, "context_info": "", "err_info": "00200500020203000f00910000000000efbeadde00000000ad0bbaab00000000", "error_count": 771, "error_flags": "", "error_info": 9502735, "error_type": " cache error", "id": 1, "mpidr": 1, "phy_fault_addr": 0, "psci_state": -1, "running_state": -1, "timestamp": "2026-10-28 13:34:32 +0000", "vendor_info": "000011003412000078560000000000000000000000000000000000000000000000000000000000000000000000000000", "virt_fault_addr": 0}], "sqlite_count": 1, "table": "arm_event", "trace_enabled_before_injection": "1"}, "kernel": "PASS", "name": "ghes-arm", "rasdaemon": "PASS", "reason": "", "status": "passed"}
+[   72.915215] ras-qemu-agent[293]: [2026-10-28T13:34:32.701677+00:00] [aarch64] ras-qemu-agent: Test ghes-arm finished: PASS; duration=3.227s; reason=completed
+[   72.917915] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 0.0, "evidence": {"after": "0", "before": "1", "output": "rasdaemon: Read 11 config vars from /var/tmp/rasdaemon-qemu/ghes-arm.env.\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: Can't register mce handler\nrasdaemon: module x86-mce-erst init failed: -2\nrasdaemon: Cpu fault isolation is enabled\nrasdaemon: Invalid CPU_ISOLATION_CYCLE: (null)! Use default value 86400.\nrasdaemon: Page offline choice on Corrected Errors is off\nrasdaemon: Row offline choice on Corrected Errors is off\nrasdaemon: Enabling DB backend: sqlite3\nrasdaemon: block:block_rq_error event enabled\nrasdaemon: Enabled event block:block_rq_error\nrasdaemon: cxl:cxl_aer_correctable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_correctable_error\nrasdaemon: cxl:cxl_aer_uncorrectable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_uncorrectable_error\nrasdaemon: cxl:cxl_dram event enabled\nrasdaemon: Enabled event cxl:cxl_dram\nrasdaemon: cxl:cxl_general_media event enabled\nrasdaemon: Enabled event cxl:cxl_general_media\nrasdaemon: cxl:cxl_generic_event event enabled\nrasdaemon: Enabled event cxl:cxl_generic_event\nrasdaemon: cxl:cxl_memory_module event enabled\nrasdaemon: Enabled event cxl:cxl_memory_module\nrasdaemon: cxl:cxl_memory_sparing event enabled\nrasdaemon: Enabled event cxl:cxl_memory_sparing\nrasdaemon: cxl:cxl_overflow event enabled\nrasdaemon: Enabled event cxl:cxl_overflow\nrasdaemon: cxl:cxl_poison event enabled\nrasdaemon: Enabled event cxl:cxl_poison\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: net:net_dev_xmit_timeout event enabled\nrasdaemon: Enabled event net:net_dev_xmit_timeout\nrasdaemon: ras:aer_event event enabled\nrasdaemon: Enabled event ras:aer_event\nrasdaemon: \t no AER_CE_TRIGGER (0xffffe5b98f7e)\nrasdaemon: ras:arm_event event enabled\nrasdaemon: Enabled event ras:arm_event\nrasdaemon: ras:extlog_mem_event event not exist\nrasdaemon: Can't get traces from ras:extlog_mem_event\nrasdaemon: ras:mc_event event enabled\nrasdaemon: Enabled event ras:mc_event\nrasdaemon: ras:memory_failure_event event enabled\nrasdaemon: Enabled event ras:memory_failure_event\nrasdaemon: ras:non_standard_event event enabled\nrasdaemon: Enabled event ras:non_standard_event\nrasdaemon: ras:reri_event event not exist\nrasdaemon: Can't get traces from ras:reri_event\nrasdaemon: signal:signal_generate event enabled\nrasdaemon: Enabled event signal:signal_generate\nrasdaemon: devlink:devlink_health_report event enabled\nrasdaemon: Enabled event devlink:devlink_health_report\nrasdaemon: Recording aer_event events\nrasdaemon: Recording arm_event events\nrasdaemon: Recording cxl_poison_event events\nrasdaemon: Recording cxl_aer_ue_event events\nrasdaemon: Recording cxl_aer_ce_event events\nrasdaemon: Recording cxl_overflow_event events\nrasdaemon: Recording cxl_generic_event events\nrasdaemon: Recording cxl_general_media_event events\nrasdaemon: Recording cxl_dram_event events\nrasdaemon: Recording cxl_memory_module_event events\nrasdaemon: Recording cxl_memory_sparing_event events\nrasdaemon: Recording devlink_event events\nrasdaemon: Recording disk_errors events\nrasdaemon: Recording extlog_event events\nrasdaemon: Recording mc_event events\nrasdaemon: Recording memory_failure_event events\nrasdaemon: Recording non_standard_event events\nrasdaemon: Recording reri_event events\nrasdaemon: Recording signal_event events\nrasdaemon: Recording mce_record events\nrasdaemon: Recording amp_payload0_event events\nrasdaemon: Recording amp_payload1_event events\nrasdaemon: Recording amp_payload2_event events\nrasdaemon: Recording amp_payload3_event events\nrasdaemon: Recording ampereone_payload0_event events\nrasdaemon: Recording ampereone_payload1_event events\nrasdaemon: Recording ampereone_payload2_event events\nrasdaemon: Recording ampereone_payload3_event events\nrasdaemon: Recording ampereone_payload4_event events\nrasdaemon: Recording ampereone_payload5_event events\nrasdaemon: Recording ampereone_payload6_event events\nrasdaemon: Recording hip08_oem_type1_event_v2 events\nrasdaemon: Recording hip08_oem_type2_event_v2 events\nrasdaemon: Recording hip08_pcie_local_event_v2 events\nrasdaemon: Recording hisi_common_section_v2 events\nrasdaemon: Recording jm_payload0_event events\nrasdaemon: Recording nvidia_ns_event events\nrasdaemon: Recording nvidia_vera_ns_event events\nrasdaemon: Recording yitian_ddr_reg_dump_event events\nrasdaemon: Database backend started: sqlite3.\nrasdaemon: Listening to events for cpus 0 to 1\nrasdaemon: 771 error in cpu core caught\nrasdaemon: Handling error on cpu1\nrasdaemon: Current number of Corrected Errors in cpu1 in the cycle is 771\nrasdaemon: Corrected Errors exceeded threshold 1, try to offline cpu1\nrasdaemon: Offline cpu1 succeed, the state is offline\nrasdaemon: arm_event store: 0xaaaafc66b238\nrasdaemon: register inserted at db\n           <...>-59    [000] d..1.     0.000007 arm_event [ERROR] 2026-10-28 13:34:32 +0000 affinity: -1 MPIDR: 0x1 MIDR: 0x0 running_state: -1 psci_state: -1 ARM Processor Err Info data len: 32\n  00000000: 00052000 00030202 0091000f 00000000\n  00000010: deadbeef 00000000 abba0bad 00000000\n  00000020: \nARM processor error info:\n error_types: cache error error_count:771 error_info: 0x000000000091000f transaction type:Data Access cache error, operation type:Data write cache level: 2 processor context not corrupted\n ARM Processor Err Context Info data len: 0\n  00000000:  Vendor Specific Err Info data len: 48\n Error Type: CPM\n Error Subtype: Snoop-Logic\n Error Instance: 0x11\n Processor Socket: 0\n Status: 0x1234\n Address: 0x5678\n MISC0: 0x0\n MISC1: 0x0\n MISC2: 0x0\n MISC3: 0x0\n\n cpu: 1\n severity: Corrected\nrasdaemon: Received signal Terminated. Stopping rasdaemon.\n"}, "kernel": "N/A", "name": "consumer-cpu-fault-isolation", "rasdaemon": "PASS", "reason": "CPU1 must transition from online to offline after corrected ARM errors", "status": "passed"}
+[   72.934007] ras-qemu-agent[293]: [2026-10-28T13:34:32.704516+00:00] [aarch64] ras-qemu-agent: Test consumer-cpu-fault-isolation finished: PASS; duration=3.185s; reason=CPU1 must transition from online to offline after corrected ARM errors
+[   72.936682] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 0.0, "evidence": {"output": "rasdaemon: Read 11 config vars from /var/tmp/rasdaemon-qemu/ghes-arm.env.\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: Can't register mce handler\nrasdaemon: module x86-mce-erst init failed: -2\nrasdaemon: Cpu fault isolation is enabled\nrasdaemon: Invalid CPU_ISOLATION_CYCLE: (null)! Use default value 86400.\nrasdaemon: Page offline choice on Corrected Errors is off\nrasdaemon: Row offline choice on Corrected Errors is off\nrasdaemon: Enabling DB backend: sqlite3\nrasdaemon: block:block_rq_error event enabled\nrasdaemon: Enabled event block:block_rq_error\nrasdaemon: cxl:cxl_aer_correctable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_correctable_error\nrasdaemon: cxl:cxl_aer_uncorrectable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_uncorrectable_error\nrasdaemon: cxl:cxl_dram event enabled\nrasdaemon: Enabled event cxl:cxl_dram\nrasdaemon: cxl:cxl_general_media event enabled\nrasdaemon: Enabled event cxl:cxl_general_media\nrasdaemon: cxl:cxl_generic_event event enabled\nrasdaemon: Enabled event cxl:cxl_generic_event\nrasdaemon: cxl:cxl_memory_module event enabled\nrasdaemon: Enabled event cxl:cxl_memory_module\nrasdaemon: cxl:cxl_memory_sparing event enabled\nrasdaemon: Enabled event cxl:cxl_memory_sparing\nrasdaemon: cxl:cxl_overflow event enabled\nrasdaemon: Enabled event cxl:cxl_overflow\nrasdaemon: cxl:cxl_poison event enabled\nrasdaemon: Enabled event cxl:cxl_poison\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: net:net_dev_xmit_timeout event enabled\nrasdaemon: Enabled event net:net_dev_xmit_timeout\nrasdaemon: ras:aer_event event enabled\nrasdaemon: Enabled event ras:aer_event\nrasdaemon: \t no AER_CE_TRIGGER (0xffffe5b98f7e)\nrasdaemon: ras:arm_event event enabled\nrasdaemon: Enabled event ras:arm_event\nrasdaemon: ras:extlog_mem_event event not exist\nrasdaemon: Can't get traces from ras:extlog_mem_event\nrasdaemon: ras:mc_event event enabled\nrasdaemon: Enabled event ras:mc_event\nrasdaemon: ras:memory_failure_event event enabled\nrasdaemon: Enabled event ras:memory_failure_event\nrasdaemon: ras:non_standard_event event enabled\nrasdaemon: Enabled event ras:non_standard_event\nrasdaemon: ras:reri_event event not exist\nrasdaemon: Can't get traces from ras:reri_event\nrasdaemon: signal:signal_generate event enabled\nrasdaemon: Enabled event signal:signal_generate\nrasdaemon: devlink:devlink_health_report event enabled\nrasdaemon: Enabled event devlink:devlink_health_report\nrasdaemon: Recording aer_event events\nrasdaemon: Recording arm_event events\nrasdaemon: Recording cxl_poison_event events\nrasdaemon: Recording cxl_aer_ue_event events\nrasdaemon: Recording cxl_aer_ce_event events\nrasdaemon: Recording cxl_overflow_event events\nrasdaemon: Recording cxl_generic_event events\nrasdaemon: Recording cxl_general_media_event events\nrasdaemon: Recording cxl_dram_event events\nrasdaemon: Recording cxl_memory_module_event events\nrasdaemon: Recording cxl_memory_sparing_event events\nrasdaemon: Recording devlink_event events\nrasdaemon: Recording disk_errors events\nrasdaemon: Recording extlog_event events\nrasdaemon: Recording mc_event events\nrasdaemon: Recording memory_failure_event events\nrasdaemon: Recording non_standard_event events\nrasdaemon: Recording reri_event events\nrasdaemon: Recording signal_event events\nrasdaemon: Recording mce_record events\nrasdaemon: Recording amp_payload0_event events\nrasdaemon: Recording amp_payload1_event events\nrasdaemon: Recording amp_payload2_event events\nrasdaemon: Recording amp_payload3_event events\nrasdaemon: Recording ampereone_payload0_event events\nrasdaemon: Recording ampereone_payload1_event events\nrasdaemon: Recording ampereone_payload2_event events\nrasdaemon: Recording ampereone_payload3_event events\nrasdaemon: Recording ampereone_payload4_event events\nrasdaemon: Recording ampereone_payload5_event events\nrasdaemon: Recording ampereone_payload6_event events\nrasdaemon: Recording hip08_oem_type1_event_v2 events\nrasdaemon: Recording hip08_oem_type2_event_v2 events\nrasdaemon: Recording hip08_pcie_local_event_v2 events\nrasdaemon: Recording hisi_common_section_v2 events\nrasdaemon: Recording jm_payload0_event events\nrasdaemon: Recording nvidia_ns_event events\nrasdaemon: Recording nvidia_vera_ns_event events\nrasdaemon: Recording yitian_ddr_reg_dump_event events\nrasdaemon: Database backend started: sqlite3.\nrasdaemon: Listening to events for cpus 0 to 1\nrasdaemon: 771 error in cpu core caught\nrasdaemon: Handling error on cpu1\nrasdaemon: Current number of Corrected Errors in cpu1 in the cycle is 771\nrasdaemon: Corrected Errors exceeded threshold 1, try to offline cpu1\nrasdaemon: Offline cpu1 succeed, the state is offline\nrasdaemon: arm_event store: 0xaaaafc66b238\nrasdaemon: register inserted at db\n           <...>-59    [000] d..1.     0.000007 arm_event [ERROR] 2026-10-28 13:34:32 +0000 affinity: -1 MPIDR: 0x1 MIDR: 0x0 running_state: -1 psci_state: -1 ARM Processor Err Info data len: 32\n  00000000: 00052000 00030202 0091000f 00000000\n  00000010: deadbeef 00000000 abba0bad 00000000\n  00000020: \nARM processor error info:\n error_types: cache error error_count:771 error_info: 0x000000000091000f transaction type:Data Access cache error, operation type:Data write cache level: 2 processor context not corrupted\n ARM Processor Err Context Info data len: 0\n  00000000:  Vendor Specific Err Info data len: 48\n Error Type: CPM\n Error Subtype: Snoop-Logic\n Error Instance: 0x11\n Processor Socket: 0\n Status: 0x1234\n Address: 0x5678\n MISC0: 0x0\n MISC1: 0x0\n MISC2: 0x0\n MISC3: 0x0\n\n cpu: 1\n severity: Corrected\nrasdaemon: Received signal Terminated. Stopping rasdaemon.\n", "vendor_data": "000011003412000078560000000000000000000000000000000000000000000000000000000000000000000000000000"}, "kernel": "N/A", "name": "arm-vendor-data", "rasdaemon": "PASS", "reason": "ARM vendor data must be retained and decoded", "status": "passed"}
+[   72.953014] ras-qemu-agent[293]: [2026-10-28T13:34:32.706681+00:00] [aarch64] ras-qemu-agent: Test arm-vendor-data finished: PASS; duration=3.186s; reason=ARM vendor data must be retained and decoded
+[   72.954479] ras-qemu-agent[293]: [2026-10-28T13:34:32.707253+00:00] [aarch64] ras-qemu-agent: Test ghes-arm-report started
+[   77.385135] ras-qemu-agent[293]: ras-qemu-agent: heartbeat phase=Test ghes-arm-report started
+[   78.879830] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 5.979, "evidence": {"command": ["/usr/sbin/ras-mc-ctl", "database", "--errors", "--table", "arm_event", "--json"], "output": "{\"format_version\": 1, \"mode\": \"errors\", \"records\": [{\"fields\": {\"affinity\": -1, \"context_info\": {\"data\": \"\", \"encoding\": \"base64\"}, \"err_info\": {\"data\": \"ACAFAAICAwAPAJEAAAAAAO++rd4AAAAArQu6qwAAAAA=\", \"encoding\": \"base64\"}, \"error_count\": 771, \"error_flags\": \"\", \"error_info\": 9502735, \"error_type\": \" cache error\", \"id\": 1, \"mpidr\": 1, \"phy_fault_addr\": 0, \"psci_state\": -1, \"running_state\": -1, \"vendor_info\": {\"data\": \"AAARADQSAAB4VgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\", \"encoding\": \"base64\"}, \"virt_fault_addr\": 0}, \"hostname\": \"rasdaemon-ci\", \"table\": \"arm_event\", \"timestamp\": \"2026-10-28T13:34:32+00:00\"}]}\n", "returncode": 0}, "kernel": "N/A", "name": "ghes-arm-report", "rasdaemon": "PASS", "reason": "", "status": "passed"}
+[   78.885337] ras-qemu-agent[293]: [2026-10-28T13:34:38.687346+00:00] [aarch64] ras-qemu-agent: Test ghes-arm-report finished: PASS; duration=5.979s; reason=completed
+[   78.886768] ras-qemu-agent[293]: [2026-10-28T13:34:38.688398+00:00] [aarch64] ras-qemu-agent: Test ghes-pci-bus started
+[   81.420963] ras-qemu-agent[293]: [2026-10-28T13:34:41.228056+00:00] [aarch64] ras-qemu-agent: rasdaemon ready: pid=374; backend=sqlite3
+[   81.423301] ras-qemu-agent[293]: [2026-10-28T13:34:41.229360+00:00] [aarch64] ras-qemu-agent: ghes-pci-bus-ready
+[   81.740895] {3}[Hardware Error]: Hardware error from APEI Generic Hardware Error Source: 1
+[   81.740951] {3}[Hardware Error]: event severity: recoverable
+[   81.740966] {3}[Hardware Error]:  Error 0, type: recoverable
+[   81.741048] {3}[Hardware Error]:   section type: unknown, c5753963-3b84-4095-bf78-eddad3f9c9dd
+[   81.741077] {3}[Hardware Error]:   section length: 0x48
+[   81.741127] {3}[Hardware Error]:   00000000: 000001ff 00000000 00001234 00000000  ........4.......
+[   81.741147] {3}[Hardware Error]:   00000010: 12560003 00000000 12345678 00000000  ..V.....xV4.....
+[   81.741165] {3}[Hardware Error]:   00000020: 00009abc 00000000 00000000 01000000  ................
+[   81.741183] {3}[Hardware Error]:   00000030: 00000000 00000000 00000044 00000000  ........D.......
+[   81.741199] {3}[Hardware Error]:   00000040: 00000055 00000000                    U.......
+[   81.842450] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 2.963, "evidence": {"cleanup_errors": [], "event": "ras/non_standard_event", "injection_ready": true, "kernel_observed": true, "kernel_trace": "# tracer: nop\n#\n# entries-in-buffer/entries-written: 1/1   #P:2\n#\n#                                _-----=> irqs-off/BH-disabled\n#                               / _----=> need-resched\n#                              | / _---=> hardirq/softirq\n#                              || / _--=> preempt-depth\n#                              ||| / _-=> migrate-disable\n#                              |||| /     delay\n#           TASK-PID     CPU#  |||||  TIMESTAMP  FUNCTION\n#              | |         |   |||||     |         |\n     kworker/0:2-59      [000] d..1.    81.741633: non_standard_event: severity: 2; sec type:633975c5-843b-9540-bf78-eddad3f9c9dd; FRU: 00000000-0000-0000-0000-000000000000 ; data len:72; raw data:ff 01 00 00 00 00 00 00 34 12 00 00 00 00 00 00 03 00 56 12 00 00 00 00 78 56 34 12 00 00 00 00 bc 9a 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 44 00 00 00 00 00 00 00 55 00 00 00 00 00 00 00\n", "rasdaemon_output": "rasdaemon: Read 9 config vars from /var/tmp/rasdaemon-qemu/ghes-pci-bus.env.\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: Can't register mce handler\nrasdaemon: module x86-mce-erst init failed: -2\nrasdaemon: Cpu fault isolation is disabled\nrasdaemon: Page offline choice on Corrected Errors is off\nrasdaemon: Row offline choice on Corrected Errors is off\nrasdaemon: Enabling DB backend: sqlite3\nrasdaemon: block:block_rq_error event enabled\nrasdaemon: Enabled event block:block_rq_error\nrasdaemon: cxl:cxl_aer_correctable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_correctable_error\nrasdaemon: cxl:cxl_aer_uncorrectable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_uncorrectable_error\nrasdaemon: cxl:cxl_dram event enabled\nrasdaemon: Enabled event cxl:cxl_dram\nrasdaemon: cxl:cxl_general_media event enabled\nrasdaemon: Enabled event cxl:cxl_general_media\nrasdaemon: cxl:cxl_generic_event event enabled\nrasdaemon: Enabled event cxl:cxl_generic_event\nrasdaemon: cxl:cxl_memory_module event enabled\nrasdaemon: Enabled event cxl:cxl_memory_module\nrasdaemon: cxl:cxl_memory_sparing event enabled\nrasdaemon: Enabled event cxl:cxl_memory_sparing\nrasdaemon: cxl:cxl_overflow event enabled\nrasdaemon: Enabled event cxl:cxl_overflow\nrasdaemon: cxl:cxl_poison event enabled\nrasdaemon: Enabled event cxl:cxl_poison\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: net:net_dev_xmit_timeout event enabled\nrasdaemon: Enabled event net:net_dev_xmit_timeout\nrasdaemon: ras:aer_event event enabled\nrasdaemon: Enabled event ras:aer_event\nrasdaemon: \t no AER_CE_TRIGGER (0xffffe91adfa7)\nrasdaemon: ras:arm_event event enabled\nrasdaemon: Enabled event ras:arm_event\nrasdaemon: ras:extlog_mem_event event not exist\nrasdaemon: Can't get traces from ras:extlog_mem_event\nrasdaemon: ras:mc_event event enabled\nrasdaemon: Enabled event ras:mc_event\nrasdaemon: ras:memory_failure_event event enabled\nrasdaemon: Enabled event ras:memory_failure_event\nrasdaemon: ras:non_standard_event event enabled\nrasdaemon: Enabled event ras:non_standard_event\nrasdaemon: ras:reri_event event not exist\nrasdaemon: Can't get traces from ras:reri_event\nrasdaemon: signal:signal_generate event enabled\nrasdaemon: Enabled event signal:signal_generate\nrasdaemon: devlink:devlink_health_report event enabled\nrasdaemon: Enabled event devlink:devlink_health_report\nrasdaemon: Recording aer_event events\nrasdaemon: Recording arm_event events\nrasdaemon: Recording cxl_poison_event events\nrasdaemon: Recording cxl_aer_ue_event events\nrasdaemon: Recording cxl_aer_ce_event events\nrasdaemon: Recording cxl_overflow_event events\nrasdaemon: Recording cxl_generic_event events\nrasdaemon: Recording cxl_general_media_event events\nrasdaemon: Recording cxl_dram_event events\nrasdaemon: Recording cxl_memory_module_event events\nrasdaemon: Recording cxl_memory_sparing_event events\nrasdaemon: Recording devlink_event events\nrasdaemon: Recording disk_errors events\nrasdaemon: Recording extlog_event events\nrasdaemon: Recording mc_event events\nrasdaemon: Recording memory_failure_event events\nrasdaemon: Recording non_standard_event events\nrasdaemon: Recording reri_event events\nrasdaemon: Recording signal_event events\nrasdaemon: Recording mce_record events\nrasdaemon: Recording amp_payload0_event events\nrasdaemon: Recording amp_payload1_event events\nrasdaemon: Recording amp_payload2_event events\nrasdaemon: Recording amp_payload3_event events\nrasdaemon: Recording ampereone_payload0_event events\nrasdaemon: Recording ampereone_payload1_event events\nrasdaemon: Recording ampereone_payload2_event events\nrasdaemon: Recording ampereone_payload3_event events\nrasdaemon: Recording ampereone_payload4_event events\nrasdaemon: Recording ampereone_payload5_event events\nrasdaemon: Recording ampereone_payload6_event events\nrasdaemon: Recording hip08_oem_type1_event_v2 events\nrasdaemon: Recording hip08_oem_type2_event_v2 events\nrasdaemon: Recording hip08_pcie_local_event_v2 events\nrasdaemon: Recording hisi_common_section_v2 events\nrasdaemon: Recording jm_payload0_event events\nrasdaemon: Recording nvidia_ns_event events\nrasdaemon: Recording nvidia_vera_ns_event events\nrasdaemon: Recording yitian_ddr_reg_dump_event events\nrasdaemon: Database backend started: sqlite3.\nrasdaemon: Listening to events for cpus 0 to 1\nrasdaemon: non_standard_event store: 0xaaaad2da9fe8\nrasdaemon: register inserted at db\n           <...>-59    [000] d..1.     0.000008 non_standard_event 2026-10-28 13:34:41 +0000  Recoverable section type: c5753963-3b84-4095-bf78-eddad3f9c9dd fru text:  fru id: 00000000-0000-0000-0000-000000000000  length: 72 error:\n  00000000: 000001ff 00000000 00001234 00000000\n  00000010: 12560003 00000000 12345678 00000000\n  00000020: 00009abc 00000000 00000000 01000000\n  00000030: 00000000 00000000 00000044 00000000\n  00000040: 00000055 00000000 \nrasdaemon: Received signal Terminated. Stopping rasdaemon.\n", "rasdaemon_returncode": 0, "rows": [{"error": "ff01000000000000341200000000000003005612000000007856341200000000bc9a0000000000000000000000000001000000000000000044000000000000005500000000000000", "fru_id": "00000000000000000000000000000000", "fru_text": "", "id": 1, "sec_type": "633975c5843b9540bf78eddad3f9c9dd", "severity": "Recoverable", "timestamp": "2026-10-28 13:34:41 +0000"}], "sqlite_count": 1, "table": "non_standard_event", "trace_enabled_before_injection": "1"}, "kernel": "PASS", "name": "ghes-pci-bus", "rasdaemon": "PASS", "reason": "", "status": "passed"}
+[   81.858820] ras-qemu-agent[293]: [2026-10-28T13:34:41.653822+00:00] [aarch64] ras-qemu-agent: Test ghes-pci-bus finished: PASS; duration=2.963s; reason=completed
+[   81.861083] ras-qemu-agent[293]: [2026-10-28T13:34:41.654395+00:00] [aarch64] ras-qemu-agent: Test ghes-pci-bus-report started
+[   87.385919] ras-qemu-agent[293]: ras-qemu-agent: heartbeat phase=Test ghes-pci-bus-report started
+[   87.594432] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 5.75, "evidence": {"command": ["/usr/sbin/ras-mc-ctl", "database", "--errors", "--table", "non_standard_event", "--json"], "output": "{\"format_version\": 1, \"mode\": \"errors\", \"records\": [{\"fields\": {\"error\": {\"data\": \"/wEAAAAAAAA0EgAAAAAAAAMAVhIAAAAAeFY0EgAAAAC8mgAAAAAAAAAAAAAAAAABAAAAAAAAAABEAAAAAAAAAFUAAAAAAAAA\", \"encoding\": \"base64\"}, \"fru_id\": {\"data\": \"AAAAAAAAAAAAAAAAAAAAAA==\", \"encoding\": \"base64\"}, \"fru_text\": \"\", \"id\": 1, \"sec_type\": {\"data\": \"Yzl1xYQ7lUC/eO3a0/nJ3Q==\", \"encoding\": \"base64\"}, \"severity\": \"Recoverable\"}, \"hostname\": \"rasdaemon-ci\", \"table\": \"non_standard_event\", \"timestamp\": \"2026-10-28T13:34:41+00:00\"}]}\n", "returncode": 0}, "kernel": "N/A", "name": "ghes-pci-bus-report", "rasdaemon": "PASS", "reason": "", "status": "passed"}
+[   87.599305] ras-qemu-agent[293]: [2026-10-28T13:34:47.406273+00:00] [aarch64] ras-qemu-agent: Test ghes-pci-bus-report finished: PASS; duration=5.750s; reason=completed
+[   87.601353] ras-qemu-agent[293]: [2026-10-28T13:34:47.407345+00:00] [aarch64] ras-qemu-agent: Test ghes-unknown started
+[   89.873207] ras-qemu-agent[293]: [2026-10-28T13:34:49.679343+00:00] [aarch64] ras-qemu-agent: rasdaemon ready: pid=378; backend=sqlite3
+[   89.875371] ras-qemu-agent[293]: [2026-10-28T13:34:49.680109+00:00] [aarch64] ras-qemu-agent: ghes-unknown-ready
+[   90.821801] {4}[Hardware Error]: Hardware error from APEI Generic Hardware Error Source: 1
+[   90.821859] {4}[Hardware Error]: It has been corrected by h/w and requires no further action
+[   90.821871] {4}[Hardware Error]: event severity: corrected
+[   90.821885] {4}[Hardware Error]:  Error 0, type: corrected
+[   90.821901] {4}[Hardware Error]:   section type: unknown, 12345678-1234-5678-9abc-123456789abc
+[   90.821922] {4}[Hardware Error]:   section length: 0x20
+[   90.821950] {4}[Hardware Error]:   00000000: 03020100 07060504 0b0a0908 0f0e0d0c  ................
+[   90.821970] {4}[Hardware Error]:   00000010: 13121110 17161514 1b1a1918 1f1e1d1c  ................
+[   91.062442] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 3.456, "evidence": {"cleanup_errors": [], "event": "ras/non_standard_event", "injection_ready": true, "kernel_observed": true, "kernel_trace": "# tracer: nop\n#\n# entries-in-buffer/entries-written: 1/1   #P:2\n#\n#                                _-----=> irqs-off/BH-disabled\n#                               / _----=> need-resched\n#                              | / _---=> hardirq/softirq\n#                              || / _--=> preempt-depth\n#                              ||| / _-=> migrate-disable\n#                              |||| /     delay\n#           TASK-PID     CPU#  |||||  TIMESTAMP  FUNCTION\n#              | |         |   |||||     |         |\n     kworker/0:2-59      [000] d..1.    90.822090: non_standard_event: severity: 1; sec type:78563412-3412-7856-9abc-123456789abc; FRU: 00000000-0000-0000-0000-000000000000 ; data len:32; raw data:00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f\n", "rasdaemon_output": "rasdaemon: Read 9 config vars from /var/tmp/rasdaemon-qemu/ghes-unknown.env.\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: Can't register mce handler\nrasdaemon: module x86-mce-erst init failed: -2\nrasdaemon: Cpu fault isolation is disabled\nrasdaemon: Page offline choice on Corrected Errors is off\nrasdaemon: Row offline choice on Corrected Errors is off\nrasdaemon: Enabling DB backend: sqlite3\nrasdaemon: block:block_rq_error event enabled\nrasdaemon: Enabled event block:block_rq_error\nrasdaemon: cxl:cxl_aer_correctable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_correctable_error\nrasdaemon: cxl:cxl_aer_uncorrectable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_uncorrectable_error\nrasdaemon: cxl:cxl_dram event enabled\nrasdaemon: Enabled event cxl:cxl_dram\nrasdaemon: cxl:cxl_general_media event enabled\nrasdaemon: Enabled event cxl:cxl_general_media\nrasdaemon: cxl:cxl_generic_event event enabled\nrasdaemon: Enabled event cxl:cxl_generic_event\nrasdaemon: cxl:cxl_memory_module event enabled\nrasdaemon: Enabled event cxl:cxl_memory_module\nrasdaemon: cxl:cxl_memory_sparing event enabled\nrasdaemon: Enabled event cxl:cxl_memory_sparing\nrasdaemon: cxl:cxl_overflow event enabled\nrasdaemon: Enabled event cxl:cxl_overflow\nrasdaemon: cxl:cxl_poison event enabled\nrasdaemon: Enabled event cxl:cxl_poison\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: net:net_dev_xmit_timeout event enabled\nrasdaemon: Enabled event net:net_dev_xmit_timeout\nrasdaemon: ras:aer_event event enabled\nrasdaemon: Enabled event ras:aer_event\nrasdaemon: \t no AER_CE_TRIGGER (0xffffd1a63fa7)\nrasdaemon: ras:arm_event event enabled\nrasdaemon: Enabled event ras:arm_event\nrasdaemon: ras:extlog_mem_event event not exist\nrasdaemon: Can't get traces from ras:extlog_mem_event\nrasdaemon: ras:mc_event event enabled\nrasdaemon: Enabled event ras:mc_event\nrasdaemon: ras:memory_failure_event event enabled\nrasdaemon: Enabled event ras:memory_failure_event\nrasdaemon: ras:non_standard_event event enabled\nrasdaemon: Enabled event ras:non_standard_event\nrasdaemon: ras:reri_event event not exist\nrasdaemon: Can't get traces from ras:reri_event\nrasdaemon: signal:signal_generate event enabled\nrasdaemon: Enabled event signal:signal_generate\nrasdaemon: devlink:devlink_health_report event enabled\nrasdaemon: Enabled event devlink:devlink_health_report\nrasdaemon: Recording aer_event events\nrasdaemon: Recording arm_event events\nrasdaemon: Recording cxl_poison_event events\nrasdaemon: Recording cxl_aer_ue_event events\nrasdaemon: Recording cxl_aer_ce_event events\nrasdaemon: Recording cxl_overflow_event events\nrasdaemon: Recording cxl_generic_event events\nrasdaemon: Recording cxl_general_media_event events\nrasdaemon: Recording cxl_dram_event events\nrasdaemon: Recording cxl_memory_module_event events\nrasdaemon: Recording cxl_memory_sparing_event events\nrasdaemon: Recording devlink_event events\nrasdaemon: Recording disk_errors events\nrasdaemon: Recording extlog_event events\nrasdaemon: Recording mc_event events\nrasdaemon: Recording memory_failure_event events\nrasdaemon: Recording non_standard_event events\nrasdaemon: Recording reri_event events\nrasdaemon: Recording signal_event events\nrasdaemon: Recording mce_record events\nrasdaemon: Recording amp_payload0_event events\nrasdaemon: Recording amp_payload1_event events\nrasdaemon: Recording amp_payload2_event events\nrasdaemon: Recording amp_payload3_event events\nrasdaemon: Recording ampereone_payload0_event events\nrasdaemon: Recording ampereone_payload1_event events\nrasdaemon: Recording ampereone_payload2_event events\nrasdaemon: Recording ampereone_payload3_event events\nrasdaemon: Recording ampereone_payload4_event events\nrasdaemon: Recording ampereone_payload5_event events\nrasdaemon: Recording ampereone_payload6_event events\nrasdaemon: Recording hip08_oem_type1_event_v2 events\nrasdaemon: Recording hip08_oem_type2_event_v2 events\nrasdaemon: Recording hip08_pcie_local_event_v2 events\nrasdaemon: Recording hisi_common_section_v2 events\nrasdaemon: Recording jm_payload0_event events\nrasdaemon: Recording nvidia_ns_event events\nrasdaemon: Recording nvidia_vera_ns_event events\nrasdaemon: Recording yitian_ddr_reg_dump_event events\nrasdaemon: Database backend started: sqlite3.\nrasdaemon: Listening to events for cpus 0 to 1\nrasdaemon: non_standard_event store: 0xaaaafcb51fe8\nrasdaemon: register inserted at db\n           <...>-59    [000] d..1.     0.000009 non_standard_event 2026-10-28 13:34:50 +0000  Corrected section type: 12345678-1234-5678-9abc-123456789abc fru text:  fru id: 00000000-0000-0000-0000-000000000000  length: 32 error:\n  00000000: 03020100 07060504 0b0a0908 0f0e0d0c\n  00000010: 13121110 17161514 1b1a1918 1f1e1d1c\n  00000020: \nrasdaemon: Received signal Terminated. Stopping rasdaemon.\n", "rasdaemon_returncode": 0, "rows": [{"error": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", "fru_id": "00000000000000000000000000000000", "fru_text": "", "id": 1, "sec_type": "78563412341278569abc123456789abc", "severity": "Corrected", "timestamp": "2026-10-28 13:34:50 +0000"}], "sqlite_count": 1, "table": "non_standard_event", "trace_enabled_before_injection": "1"}, "kernel": "PASS", "name": "ghes-unknown", "rasdaemon": "PASS", "reason": "", "status": "passed"}
+[   91.081979] ras-qemu-agent[293]: [2026-10-28T13:34:50.865858+00:00] [aarch64] ras-qemu-agent: Test ghes-unknown finished: PASS; duration=3.456s; reason=completed
+[   91.084328] ras-qemu-agent[293]: [2026-10-28T13:34:50.866432+00:00] [aarch64] ras-qemu-agent: Test ghes-unknown-report started
+[   97.142635] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 6.083, "evidence": {"command": ["/usr/sbin/ras-mc-ctl", "database", "--errors", "--table", "non_standard_event", "--json"], "output": "{\"format_version\": 1, \"mode\": \"errors\", \"records\": [{\"fields\": {\"error\": {\"data\": \"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=\", \"encoding\": \"base64\"}, \"fru_id\": {\"data\": \"AAAAAAAAAAAAAAAAAAAAAA==\", \"encoding\": \"base64\"}, \"fru_text\": \"\", \"id\": 1, \"sec_type\": {\"data\": \"eFY0EjQSeFaavBI0VniavA==\", \"encoding\": \"base64\"}, \"severity\": \"Corrected\"}, \"hostname\": \"rasdaemon-ci\", \"table\": \"non_standard_event\", \"timestamp\": \"2026-10-28T13:34:50+00:00\"}]}\n", "returncode": 0}, "kernel": "N/A", "name": "ghes-unknown-report", "rasdaemon": "PASS", "reason": "", "status": "passed"}
+[   97.147690] ras-qemu-agent[293]: [2026-10-28T13:34:56.950304+00:00] [aarch64] ras-qemu-agent: Test ghes-unknown-report finished: PASS; duration=6.083s; reason=completed
+[   97.149600] ras-qemu-agent[293]: [2026-10-28T13:34:56.951996+00:00] [aarch64] ras-qemu-agent: Test memory-failure started
+[   97.158625] ras-qemu-agent[293]: [2026-10-28T13:34:56.969987+00:00] [aarch64] ras-qemu-agent: Test consumer-abrt-report started
+[   97.160715] ras-qemu-agent[293]: [2026-10-28T13:34:56.970552+00:00] [aarch64] ras-qemu-agent: Test consumer-trigger started
+[   97.162383] ras-qemu-agent[293]: [2026-10-28T13:34:56.970875+00:00] [aarch64] ras-qemu-agent: Test consumer-poison-page-stat started
+[   97.163717] ras-qemu-agent[293]: [2026-10-28T13:34:56.971153+00:00] [aarch64] ras-qemu-agent: Test consumer-sqlite3 started
+[   97.166070] ras-qemu-agent[293]: [2026-10-28T13:34:56.971573+00:00] [aarch64] ras-qemu-agent: Test consumer-database-report started
+[   97.384787] ras-qemu-agent[293]: ras-qemu-agent: heartbeat phase=Test consumer-database-report started
+[   99.424422] ras-qemu-agent[293]: [2026-10-28T13:34:59.231363+00:00] [aarch64] ras-qemu-agent: rasdaemon ready: pid=383; backend=sqlite3
+[   99.426925] ras-qemu-agent[293]: [2026-10-28T13:34:59.232120+00:00] [aarch64] ras-qemu-agent: memory-failure-ready
+[   99.584823] ras-qemu-agent[293]: /run/rasdaemon-payload/agent.py:227: DeprecationWarning: This process (pid=293) is multi-threaded, use of fork() may lead to deadlocks in the child.
+[   99.586889] ras-qemu-agent[293]:   holder = os.fork()
+[   99.641361] Injecting memory failure at pfn 0x533a9
+[   99.649087] Memory failure: 0x533a9: recovery action for dirty LRU page: Recovered
+[   99.688112] Injecting memory failure at pfn 0x51b63
+[   99.693150] Memory failure: 0x51b63: recovery action for dirty LRU page: Recovered
+[   99.698852] process 'rasdaemon' launched '/var/tmp/rasdaemon-qemu/memory-failure.db.trigger' with NULL argv: empty string added
+[   99.721662] Injecting memory failure at pfn 0x52abe
+[   99.725816] Memory failure: 0x52abe: recovery action for dirty LRU page: Recovered
+[  101.241973] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 4.091, "evidence": {"cleanup_errors": [], "event": "ras/memory_failure_event", "hardware_corrupted_samples": [{"after_pfn": "0x533a9", "value": "HardwareCorrupted:     4 kB"}, {"after_pfn": "0x51b63", "value": "HardwareCorrupted:     8 kB"}, {"after_pfn": "0x52abe", "value": "HardwareCorrupted:    12 kB"}], "holder_pids": [387, 389, 391], "injection_ready": true, "kernel_observed": true, "kernel_trace": "# tracer: nop\n#\n# entries-in-buffer/entries-written: 3/3   #P:2\n#\n#                                _-----=> irqs-off/BH-disabled\n#                               / _----=> need-resched\n#                              | / _---=> hardirq/softirq\n#                              || / _--=> preempt-depth\n#                              ||| / _-=> migrate-disable\n#                              |||| /     delay\n#           TASK-PID     CPU#  |||||  TIMESTAMP  FUNCTION\n#              | |         |   |||||     |         |\n         python3-293     [000] .....    99.648917: memory_failure_event: pfn 0x533a9: recovery action for dirty LRU page: Recovered\n         python3-293     [000] .....    99.693119: memory_failure_event: pfn 0x51b63: recovery action for dirty LRU page: Recovered\n         python3-293     [000] .....    99.725783: memory_failure_event: pfn 0x52abe: recovery action for dirty LRU page: Recovered\n", "pfn": 338622, "poisoned_pages": [{"pfn": 340905, "physical": 1396346880}, {"pfn": 334691, "physical": 1370894336}, {"pfn": 338622, "physical": 1386995712}], "rasdaemon_output": "rasdaemon: Read 11 config vars from /var/tmp/rasdaemon-qemu/memory-failure.env.\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: Can't register mce handler\nrasdaemon: module x86-mce-erst init failed: -2\nrasdaemon: Cpu fault isolation is disabled\nrasdaemon: Page offline choice on Corrected Errors is off\nrasdaemon: Threshold of poison page statistics is 4 kB\nrasdaemon: Row offline choice on Corrected Errors is off\nrasdaemon: Enabling DB backend: sqlite3\nrasdaemon: block:block_rq_error event enabled\nrasdaemon: Enabled event block:block_rq_error\nrasdaemon: cxl:cxl_aer_correctable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_correctable_error\nrasdaemon: cxl:cxl_aer_uncorrectable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_uncorrectable_error\nrasdaemon: cxl:cxl_dram event enabled\nrasdaemon: Enabled event cxl:cxl_dram\nrasdaemon: cxl:cxl_general_media event enabled\nrasdaemon: Enabled event cxl:cxl_general_media\nrasdaemon: cxl:cxl_generic_event event enabled\nrasdaemon: Enabled event cxl:cxl_generic_event\nrasdaemon: cxl:cxl_memory_module event enabled\nrasdaemon: Enabled event cxl:cxl_memory_module\nrasdaemon: cxl:cxl_memory_sparing event enabled\nrasdaemon: Enabled event cxl:cxl_memory_sparing\nrasdaemon: cxl:cxl_overflow event enabled\nrasdaemon: Enabled event cxl:cxl_overflow\nrasdaemon: cxl:cxl_poison event enabled\nrasdaemon: Enabled event cxl:cxl_poison\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: net:net_dev_xmit_timeout event enabled\nrasdaemon: Enabled event net:net_dev_xmit_timeout\nrasdaemon: ras:aer_event event enabled\nrasdaemon: Enabled event ras:aer_event\nrasdaemon: \t no AER_CE_TRIGGER (0xffffea9a7f5e)\nrasdaemon: ras:arm_event event enabled\nrasdaemon: Enabled event ras:arm_event\nrasdaemon: ras:extlog_mem_event event not exist\nrasdaemon: Can't get traces from ras:extlog_mem_event\nrasdaemon: ras:mc_event event enabled\nrasdaemon: Enabled event ras:mc_event\nrasdaemon: ras:memory_failure_event event enabled\nrasdaemon: Enabled event ras:memory_failure_event\nrasdaemon: Setup memory_fail_event trigger `/var/tmp/rasdaemon-qemu/memory-failure.db.trigger`\nrasdaemon: ras:non_standard_event event enabled\nrasdaemon: Enabled event ras:non_standard_event\nrasdaemon: ras:reri_event event not exist\nrasdaemon: Can't get traces from ras:reri_event\nrasdaemon: signal:signal_generate event enabled\nrasdaemon: Enabled event signal:signal_generate\nrasdaemon: devlink:devlink_health_report event enabled\nrasdaemon: Enabled event devlink:devlink_health_report\nrasdaemon: Recording aer_event events\nrasdaemon: Recording arm_event events\nrasdaemon: Recording cxl_poison_event events\nrasdaemon: Recording cxl_aer_ue_event events\nrasdaemon: Recording cxl_aer_ce_event events\nrasdaemon: Recording cxl_overflow_event events\nrasdaemon: Recording cxl_generic_event events\nrasdaemon: Recording cxl_general_media_event events\nrasdaemon: Recording cxl_dram_event events\nrasdaemon: Recording cxl_memory_module_event events\nrasdaemon: Recording cxl_memory_sparing_event events\nrasdaemon: Recording devlink_event events\nrasdaemon: Recording disk_errors events\nrasdaemon: Recording extlog_event events\nrasdaemon: Recording mc_event events\nrasdaemon: Recording memory_failure_event events\nrasdaemon: Recording non_standard_event events\nrasdaemon: Recording reri_event events\nrasdaemon: Recording signal_event events\nrasdaemon: Recording mce_record events\nrasdaemon: Recording amp_payload0_event events\nrasdaemon: Recording amp_payload1_event events\nrasdaemon: Recording amp_payload2_event events\nrasdaemon: Recording amp_payload3_event events\nrasdaemon: Recording ampereone_payload0_event events\nrasdaemon: Recording ampereone_payload1_event events\nrasdaemon: Recording ampereone_payload2_event events\nrasdaemon: Recording ampereone_payload3_event events\nrasdaemon: Recording ampereone_payload4_event events\nrasdaemon: Recording ampereone_payload5_event events\nrasdaemon: Recording ampereone_payload6_event events\nrasdaemon: Recording hip08_oem_type1_event_v2 events\nrasdaemon: Recording hip08_oem_type2_event_v2 events\nrasdaemon: Recording hip08_pcie_local_event_v2 events\nrasdaemon: Recording hisi_common_section_v2 events\nrasdaemon: Recording jm_payload0_event events\nrasdaemon: Recording nvidia_ns_event events\nrasdaemon: Recording nvidia_vera_ns_event events\nrasdaemon: Recording yitian_ddr_reg_dump_event events\nrasdaemon: Database backend started: sqlite3.\nrasdaemon: Listening to events for cpus 0 to 1\nrasdaemon: memory_failure_event store: 0xaaaae29f4d68\nrasdaemon: register inserted at db\n           <...>-293   [001] .....     0.000010 memory_failure_event [ALERT] 2026-10-28 13:34:59 +0000 pfn=0x533a9 page_type=dirty LRU page action_result=Recovered \nrasdaemon: Poison page statistics exceeded threshold: 12 kB (threshold: 4 kB)\nrasdaemon: memory_failure_event store: 0xaaaae29f4d68\nrasdaemon: register inserted at db\n           <...>-293   [000] .....     0.000010 memory_failure_event [ALERT] 2026-10-28 13:34:59 +0000 pfn=0x51b63 page_type=dirty LRU page action_result=Recovered \nrasdaemon: Poison page statistics exceeded threshold: 12 kB (threshold: 4 kB)\nrasdaemon: memory_failure_event store: 0xaaaae29f4d68\nrasdaemon: register inserted at db\n           <...>-293   [000] .....     0.000010 memory_failure_event [ALERT] 2026-10-28 13:34:59 +0000 pfn=0x52abe page_type=dirty LRU page action_result=Recovered \nrasdaemon: Received signal Terminated. Stopping rasdaemon.\n", "rasdaemon_returncode": 0, "rows": [{"action_result": "Recovered", "id": 1, "page_type": "dirty LRU page", "pfn": "0x533a9", "timestamp": "2026-10-28 13:34:59 +0000"}, {"action_result": "Recovered", "id": 2, "page_type": "dirty LRU page", "pfn": "0x51b63", "timestamp": "2026-10-28 13:34:59 +0000"}, {"action_result": "Recovered", "id": 3, "page_type": "dirty LRU page", "pfn": "0x52abe", "timestamp": "2026-10-28 13:34:59 +0000"}], "sqlite_count": 3, "table": "memory_failure_event", "trace_enabled_before_injection": "1"}, "kernel": "PASS", "name": "memory-failure", "rasdaemon": "PASS", "reason": "", "status": "passed"}
+[  101.264994] ras-qemu-agent[293]: [2026-10-28T13:35:01.046488+00:00] [aarch64] ras-qemu-agent: Test memory-failure finished: PASS; duration=4.091s; reason=completed
+[  101.267613] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 0.0, "evidence": {"reports": ["PUT / HTTP/1.1\r\n\r\nPID=383\nEXECUTABLE=/boot/vmlinuz-7.3.0-gc03c1a14507d\nTYPE=ras\nBACKTRACE=timestamp=2026-10-28 13:34:59 +0000\npfn=0x533a9\npage_type=dirty LRU page\naction_result=Recovered\n\nANALYZER=rasdaemon-memory_failure\nREASON=memory failure problem\n", "PUT / HTTP/1.1\r\n\r\nPID=383\nEXECUTABLE=/boot/vmlinuz-7.3.0-gc03c1a14507d\nTYPE=ras\nBACKTRACE=timestamp=2026-10-28 13:34:59 +0000\npfn=0x51b63\npage_type=dirty LRU page\naction_result=Recovered\n\nANALYZER=rasdaemon-memory_failure\nREASON=memory failure problem\n", "PUT / HTTP/1.1\r\n\r\nPID=383\nEXECUTABLE=/boot/vmlinuz-7.3.0-gc03c1a14507d\nTYPE=ras\nBACKTRACE=timestamp=2026-10-28 13:34:59 +0000\npfn=0x52abe\npage_type=dirty LRU page\naction_result=Recovered\n\nANALYZER=rasdaemon-memory_failure\nREASON=memory failure problem\n"]}, "kernel": "N/A", "name": "consumer-abrt-report", "rasdaemon": "PASS", "reason": "ABRT report must contain the injected page's PFN", "status": "passed"}
+[  101.271718] ras-qemu-agent[293]: [2026-10-28T13:35:01.049469+00:00] [aarch64] ras-qemu-agent: Test consumer-abrt-report finished: PASS; duration=4.079s; reason=ABRT report must contain the injected page's PFN
+[  101.274326] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 0.0, "evidence": {"environment": {"ACTION_RESULT": "Recovered", "LC_CTYPE": "C.UTF-8", "PAGE_TYPE": "dirty LRU page", "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin", "PFN": "0x52abe", "TIMESTAMP": "2026-10-28 13:34:59 +0000"}}, "kernel": "N/A", "name": "consumer-trigger", "rasdaemon": "PASS", "reason": "Memory-failure trigger must receive the injected PFN and action result", "status": "passed"}
+[  101.276490] ras-qemu-agent[293]: [2026-10-28T13:35:01.053256+00:00] [aarch64] ras-qemu-agent: Test consumer-trigger finished: PASS; duration=4.082s; reason=Memory-failure trigger must receive the injected PFN and action result
+[  101.279036] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 0.0, "evidence": {"expected_poisoned_pages": 3, "expected_warning": "Poison page statistics exceeded threshold:", "hardware_corrupted": "HardwareCorrupted:    12 kB", "hardware_corrupted_kb": 12, "hardware_corrupted_pages": 3, "hardware_corrupted_samples": [{"after_pfn": "0x533a9", "value": "HardwareCorrupted:     4 kB"}, {"after_pfn": "0x51b63", "value": "HardwareCorrupted:     8 kB"}, {"after_pfn": "0x52abe", "value": "HardwareCorrupted:    12 kB"}], "kernel_event_observed": true, "kernel_trace": "# tracer: nop\n#\n# entries-in-buffer/entries-written: 3/3   #P:2\n#\n#                                _-----=> irqs-off/BH-disabled\n#                               / _----=> need-resched\n#                              | / _---=> hardirq/softirq\n#                              || / _--=> preempt-depth\n#                              ||| / _-=> migrate-disable\n#                              |||| /     delay\n#           TASK-PID     CPU#  |||||  TIMESTAMP  FUNCTION\n#              | |         |   |||||     |         |\n         python3-293     [000] .....    99.648917: memory_failure_event: pfn 0x533a9: recovery action for dirty LRU page: Recovered\n         python3-293     [000] .....    99.693119: memory_failure_event: pfn 0x51b63: recovery action for dirty LRU page: Recovered\n         python3-293     [000] .....    99.725783: memory_failure_event: pfn 0x52abe: recovery action for dirty LRU page: Recovered\n", "multiple_pages_observed": true, "poisoned_pages": [{"pfn": 340905, "physical": 1396346880}, {"pfn": 334691, "physical": 1370894336}, {"pfn": 338622, "physical": 1386995712}], "rasdaemon_output": "rasdaemon: Read 11 config vars from /var/tmp/rasdaemon-qemu/memory-failure.env.\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: Can't register mce handler\nrasdaemon: module x86-mce-erst init failed: -2\nrasdaemon: Cpu fault isolation is disabled\nrasdaemon: Page offline choice on Corrected Errors is off\nrasdaemon: Threshold of poison page statistics is 4 kB\nrasdaemon: Row offline choice on Corrected Errors is off\nrasdaemon: Enabling DB backend: sqlite3\nrasdaemon: block:block_rq_error event enabled\nrasdaemon: Enabled event block:block_rq_error\nrasdaemon: cxl:cxl_aer_correctable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_correctable_error\nrasdaemon: cxl:cxl_aer_uncorrectable_error event enabled\nrasdaemon: Enabled event cxl:cxl_aer_uncorrectable_error\nrasdaemon: cxl:cxl_dram event enabled\nrasdaemon: Enabled event cxl:cxl_dram\nrasdaemon: cxl:cxl_general_media event enabled\nrasdaemon: Enabled event cxl:cxl_general_media\nrasdaemon: cxl:cxl_generic_event event enabled\nrasdaemon: Enabled event cxl:cxl_generic_event\nrasdaemon: cxl:cxl_memory_module event enabled\nrasdaemon: Enabled event cxl:cxl_memory_module\nrasdaemon: cxl:cxl_memory_sparing event enabled\nrasdaemon: Enabled event cxl:cxl_memory_sparing\nrasdaemon: cxl:cxl_overflow event enabled\nrasdaemon: Enabled event cxl:cxl_overflow\nrasdaemon: cxl:cxl_poison event enabled\nrasdaemon: Enabled event cxl:cxl_poison\nrasdaemon: Can't find a x86 CPU at /proc/cpuinfo. Disabling MCE handler.\nrasdaemon: net:net_dev_xmit_timeout event enabled\nrasdaemon: Enabled event net:net_dev_xmit_timeout\nrasdaemon: ras:aer_event event enabled\nrasdaemon: Enabled event ras:aer_event\nrasdaemon: \t no AER_CE_TRIGGER (0xffffea9a7f5e)\nrasdaemon: ras:arm_event event enabled\nrasdaemon: Enabled event ras:arm_event\nrasdaemon: ras:extlog_mem_event event not exist\nrasdaemon: Can't get traces from ras:extlog_mem_event\nrasdaemon: ras:mc_event event enabled\nrasdaemon: Enabled event ras:mc_event\nrasdaemon: ras:memory_failure_event event enabled\nrasdaemon: Enabled event ras:memory_failure_event\nrasdaemon: Setup memory_fail_event trigger `/var/tmp/rasdaemon-qemu/memory-failure.db.trigger`\nrasdaemon: ras:non_standard_event event enabled\nrasdaemon: Enabled event ras:non_standard_event\nrasdaemon: ras:reri_event event not exist\nrasdaemon: Can't get traces from ras:reri_event\nrasdaemon: signal:signal_generate event enabled\nrasdaemon: Enabled event signal:signal_generate\nrasdaemon: devlink:devlink_health_report event enabled\nrasdaemon: Enabled event devlink:devlink_health_report\nrasdaemon: Recording aer_event events\nrasdaemon: Recording arm_event events\nrasdaemon: Recording cxl_poison_event events\nrasdaemon: Recording cxl_aer_ue_event events\nrasdaemon: Recording cxl_aer_ce_event events\nrasdaemon: Recording cxl_overflow_event events\nrasdaemon: Recording cxl_generic_event events\nrasdaemon: Recording cxl_general_media_event events\nrasdaemon: Recording cxl_dram_event events\nrasdaemon: Recording cxl_memory_module_event events\nrasdaemon: Recording cxl_memory_sparing_event events\nrasdaemon: Recording devlink_event events\nrasdaemon: Recording disk_errors events\nrasdaemon: Recording extlog_event events\nrasdaemon: Recording mc_event events\nrasdaemon: Recording memory_failure_event events\nrasdaemon: Recording non_standard_event events\nrasdaemon: Recording reri_event events\nrasdaemon: Recording signal_event events\nrasdaemon: Recording mce_record events\nrasdaemon: Recording amp_payload0_event events\nrasdaemon: Recording amp_payload1_event events\nrasdaemon: Recording amp_payload2_event events\nrasdaemon: Recording amp_payload3_event events\nrasdaemon: Recording ampereone_payload0_event events\nrasdaemon: Recording ampereone_payload1_event events\nrasdaemon: Recording ampereone_payload2_event events\nrasdaemon: Recording ampereone_payload3_event events\nrasdaemon: Recording ampereone_payload4_event events\nrasdaemon: Recording ampereone_payload5_event events\nrasdaemon: Recording ampereone_payload6_event events\nrasdaemon: Recording hip08_oem_type1_event_v2 events\nrasdaemon: Recording hip08_oem_type2_event_v2 events\nrasdaemon: Recording hip08_pcie_local_event_v2 events\nrasdaemon: Recording hisi_common_section_v2 events\nrasdaemon: Recording jm_payload0_event events\nrasdaemon: Recording nvidia_ns_event events\nrasdaemon: Recording nvidia_vera_ns_event events\nrasdaemon: Recording yitian_ddr_reg_dump_event events\nrasdaemon: Database backend started: sqlite3.\nrasdaemon: Listening to events for cpus 0 to 1\nrasdaemon: memory_failure_event store: 0xaaaae29f4d68\nrasdaemon: register inserted at db\n           <...>-293   [001] .....     0.000010 memory_failure_event [ALERT] 2026-10-28 13:34:59 +0000 pfn=0x533a9 page_type=dirty LRU page action_result=Recovered \nrasdaemon: Poison page statistics exceeded threshold: 12 kB (threshold: 4 kB)\nrasdaemon: memory_failure_event store: 0xaaaae29f4d68\nrasdaemon: register inserted at db\n           <...>-293   [000] .....     0.000010 memory_failure_event [ALERT] 2026-10-28 13:34:59 +0000 pfn=0x51b63 page_type=dirty LRU page action_result=Recovered \nrasdaemon: Poison page statistics exceeded threshold: 12 kB (threshold: 4 kB)\nrasdaemon: memory_failure_event store: 0xaaaae29f4d68\nrasdaemon: register inserted at db\n           <...>-293   [000] .....     0.000010 memory_failure_event [ALERT] 2026-10-28 13:34:59 +0000 pfn=0x52abe page_type=dirty LRU page action_result=Recovered \nrasdaemon: Received signal Terminated. Stopping rasdaemon.\n", "threshold_exceeded": true, "threshold_kb": 4, "warning_observed": true}, "kernel": "N/A", "name": "consumer-poison-page-stat", "rasdaemon": "PASS", "reason": "Poison statistics must exceed 4 kB after poisoning more than one distinct page", "status": "passed"}
+[  101.298601] ras-qemu-agent[293]: [2026-10-28T13:35:01.062902+00:00] [aarch64] ras-qemu-agent: Test consumer-poison-page-stat finished: PASS; duration=4.092s; reason=Poison statistics must exceed 4 kB after poisoning more than one distinct page
+[  101.301466] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 0.0, "evidence": {"database": "/var/tmp/rasdaemon-qemu/memory-failure.db", "rows": [{"action_result": "Recovered", "id": 1, "page_type": "dirty LRU page", "pfn": "0x533a9", "timestamp": "2026-10-28 13:34:59 +0000"}, {"action_result": "Recovered", "id": 2, "page_type": "dirty LRU page", "pfn": "0x51b63", "timestamp": "2026-10-28 13:34:59 +0000"}, {"action_result": "Recovered", "id": 3, "page_type": "dirty LRU page", "pfn": "0x52abe", "timestamp": "2026-10-28 13:34:59 +0000"}]}, "kernel": "N/A", "name": "consumer-sqlite3", "rasdaemon": "PASS", "reason": "SQLite must commit the injected memory-failure record", "status": "passed"}
+[  101.304626] ras-qemu-agent[293]: [2026-10-28T13:35:01.064240+00:00] [aarch64] ras-qemu-agent: Test consumer-sqlite3 finished: PASS; duration=4.093s; reason=SQLite must commit the injected memory-failure record
+[  107.038033] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 0.0, "evidence": {"command": ["/usr/sbin/ras-mc-ctl", "database", "--errors", "--json", "--table", "memory_failure_event"], "output": "{\"format_version\": 1, \"mode\": \"errors\", \"records\": [{\"fields\": {\"action_result\": \"Recovered\", \"id\": 1, \"page_type\": \"dirty LRU page\", \"pfn\": \"0x533a9\"}, \"hostname\": \"rasdaemon-ci\", \"table\": \"memory_failure_event\", \"timestamp\": \"2026-10-28T13:34:59+00:00\"}, {\"fields\": {\"action_result\": \"Recovered\", \"id\": 2, \"page_type\": \"dirty LRU page\", \"pfn\": \"0x51b63\"}, \"hostname\": \"rasdaemon-ci\", \"table\": \"memory_failure_event\", \"timestamp\": \"2026-10-28T13:34:59+00:00\"}, {\"fields\": {\"action_result\": \"Recovered\", \"id\": 3, \"page_type\": \"dirty LRU page\", \"pfn\": \"0x52abe\"}, \"hostname\": \"rasdaemon-ci\", \"table\": \"memory_failure_event\", \"timestamp\": \"2026-10-28T13:34:59+00:00\"}]}\n", "returncode": 0}, "kernel": "N/A", "name": "consumer-database-report", "rasdaemon": "PASS", "reason": "Installed database report must preserve the injected PFN", "status": "passed"}
+[  107.043639] ras-qemu-agent[293]: [2026-10-28T13:35:06.845843+00:00] [aarch64] ras-qemu-agent: Test consumer-database-report finished: PASS; duration=9.874s; reason=Installed database report must preserve the injected PFN
+[  107.046922] ras-qemu-agent[293]: [2026-10-28T13:35:06.846597+00:00] [aarch64] ras-qemu-agent: Test memory-failure-report started
+[  107.386708] ras-qemu-agent[293]: ras-qemu-agent: heartbeat phase=Test memory-failure-report started
+[  112.757128] ras-qemu-agent[293]: ras-qemu-result: {"duration_seconds": 5.709, "evidence": {"command": ["/usr/sbin/ras-mc-ctl", "database", "--errors", "--table", "memory_failure_event", "--json"], "output": "{\"format_version\": 1, \"mode\": \"errors\", \"records\": [{\"fields\": {\"action_result\": \"Recovered\", \"id\": 1, \"page_type\": \"dirty LRU page\", \"pfn\": \"0x533a9\"}, \"hostname\": \"rasdaemon-ci\", \"table\": \"memory_failure_event\", \"timestamp\": \"2026-10-28T13:34:59+00:00\"}, {\"fields\": {\"action_result\": \"Recovered\", \"id\": 2, \"page_type\": \"dirty LRU page\", \"pfn\": \"0x51b63\"}, \"hostname\": \"rasdaemon-ci\", \"table\": \"memory_failure_event\", \"timestamp\": \"2026-10-28T13:34:59+00:00\"}, {\"fields\": {\"action_result\": \"Recovered\", \"id\": 3, \"page_type\": \"dirty LRU page\", \"pfn\": \"0x52abe\"}, \"hostname\": \"rasdaemon-ci\", \"table\": \"memory_failure_event\", \"timestamp\": \"2026-10-28T13:34:59+00:00\"}]}\n", "returncode": 0}, "kernel": "N/A", "name": "memory-failure-report", "rasdaemon": "PASS", "reason": "", "status": "passed"}
+[  112.761228] ras-qemu-agent[293]: [2026-10-28T13:35:12.556969+00:00] [aarch64] ras-qemu-agent: Test memory-failure-report finished: PASS; duration=5.709s; reason=completed
+[  112.763263] ras-qemu-agent[293]: [2026-10-28T13:35:12.558621+00:00] [aarch64] ras-qemu-agent: Test memory-sigbus started
+[  115.029108] ras-qemu-agent[293]: [2026-10-28T13:35:14.836139+00:00] [aarch64] ras-qemu-agent: rasdaemon ready: pid=396; backend=sqlite3
+[  115.031730] ras-qemu-agent[293]: [2026-10-28T13:35:14.837205+00:00] [aarch64] ras-qemu-agent: memory-sigbus-ready
+[  115.079166] ras-qemu-agent[293]: /run/rasdaemon-payload/agent.py:227: DeprecationWarning: This process (pid=293) is multi-threaded, use of fork() may lead to deadlocks in the child.
+[  115.085848] ras-qemu-agent[293]:   holder = os.fork()
+[  115.141057] Injecting memory failure at pfn 0x4f34e
+[  115.143263] Memory failure: 0x4f34e: recovery action for dirty LRU page: Recovered
+[  115.414822] ras-qemu-agent[293]: Traceback (most recent call last):
+[  115.473335] ras-qemu-agent[293]:   File "/run/rasdaemon-payload/agent.py", line 1536, in <module>
+[  115.475069] ras-qemu-agent[293]:     main()
+[  115.477492] ras-qemu-agent[293]:     ~~~~^^
+[  115.479117] ras-qemu-agent[293]:   File "/run/rasdaemon-payload/agent.py", line 1520, in main
+[  115.480981] ras-qemu-agent[293]:     results = execute(profile)
+[  115.482328] ras-qemu-agent[293]:   File "/run/rasdaemon-payload/agent.py", line 1472, in execute
+[  115.483599] ras-qemu-agent[293]:     RecordedScenario(results, os.fspath(build), environment, scenario).execute()
+[  115.484993] ras-qemu-agent[293]:     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+[  115.487828] ras-qemu-agent[293]:   File "/run/rasdaemon-payload/agent.py", line 1254, in execute
+[  115.489577] ras-qemu-agent[293]:     self.wait_record()
+[  115.490579] ras-qemu-agent[293]:     ~~~~~~~~~~~~~~~~^^
+[  115.491556] ras-qemu-agent[293]:   File "/run/rasdaemon-payload/agent.py", line 1142, in wait_record
+[  115.493586] ras-qemu-agent[293]:     elif any(matching_record(self.scenario, row, self.evidence) for row in rows):
+[  115.494879] ras-qemu-agent[293]:          ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[  115.496019] ras-qemu-agent[293]:   File "/run/rasdaemon-payload/agent.py", line 1142, in <genexpr>
+[  115.497501] ras-qemu-agent[293]:     elif any(matching_record(self.scenario, row, self.evidence) for row in rows):
+[  115.498548] ras-qemu-agent[293]:              ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[  115.499539] ras-qemu-agent[293]:   File "/run/rasdaemon-payload/agent.py", line 715, in matching_record
+[  115.501312] ras-qemu-agent[293]:     and row.get("pid") == evidence["holder_pid"])
+[  115.502661] ras-qemu-agent[293]:                           ~~~~~~~~^^^^^^^^^^^^^^
+[  115.503672] ras-qemu-agent[293]: KeyError: 'holder_pid'

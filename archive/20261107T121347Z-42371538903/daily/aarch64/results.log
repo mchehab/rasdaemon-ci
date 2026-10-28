@@ -1,0 +1,11 @@
+PASSED Enable Kernel CONFIG_ACPI_APEI_GHES config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_ACPI_APEI_PCIEAER config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_EDAC_GHES config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_MEMORY_FAILURE config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_PCIEAER config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_CXL_BUS config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_CXL_PCI config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_CXL_ACPI config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_CXL_MEM config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_CXL_REGION config: Kernel option is y as requested
+SKIPPED prerequisites: Prerequisites check skipped: QEMU tools, guest image integrity, firmware and a usable accelerator are required to start the VM; no matching pair found; no matching pair found

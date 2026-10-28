@@ -1,0 +1,148 @@
+[
+  {
+    "feature": "aer",
+    "arch": "x86_64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "aer-native",
+      "ghes-aer"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "bmc-generic",
+    "arch": "x86_64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "consumer-bmc-generic"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "cxl",
+    "arch": "x86_64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "cxl-media",
+      "cxl-dram",
+      "cxl-module",
+      "cxl-poison",
+      "cxl-overflow",
+      "cxl-aer-ce",
+      "cxl-aer-ue",
+      "cxl-memory-sparing"
+    ],
+    "untested": [
+      {
+        "check": "cxl-generic",
+        "reason": "No generic CXL event producer has been implemented in the harness"
+      }
+    ]
+  },
+  {
+    "feature": "erst",
+    "arch": "x86_64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "erst-persistence"
+    ],
+    "untested": [
+      {
+        "check": "erst-additional-coverage",
+        "reason": "A fatal MCE followed by reboot and post-boot ERST discovery is not simulated"
+      }
+    ]
+  },
+  {
+    "feature": "extlog",
+    "arch": "x86_64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "extlog-memory"
+    ],
+    "untested": [
+      {
+        "check": "extlog-additional-coverage",
+        "reason": "The producer is software-only; physical firmware EXTLOG delivery is not simulated"
+      }
+    ]
+  },
+  {
+    "feature": "ipmi-bmc",
+    "arch": "x86_64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "consumer-bmc-generic"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "mce",
+    "arch": "x86_64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "mce-hardware-first"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "mysql",
+    "arch": "x86_64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "consumer-mysql"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "pcie-edpc",
+    "arch": "x86_64",
+    "PASS": 0,
+    "FAIL": 0,
+    "N/A": 1,
+    "reason": "The current QEMU test topology has no DPC-capable PCIe port",
+    "checks": [],
+    "untested": [
+      {
+        "check": "pcie-edpc",
+        "reason": "The current QEMU test topology has no DPC-capable PCIe port"
+      }
+    ]
+  },
+  {
+    "feature": "postgresql",
+    "arch": "x86_64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "consumer-postgresql"
+    ],
+    "untested": []
+  }
+]
