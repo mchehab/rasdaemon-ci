@@ -1,0 +1,338 @@
+[
+  {
+    "feature": "abrt-report",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "consumer-abrt-report"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "amp-ns-decode",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "vendor-ampere"
+    ],
+    "untested": [
+      {
+        "check": "amp-ns-decode-additional-coverage",
+        "reason": "Only the Ampere payload-0 format has a producer; other AMP payload formats remain untested"
+      }
+    ]
+  },
+  {
+    "feature": "ampere-oem-sel",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "consumer-arm-sel",
+      "consumer-ampere-oem-sel"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "arm",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "ghes-arm"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "arm-vendor-data",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "arm-vendor-data"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "cpu-fault-isolation",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "consumer-cpu-fault-isolation"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "db",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "consumer-database-report"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "debug-sql",
+    "arch": "aarch64",
+    "PASS": 0,
+    "FAIL": 0,
+    "N/A": 1,
+    "reason": "No functional test implementation is assigned to this feature",
+    "checks": [],
+    "untested": [
+      {
+        "check": "debug-sql-additional-coverage",
+        "reason": "No functional SQL debug-logging test or producer is assigned"
+      }
+    ]
+  },
+  {
+    "feature": "devlink",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "devlink-health",
+      "net-xmit-timeout"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "diskerror",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "block-io-native"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "hisi-ns-decode",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "vendor-hisilicon-common",
+      "vendor-hisilicon-type1",
+      "vendor-hisilicon-type2",
+      "vendor-hisilicon-pcie"
+    ],
+    "untested": [
+      {
+        "check": "hisi-ns-decode-additional-coverage",
+        "reason": "Malformed input and execution through every registered format remain untested"
+      }
+    ]
+  },
+  {
+    "feature": "jaguar-ns-decode",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "vendor-jaguar"
+    ],
+    "untested": [
+      {
+        "check": "jaguar-ns-decode-additional-coverage",
+        "reason": "Only Jaguar payload-0 is produced; additional payload layouts remain untested"
+      }
+    ]
+  },
+  {
+    "feature": "mc-event",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "ghes-memory"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "memory-ce-pfa",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "consumer-memory-ce-pfa"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "memory-failure",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "memory-failure"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "memory-row-ce-pfa",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "consumer-memory-row-ce-pfa"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "non-standard",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "ghes-pci-bus",
+      "ghes-unknown"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "nvidia-ns-decode",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "vendor-nvidia"
+    ],
+    "untested": [
+      {
+        "check": "nvidia-ns-decode-additional-coverage",
+        "reason": "Only one NVIDIA non-standard format is produced; broader format coverage remains untested"
+      }
+    ]
+  },
+  {
+    "feature": "openbmc-unified-sel",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "consumer-arm-sel",
+      "consumer-openbmc-unified-sel"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "page-isolation",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "consumer-memory-ce-pfa",
+      "consumer-memory-row-ce-pfa"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "poison-page-stat",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "consumer-poison-page-stat"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "signal",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "memory-sigbus"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "sqlite3",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "consumer-sqlite3"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "trigger",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "consumer-trigger"
+    ],
+    "untested": []
+  },
+  {
+    "feature": "yitian-ns-decode",
+    "arch": "aarch64",
+    "PASS": 1,
+    "FAIL": 0,
+    "N/A": 0,
+    "reason": "All implemented functional checks passed",
+    "checks": [
+      "vendor-yitian"
+    ],
+    "untested": [
+      {
+        "check": "yitian-ns-decode-additional-coverage",
+        "reason": "Only the Yitian DDR register-dump format is produced; other event types remain untested"
+      }
+    ]
+  }
+]
