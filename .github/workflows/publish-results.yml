@@ -4,6 +4,15 @@ name: Publish media CI results
 
 on:
   workflow_dispatch:
+    inputs:
+      daily_run_id:
+        description: "Completed RAS CI pipeline run ID to preserve (optional)"
+        required: false
+        type: string
+      weekly_run_id:
+        description: "Completed fuzz workflow run ID to preserve (optional)"
+        required: false
+        type: string
 
   workflow_run:
     # Reusable test jobs belong to the coordinator run. Publish only after
@@ -38,8 +47,17 @@ jobs:
         id: results
         env:
           GH_TOKEN: ${{ github.token }}
+          DAILY_RUN_ID: ${{ inputs.daily_run_id }}
+          WEEKLY_RUN_ID: ${{ inputs.weekly_run_id }}
         run: |
           set -euxo pipefail
+
+          for run_id in "$DAILY_RUN_ID" "$WEEKLY_RUN_ID"; do
+            if test -n "$run_id" && ! [[ "$run_id" =~ ^[0-9]+$ ]]; then
+              echo "Workflow run IDs must contain only digits" >&2
+              exit 1
+            fi
+          done
 
           download_artifact()
           {
@@ -56,8 +74,13 @@ jobs:
 
           find_daily()
           {
-            runs=$(gh api \
-              "/repos/$GITHUB_REPOSITORY/actions/workflows/pipeline.yml/runs?status=completed&per_page=100")
+            if test -n "$DAILY_RUN_ID"; then
+              runs=$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$DAILY_RUN_ID" |
+                jq '{workflow_runs: [.] }')
+            else
+              runs=$(gh api \
+                "/repos/$GITHUB_REPOSITORY/actions/workflows/pipeline.yml/runs?status=completed&per_page=100")
+            fi
 
             for run_id in $(printf '%s' "$runs" | jq -r \
               '.workflow_runs | sort_by(.id) | reverse | .[].id'); do
@@ -98,8 +121,13 @@ jobs:
 
           find_weekly()
           {
-            runs=$(gh api \
-              "/repos/$GITHUB_REPOSITORY/actions/workflows/qemu-fuzz.yml/runs?branch=main&status=completed&per_page=100")
+            if test -n "$WEEKLY_RUN_ID"; then
+              runs=$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$WEEKLY_RUN_ID" |
+                jq '{workflow_runs: [.] }')
+            else
+              runs=$(gh api \
+                "/repos/$GITHUB_REPOSITORY/actions/workflows/qemu-fuzz.yml/runs?branch=main&status=completed&per_page=100")
+            fi
 
             for run_id in $(printf '%s' "$runs" | jq -r \
               '.workflow_runs | sort_by(.id) | reverse | .[].id'); do
@@ -210,7 +238,8 @@ jobs:
           <ul><li><a href="daily/">Daily functional tests</a></li>
           <li><a href="weekly/">Weekly fuzz tests</a></li>
           <li><a href="archive/">Timestamped run evidence archive</a></li>
-          <li><a href="failures/">Failed tests and individual evidence</a></li></ul>
+          <li><a href="failures/">Failed tests and individual evidence</a></li>
+          <li><a href="https://github.com/mchehab/rasdaemon-ci/actions/workflows/publish-results.yml">Manually preserve a CI run</a></li></ul>
           EOF
 
       - name: Preserve timestamped run evidence
