@@ -1,0 +1,93 @@
+PASSED Enable Kernel CONFIG_ACPI_APEI_GHES config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_ACPI_APEI_PCIEAER config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_EDAC_GHES config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_MEMORY_FAILURE config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_PCIEAER config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_CXL_BUS config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_CXL_PCI config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_CXL_ACPI config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_CXL_MEM config: Kernel option is y as requested
+PASSED Enable Kernel CONFIG_CXL_REGION config: Kernel option is y as requested
+PASSED prerequisites: Prerequisites check passed: QEMU tools, guest image integrity, firmware and a usable accelerator are required to start the VM
+PASSED Build HAVE_ABRT_REPORT: rasdaemon compilation flag HAVE_ABRT_REPORT enabled
+PASSED Build HAVE_AER: rasdaemon compilation flag HAVE_AER enabled
+PASSED Build HAVE_AMPERE_OEM_SEL: rasdaemon compilation flag HAVE_AMPERE_OEM_SEL enabled
+PASSED Build HAVE_AMP_NS_DECODE: rasdaemon compilation flag HAVE_AMP_NS_DECODE enabled
+PASSED Build HAVE_ARM: rasdaemon compilation flag HAVE_ARM enabled
+PASSED Build HAVE_BMC_GENERIC: rasdaemon compilation flag HAVE_BMC_GENERIC enabled
+PASSED Build HAVE_CPU_FAULT_ISOLATION: rasdaemon compilation flag HAVE_CPU_FAULT_ISOLATION enabled
+PASSED Build HAVE_CXL: rasdaemon compilation flag HAVE_CXL enabled
+PASSED Build HAVE_DB: rasdaemon compilation flag HAVE_DB enabled
+PASSED Build HAVE_DEVLINK: rasdaemon compilation flag HAVE_DEVLINK enabled
+PASSED Build HAVE_DISKERROR: rasdaemon compilation flag HAVE_DISKERROR enabled
+PASSED Build HAVE_ERST: rasdaemon compilation flag HAVE_ERST enabled
+PASSED Build HAVE_EXTLOG: rasdaemon compilation flag HAVE_EXTLOG enabled
+PASSED Build HAVE_HISI_NS_DECODE: rasdaemon compilation flag HAVE_HISI_NS_DECODE enabled
+PASSED Build HAVE_IPMI_BMC: rasdaemon compilation flag HAVE_IPMI_BMC enabled
+PASSED Build HAVE_JAGUAR_NS_DECODE: rasdaemon compilation flag HAVE_JAGUAR_NS_DECODE enabled
+PASSED Build HAVE_MCE: rasdaemon compilation flag HAVE_MCE enabled
+PASSED Build HAVE_MEMORY_CE_PFA: rasdaemon compilation flag HAVE_MEMORY_CE_PFA enabled
+PASSED Build HAVE_MEMORY_FAILURE: rasdaemon compilation flag HAVE_MEMORY_FAILURE enabled
+PASSED Build HAVE_MEMORY_ROW_CE_PFA: rasdaemon compilation flag HAVE_MEMORY_ROW_CE_PFA enabled
+PASSED Build HAVE_MYSQL: HAVE_MYSQL disabled as requested; server database tests run on x86_64
+PASSED Build HAVE_NON_STANDARD: rasdaemon compilation flag HAVE_NON_STANDARD enabled
+PASSED Build HAVE_NVIDIA_NS_DECODE: rasdaemon compilation flag HAVE_NVIDIA_NS_DECODE enabled
+PASSED Build HAVE_OPENBMC_UNIFIED_SEL: rasdaemon compilation flag HAVE_OPENBMC_UNIFIED_SEL enabled
+PASSED Build HAVE_PCIE_EDPC: rasdaemon compilation flag HAVE_PCIE_EDPC enabled
+PASSED Build HAVE_POSTGRESQL: HAVE_POSTGRESQL disabled as requested; server database tests run on x86_64
+PASSED Build HAVE_RERI: rasdaemon compilation flag HAVE_RERI enabled
+PASSED Build HAVE_SIGNAL: rasdaemon compilation flag HAVE_SIGNAL enabled
+PASSED Build HAVE_SQLITE3: rasdaemon compilation flag HAVE_SQLITE3 enabled
+PASSED Build HAVE_YITIAN_NS_DECODE: rasdaemon compilation flag HAVE_YITIAN_NS_DECODE enabled
+PASSED payload: Harness or setup check only; it does not assess kernel RAS handling or rasdaemon
+PASSED install-payload: Harness or setup check only; it does not assess kernel RAS handling or rasdaemon
+PASSED tracefs: Harness or setup check only; it does not assess kernel RAS handling or rasdaemon
+PASSED block-io-native
+PASSED block-database-report: rasdaemon check passed
+PASSED ghes-memory
+PASSED ghes-memory-report: rasdaemon check passed
+PASSED ghes-arm
+PASSED consumer-cpu-fault-isolation: CPU1 must transition from online to offline after corrected ARM errors
+PASSED arm-vendor-data: ARM vendor data must be retained and decoded
+PASSED ghes-arm-report: rasdaemon check passed
+PASSED ghes-pci-bus
+PASSED ghes-pci-bus-report: rasdaemon check passed
+PASSED ghes-unknown
+PASSED ghes-unknown-report: rasdaemon check passed
+PASSED memory-failure
+PASSED consumer-abrt-report: ABRT report must contain the injected page's PFN
+PASSED consumer-trigger: Memory-failure trigger must receive the injected PFN and action result
+PASSED consumer-poison-page-stat: Poison statistics must report a nonzero count after poisoning
+PASSED consumer-sqlite3: SQLite must commit the injected memory-failure record
+PASSED consumer-database-report: Installed database report must preserve the injected PFN
+PASSED memory-failure-report: rasdaemon check passed
+PASSED memory-sigbus
+PASSED memory-sigbus-report: rasdaemon check passed
+PASSED vendor-ampere
+PASSED vendor-ampere-report: rasdaemon check passed
+PASSED vendor-jaguar
+PASSED vendor-jaguar-report: rasdaemon check passed
+PASSED vendor-nvidia
+PASSED vendor-nvidia-report: rasdaemon check passed
+PASSED vendor-yitian
+PASSED vendor-yitian-report: rasdaemon check passed
+PASSED devlink-health
+PASSED devlink-health-report: rasdaemon check passed
+PASSED consumer-memory-ce-pfa: rasdaemon check passed
+PASSED consumer-memory-ce-pfa-report: rasdaemon check passed
+PASSED consumer-memory-row-ce-pfa: rasdaemon check passed
+PASSED consumer-memory-row-ce-pfa-report: rasdaemon check passed
+PASSED net-xmit-timeout
+PASSED net-xmit-timeout-report: rasdaemon check passed
+PASSED consumer-arm-sel: rasdaemon check passed
+PASSED consumer-ampere-oem-sel: BMC SEL must contain exactly one matching corrected AER record
+PASSED consumer-openbmc-unified-sel: BMC SEL must contain exactly one matching corrected AER record
+PASSED consumer-arm-sel-report: rasdaemon check passed
+PASSED vendor-hisilicon-common
+PASSED vendor-hisilicon-common-report: rasdaemon check passed
+PASSED vendor-hisilicon-type1
+PASSED vendor-hisilicon-type1-report: rasdaemon check passed
+PASSED vendor-hisilicon-type2
+PASSED vendor-hisilicon-type2-report: rasdaemon check passed
+PASSED vendor-hisilicon-pcie
+PASSED vendor-hisilicon-pcie-report: rasdaemon check passed

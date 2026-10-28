@@ -1,0 +1,14 @@
+{
+  "url": "https://github.com/mchehab/rasdaemon-ci/actions/runs/44467614322",
+  "conclusion": "success",
+  "created_at": "2026-11-19T05:47:51+00:00",
+  "timestamp": "20261119T054751Z",
+  "run_id": "44467614322",
+  "versions": {
+    "qemu": "v11.1.0-3700-gc63cff02c",
+    "kernel": "v7.4-rc3",
+    "rasdaemon": "v1.0.0-19-g5e547c3"
+  },
+  "version_label": "aarch64",
+  "kind": "daily"
+}

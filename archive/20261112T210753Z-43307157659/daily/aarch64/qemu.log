@@ -1,0 +1,2 @@
+qemu-system-aarch64: terminating on signal 15 from pid 6 (/usr/bin/python3)
+qemu-system-aarch64: Failed flush for 'blkdebug:/tmp/ras-qemu-ewr1ec54/blkdebug.conf:/tmp/ras-qemu-ewr1ec54/block-error.raw' during close: Input/output error

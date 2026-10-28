@@ -1,0 +1,212 @@
+
+$ meson setup /tmp/ras-qemu-whhkq11t/host-build /root/rasdaemon --prefix=/usr -Dsqlite3=enabled -Dmysql=enabled -Denable-arch=all -Dpostgresql=enabled -Dpcie-edpc=enabled -Dbmc-generic=enabled
+The Meson build system
+Version: 1.7.0
+Source dir: /root/rasdaemon
+Build dir: /tmp/ras-qemu-whhkq11t/host-build
+Build type: native build
+Project name: rasdaemon
+Project version: 1.0.0
+C compiler for the host machine: cc (gcc 14.2.0 "cc (Debian 14.2.0-19) 14.2.0")
+C linker for the host machine: cc ld.bfd 2.44
+Host machine cpu family: x86_64
+Host machine cpu: x86_64
+Found pkg-config: YES (/usr/bin/pkg-config) 1.8.1
+Did not find CMake 'cmake'
+Found CMake: NO
+Run-time dependency cmocka found: NO (tried pkgconfig and cmake)
+Run-time dependency cmocka found: NO (tried pkgconfig and cmake)
+Program python3 found: YES (/usr/bin/python3)
+Run-time dependency libtraceevent found: YES 1.8.4
+Run-time dependency systemd found: NO (tried pkgconfig and cmake)
+Run-time dependency threads found: YES
+Run-time dependency mysqlclient found: YES 3.4.9
+Has header "mysql/mysql.h" : YES 
+Run-time dependency libpq found: YES 17.11
+Run-time dependency sqlite3 found: YES 3.46.1
+Run-time dependency libpci found: YES 3.13.0
+Dependency libpci found: YES 3.13.0 (cached)
+Program sphinx-build found: NO
+Message: Sphinx not found. Skipping documentation build
+Configuring rasdaemon.8 using configuration
+Configuring ras-mc-ctl using configuration
+Configuring rasdaemon.spec using configuration
+Configuring rasdaemon.service using configuration
+Configuring ras-mc-ctl.service using configuration
+Configuring rasdaemon.syslog-ng using configuration
+Configuring rasdaemon.rsyslog using configuration
+Configuring rasdaemon.logrotate using configuration
+Configuring Makefile.inc using configuration
+Configuring ras_config.py using configuration
+Configuring config.h using configuration
+Build targets in project: 3
+
+rasdaemon 1.0.0
+
+  Documentation
+    Build API docs       : NO
+
+  General options
+    ABRT report          : YES
+    AER                  : YES
+    Ampere OEM SEL       : YES
+    CPU fault isolation  : YES
+    CXL events           : YES
+    DEVLINK              : YES
+    Disk I/O errors      : YES
+    ERST                 : YES
+    EXTLOG               : YES
+    Facebook Unified SEL : YES
+    Generic BMC SEL      : YES
+    Memory CE PFA        : YES
+    Memory Failure       : YES
+    Memory ROW CE PFA    : YES
+    PCIe eDPC            : YES
+    Signal               : YES
+
+  Database backends
+    MySQL/MariaDB        : YES
+    PostgreSQL           : YES
+    Sqlite3              : YES
+
+  Arch-specific options
+    ARM events           : YES
+    MCE                  : YES
+    RERI                 : YES
+
+  Non-standard CPER records
+    AMP RAS errors       : YES
+    HISI Kunpeng errors  : YES
+    YITIAN RAS errors    : YES
+    JAGUAR RAS errors    : YES
+    NVIDIA RAS errors    : YES
+
+  User defined options
+    SQLite3 database file: /var/lib/rasdaemon/ras-mc_event.db
+    bmc-generic          : enabled
+    enable-arch          : all
+    mysql                : enabled
+    pcie-edpc            : enabled
+    postgresql           : enabled
+    prefix               : /usr
+    sqlite3              : enabled
+
+Found ninja-1.12.1 at /usr/bin/ninja
+
+$ ninja -C /tmp/ras-qemu-whhkq11t/host-build
+ninja: Entering directory `/tmp/ras-qemu-whhkq11t/host-build'
+[1/69] Compiling C object librasdaemon.a.p/core_bitfield.c.o
+[2/69] Compiling C object librasdaemon.a.p/core_ras-env.c.o
+[3/69] Compiling C object librasdaemon.a.p/core_ras-logger.c.o
+[4/69] Compiling C object librasdaemon.a.p/core_event-consumer.c.o
+[5/69] Compiling C object librasdaemon.a.p/core_modules.c.o
+[6/69] Compiling C object librasdaemon.a.p/core_types.c.o
+[7/69] Compiling C object librasdaemon.a.p/core_trigger.c.o
+[8/69] Compiling C object librasdaemon.a.p/events_ras-mc-handler.c.o
+[9/69] Compiling C object librasdaemon.a.p/db_db-mysql.c.o
+[10/69] Compiling C object librasdaemon.a.p/db_db-sqlite3.c.o
+[11/69] Compiling C object librasdaemon.a.p/events_ras-aer-handler.c.o
+[12/69] Compiling C object librasdaemon.a.p/db_db-postgresql.c.o
+[13/69] Compiling C object librasdaemon.a.p/core_ras-events.c.o
+[14/69] Compiling C object librasdaemon.a.p/actions_abrt-report.c.o
+[15/69] Compiling C object librasdaemon.a.p/actions_ampere-oem-sel.c.o
+[16/69] Compiling C object librasdaemon.a.p/actions_bmc-generic.c.o
+[17/69] Compiling C object librasdaemon.a.p/events-arch-arm_non-standard-ampere.c.o
+[18/69] Compiling C object librasdaemon.a.p/actions_openbmc-unified-sel.c.o
+[19/69] Compiling C object librasdaemon.a.p/actions_ras-pcie-edpc.c.o
+[20/69] Compiling C object librasdaemon.a.p/events-arch-arm_ras-arm-handler.c.o
+[21/69] Compiling C object librasdaemon.a.p/events-arch-arm_non-standard-ampereone.c.o
+[22/69] Compiling C object librasdaemon.a.p/core_queue.c.o
+[23/69] Compiling C object librasdaemon.a.p/events_ras-diskerror-handler.c.o
+[24/69] Compiling C object librasdaemon.a.p/events_ras-devlink-handler.c.o
+[25/69] Compiling C object librasdaemon.a.p/actions_ras-cpu-isolation.c.o
+[26/69] Compiling C object librasdaemon.a.p/events-arch-x86_ras-erst.c.o
+[27/69] Compiling C object librasdaemon.a.p/events-arch-arm_non-standard-hisilicon.c.o
+[28/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-amd.c.o
+[29/69] Compiling C object librasdaemon.a.p/events_ras-extlog-handler.c.o
+[30/69] Compiling C object librasdaemon.a.p/events-arch-arm_non-standard-hisi_hip08.c.o
+[31/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-amd-smca.c.o
+[32/69] Compiling C object librasdaemon.a.p/events_ras-cxl-handler.c.o
+[33/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-amd-k8.c.o
+[34/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-intel-broadwell-de.c.o
+[35/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-intel-broadwell-epex.c.o
+[36/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-intel-diamond.c.o
+[37/69] Compiling C object librasdaemon.a.p/events-arch-arm_non-standard-jaguarmicro.c.o
+[38/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-intel-dunnington.c.o
+[39/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-intel-haswell.c.o
+[40/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-intel.c.o
+[41/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-intel-granite.c.o
+[42/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-intel-ivb.c.o
+[43/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-intel-i10nm.c.o
+[44/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-intel-knl.c.o
+[45/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-intel-sb.c.o
+[46/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-intel-nehalem.c.o
+[47/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-intel-p4-p6.c.o
+[48/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-intel-skylake-xeon.c.o
+[49/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-intel-tulsa.c.o
+[50/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-zhaoxin.c.o
+[51/69] Compiling C object librasdaemon.a.p/events_ras-signal-handler.c.o
+[52/69] Compiling C object librasdaemon.a.p/events_ras-memory-failure-handler.c.o
+[53/69] Compiling C object librasdaemon.a.p/events-arch-x86_mce-zhaoxin-kh50000.c.o
+[54/69] Compiling C object librasdaemon.a.p/events-arch-arm_non-standard-nvidia.c.o
+[55/69] Compiling C object librasdaemon.a.p/events-arch-arm_non-standard-yitian.c.o
+[56/69] Compiling C object librasdaemon.a.p/events-arch-x86_ras-mce-handler.c.o
+[57/69] Compiling C object librasdaemon.a.p/events-arch-riscv_ras-reri-handler.c.o
+[58/69] Compiling C object librasdaemon.a.p/events-arch-arm_ras-arm-vendor-data.c.o
+[59/69] Compiling C object librasdaemon.a.p/actions_ras-poison-page-stat.c.o
+[60/69] Compiling C object librasdaemon.a.p/actions_ipmi-bmc.c.o
+[61/69] Compiling C object librasdaemon.a.p/core_rbtree.c.o
+[62/69] Compiling C object librasdaemon.a.p/events-arch-arm_ras-non-standard-handler.c.o
+[63/69] Compiling C object librasdaemon.a.p/actions_db-store.c.o
+[64/69] Compiling C object rasdaemon.p/core_rasdaemon.c.o
+[65/69] Compiling C object librasdaemon.a.p/db_ras-db.c.o
+[66/69] Compiling C object librasdaemon.a.p/actions_ras-page-isolation.c.o
+[67/69] Linking static target librasdaemon.a
+[68/69] Linking target rasdaemon
+[69/69] Generating util/ras-mc-ctl-man with a custom command
+
+$ meson install -C /tmp/ras-qemu-whhkq11t/host-build --destdir /tmp/ras-qemu-whhkq11t/host-install
+ninja: Entering directory `/tmp/ras-qemu-whhkq11t/host-build'
+ninja: no work to do.
+Compiling '/tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages/__init__.py'...
+Compiling '/tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages/display_table.py'...
+Compiling '/tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages/mem_layout.py'...
+Compiling '/tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages/ras_db.py'...
+Compiling '/tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages/ras_db_decode.py'...
+Compiling '/tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages/ras_filter.py'...
+Compiling '/tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages/ras_dimm.py'...
+Compiling '/tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages/ras_env.py'...
+Compiling '/tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages/ras_config.py'...
+Installing rasdaemon to /tmp/ras-qemu-whhkq11t/host-install/usr/sbin
+Installing util/ras-mc-ctl.8 to /tmp/ras-qemu-whhkq11t/host-install/usr/share/man/man8
+Installing /tmp/ras-qemu-whhkq11t/host-build/man/rasdaemon.8 to /tmp/ras-qemu-whhkq11t/host-install/usr/share/man/man8
+Installing /root/rasdaemon/util/__init__.py to /tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages
+Installing /root/rasdaemon/util/display_table.py to /tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages
+Installing /root/rasdaemon/util/mem_layout.py to /tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages
+Installing /root/rasdaemon/util/ras_db.py to /tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages
+Installing /root/rasdaemon/util/ras_db_decode.py to /tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages
+Installing /root/rasdaemon/util/ras_filter.py to /tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages
+Installing /root/rasdaemon/util/ras_dimm.py to /tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages
+Installing /root/rasdaemon/util/ras_env.py to /tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages
+Installing /tmp/ras-qemu-whhkq11t/host-build/util/ras-mc-ctl to /tmp/ras-qemu-whhkq11t/host-install/usr/sbin
+Installing /root/rasdaemon/misc/rasdaemon.env to /tmp/ras-qemu-whhkq11t/host-install/etc/sysconfig
+Installing /tmp/ras-qemu-whhkq11t/host-build/misc/rasdaemon.service to /tmp/ras-qemu-whhkq11t/host-install/usr/lib/x86_64-linux-gnu/systemd/system
+Installing /tmp/ras-qemu-whhkq11t/host-build/misc/ras-mc-ctl.service to /tmp/ras-qemu-whhkq11t/host-install/usr/lib/x86_64-linux-gnu/systemd/system
+Installing /tmp/ras-qemu-whhkq11t/host-build/misc/rasdaemon.syslog-ng to /tmp/ras-qemu-whhkq11t/host-install/etc/syslog-ng/conf.d
+Installing /tmp/ras-qemu-whhkq11t/host-build/misc/rasdaemon.rsyslog to /tmp/ras-qemu-whhkq11t/host-install/etc/rsyslog.d
+Installing /tmp/ras-qemu-whhkq11t/host-build/misc/rasdaemon.logrotate to /tmp/ras-qemu-whhkq11t/host-install/etc/logrotate.d
+Installing /root/rasdaemon/labels/intel to /tmp/ras-qemu-whhkq11t/host-install/etc/ras/dimm_labels.d
+Installing /root/rasdaemon/labels/apple to /tmp/ras-qemu-whhkq11t/host-install/etc/ras/dimm_labels.d
+Installing /root/rasdaemon/labels/asus to /tmp/ras-qemu-whhkq11t/host-install/etc/ras/dimm_labels.d
+Installing /root/rasdaemon/labels/supermicro to /tmp/ras-qemu-whhkq11t/host-install/etc/ras/dimm_labels.d
+Installing /root/rasdaemon/labels/meson.build to /tmp/ras-qemu-whhkq11t/host-install/etc/ras/dimm_labels.d
+Installing /root/rasdaemon/labels/gigabyte to /tmp/ras-qemu-whhkq11t/host-install/etc/ras/dimm_labels.d
+Installing /root/rasdaemon/labels/lenovo to /tmp/ras-qemu-whhkq11t/host-install/etc/ras/dimm_labels.d
+Installing /root/rasdaemon/labels/asrock to /tmp/ras-qemu-whhkq11t/host-install/etc/ras/dimm_labels.d
+Installing /root/rasdaemon/labels/dell to /tmp/ras-qemu-whhkq11t/host-install/etc/ras/dimm_labels.d
+Installing /root/rasdaemon/contrib/mc_event_trigger to /tmp/ras-qemu-whhkq11t/host-install/etc/ras/triggers
+Installing /root/rasdaemon/contrib/mem_fail_trigger to /tmp/ras-qemu-whhkq11t/host-install/etc/ras/triggers
+Installing /tmp/ras-qemu-whhkq11t/host-build/ras_config.py to /tmp/ras-qemu-whhkq11t/host-install/usr/lib/python3/dist-packages
+Installing /root/rasdaemon/completions/ras-mc-ctl.bash to /tmp/ras-qemu-whhkq11t/host-install/usr/share/bash-completion/completions
+Installing /root/rasdaemon/completions/ras-mc-ctl.zsh to /tmp/ras-qemu-whhkq11t/host-install/usr/share/zsh/site-functions
+Running custom install script '/usr/bin/python3 /tmp/ras-qemu-whhkq11t/host-build/meson-private/pycompile.py python-3.13-installed.json 0'
