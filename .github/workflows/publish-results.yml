@@ -30,7 +30,7 @@ jobs:
       ready: ${{ steps.results.outputs.ready }}
     permissions:
       actions: read
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v7
 
@@ -87,7 +87,8 @@ jobs:
                 mv build/candidate build/results/daily
                 printf '%s' "$runs" | jq -r --argjson id "$run_id" '
                   .workflow_runs[] | select(.id == $id) |
-                  [.html_url, .conclusion] | @tsv' > build/results/daily/run
+                  [.html_url, .conclusion, .created_at, (.id | tostring)] | @tsv' \
+                  > build/results/daily/run
                 return
               fi
             done
@@ -138,7 +139,7 @@ jobs:
                   mv build/candidate build/results/weekly
                   printf '%s' "$runs" | jq -r --argjson id "$run_id" \
                     '.workflow_runs[] | select(.id == $id) |
-                     [.html_url, .conclusion] | @tsv' \
+                     [.html_url, .conclusion, .created_at, (.id | tostring)] | @tsv' \
                     > build/results/weekly/run
                   return
                 fi
@@ -168,14 +169,14 @@ jobs:
           weekly_results=()
 
           if test -f build/results/daily/run; then
-            IFS=$'\t' read -r daily_url daily_conclusion \
+            IFS=$'\t' read -r daily_url daily_conclusion _ _ \
               < build/results/daily/run
             daily_results+=(--result x86_64=build/results/daily/x86_64)
             daily_results+=(--result aarch64=build/results/daily/aarch64)
           fi
 
           if test -f build/results/weekly/run; then
-            IFS=$'\t' read -r weekly_url weekly_conclusion \
+            IFS=$'\t' read -r weekly_url weekly_conclusion _ _ \
               < build/results/weekly/run
           fi
 
@@ -207,8 +208,55 @@ jobs:
           <h1>rasdaemon media CI</h1>
           <p>Latest published kernel and rasdaemon test results:</p>
           <ul><li><a href="daily/">Daily functional tests</a></li>
-          <li><a href="weekly/">Weekly fuzz tests</a></li></ul>
+          <li><a href="weekly/">Weekly fuzz tests</a></li>
+          <li><a href="archive/">Timestamped run evidence archive</a></li>
+          <li><a href="failures/">Failed tests and individual evidence</a></li></ul>
           EOF
+
+      - name: Preserve timestamped run evidence
+        if: steps.results.outputs.ready == 'true'
+        run: |
+          set -euxo pipefail
+
+          if git fetch origin evidence; then
+            git worktree add --detach build/evidence-store FETCH_HEAD
+            git -C build/evidence-store switch -c evidence
+          else
+            git worktree add -b evidence build/evidence-store HEAD
+          fi
+
+          git -C build/evidence-store config user.name "github-actions[bot]"
+          git -C build/evidence-store config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          archive_args=(--store build/evidence-store/archive \
+                        --site build/pages)
+          if test -f build/results/daily/run; then
+            archive_args+=(--run "daily=build/results/daily")
+          fi
+          if test -f build/results/weekly/run; then
+            archive_args+=(--run "weekly=build/results/weekly")
+          fi
+
+          python3 tests/qemu/archive_results.py "${archive_args[@]}"
+
+          git -C build/evidence-store add -A archive
+          while IFS= read -r -d '' tracked; do
+            case "$tracked" in
+              archive/*) ;;
+              *) git -C build/evidence-store rm -q -- "$tracked" ;;
+            esac
+          done < <(git -C build/evidence-store ls-files -z)
+          if ! git -C build/evidence-store diff --cached --quiet; then
+            if git -C build/evidence-store rev-parse --verify HEAD >/dev/null 2>&1; then
+              git -C build/evidence-store commit --amend --allow-empty -m \
+                "Refresh retained rasdaemon CI evidence"
+            else
+              git -C build/evidence-store commit --allow-empty -m \
+                "Store retained rasdaemon CI evidence"
+            fi
+            git -C build/evidence-store push --force-with-lease origin evidence
+          fi
 
       - name: Upload GitHub Pages artifact
         if: steps.results.outputs.ready == 'true'
