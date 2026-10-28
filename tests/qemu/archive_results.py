@@ -70,6 +70,41 @@ def page_for_run(destination: str, metadata: dict, kind: str) -> None:
         stream.write("\n".join(page) + "\n")
 
 
+def archive_index(retained: list[tuple[str, dict]]) -> str:
+    """Render one newest-first row per archived run, without a kind column."""
+    runs = {}
+    for name, metadata in retained:
+        run = runs.setdefault(name, {"items": [], "timestamp": metadata["timestamp"]})
+        run["items"].append(metadata)
+
+    ordered = sorted(
+        runs.items(),
+        key=lambda pair: max(datetime.datetime.fromisoformat(item["created_at"])
+                             for item in pair[1]["items"]),
+        reverse=True,
+    )
+    rows = []
+    for name, run in ordered:
+        items = run["items"]
+        kind = "daily" if any(item["kind"] == "daily" for item in items) else "weekly"
+        status = "success" if all(item["conclusion"] == "success" for item in items) else "failure"
+        timestamp = max(datetime.datetime.fromisoformat(item["created_at"])
+                        for item in items).astimezone(datetime.timezone.utc)
+        readable = timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
+        report = html.escape(f"../{name}/{kind}/index.html", quote=True)
+        evidence = html.escape(f"../{name}/", quote=True)
+        rows.append(f'<tr><td><a href="{report}">{readable}</a></td>'
+                    f'<td><a href="{evidence}">{status}</a></td></tr>')
+
+    page = ["<!doctype html><html lang=\"en\"><meta charset=\"utf-8\">"]
+    page.append("<title>rasdaemon CI evidence archive</title>")
+    page.append("<h1>rasdaemon CI evidence archive</h1>")
+    page.append("<p>Failed runs are retained indefinitely. Successful runs are retained for 30 days.</p>")
+    page.append("<table><thead><tr><th>Time (UTC)</th><th>Status</th></tr></thead><tbody>" +
+                "".join(rows) + "</tbody></table>")
+    return "\n".join(page) + "\n"
+
+
 def publish_archived_report(store_run: str, site_run: str,
                             metadata: dict, kind: str) -> None:
     """Render the archived report with the same combined view as latest."""
@@ -499,19 +534,8 @@ def archive(store: str, site: str, inputs: list[str], now: datetime.datetime) ->
             with open(summary, "w", encoding="utf-8") as stream:
                 stream.write(page)
 
-    rows = []
-    for name, item in retained:
-        label = html.escape(f"{item['kind']} — {item['timestamp']} — {item['conclusion']}")
-        href = html.escape(f"../{name}/", quote=True)
-        rows.append(f'<li><a href="{href}">{label}</a></li>')
-
-    page = ["<!doctype html><html lang=\"en\"><meta charset=\"utf-8\">"]
-    page.append("<title>rasdaemon CI evidence archive</title>")
-    page.append("<h1>rasdaemon CI evidence archive</h1>")
-    page.append("<p>Failed runs are retained indefinitely. Successful runs are retained for 30 days.</p>")
-    page.append("<ul>" + "".join(rows) + "</ul>")
     with open(os.path.join(archive_site, "index.html"), "w", encoding="utf-8") as stream:
-        stream.write("\n".join(page) + "\n")
+        stream.write(archive_index(retained))
 
     failure_rows = []
     for item in failures:

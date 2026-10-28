@@ -63,6 +63,9 @@ Latest reports
 * `Daily functional-test report
   <https://mchehab.github.io/rasdaemon-ci/daily/>`_
 
+* `Past runs
+  <https://mchehab.github.io/rasdaemon-ci/archive/>`_
+
 Functional feature implementation
 ---------------------------------
 
