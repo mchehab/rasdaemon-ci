@@ -120,6 +120,7 @@ class RecordedEventTest(unittest.TestCase):
         self.assertTrue(agent.matching_record(scenario, row, evidence))
         self.assertFalse(agent.matching_record(scenario, dict(row, code=0), evidence))
         self.assertFalse(agent.matching_record(scenario, dict(row, pid=456), evidence))
+        self.assertFalse(agent.matching_record(scenario, row, {}))
 
     def test_memory_failure_must_reference_the_poisoned_pfn(self) -> None:
         """The row must identify the guest's disposable page."""

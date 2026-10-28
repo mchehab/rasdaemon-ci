@@ -712,7 +712,7 @@ def matching_record(scenario: dict, row: dict, evidence: dict) -> bool:
 
     if name == "memory-sigbus":
         return (row.get("sig") == signal.SIGBUS and row.get("code", 0) in (4, 5)
-                and row.get("pid") == evidence["holder_pid"])
+                and row.get("pid") == evidence.get("holder_pid"))
 
     expected = {
         "cxl-poison": {"dpa": 4096, "dpa_length": 64},
@@ -1027,6 +1027,10 @@ class RecordedScenario:
         for _ in range(pages):
             holder, physical, page_size = guest_test_page(consume)
             pfn = physical // page_size
+            # Keep the singular field used by the SIGBUS record matcher and
+            # older evidence consumers. Multi-page scenarios also retain the
+            # full holder_pids list below.
+            self.evidence.setdefault("holder_pid", holder)
             self.evidence["holder_pids"].append(holder)
             self.evidence["poisoned_pages"].append({"pfn": pfn, "physical": physical})
             self.evidence["pfn"] = pfn
