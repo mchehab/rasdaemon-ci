@@ -140,10 +140,13 @@ def evidence_summary_lines(evidence: dict) -> list[str]:
     """Format evidence into concise, labeled lines suitable for a diff."""
     if "expected_warning" in evidence:
         lines = [
-            f"Threshold: {evidence.get('threshold', 'unknown')}",
+            f"Threshold: {evidence.get('threshold_kb', evidence.get('threshold', 'unknown'))} kB",
             f"Expected warning: {evidence.get('expected_warning', '')}",
             f"Warning observed: {'Yes' if evidence.get('warning_observed') else 'No'}",
             f"Hardware corrupted: {evidence.get('hardware_corrupted', 'not recorded')}",
+            f"Hardware corrupted pages: {evidence.get('hardware_corrupted_pages', 'not recorded')}",
+            f"Threshold exceeded: {'Yes' if evidence.get('threshold_exceeded') else 'No'}",
+            f"Multiple pages observed: {'Yes' if evidence.get('multiple_pages_observed') else 'No'}",
             f"Kernel event observed: {'Yes' if evidence.get('kernel_event_observed') else 'No'}",
         ]
         output = str(evidence.get("rasdaemon_output", ""))
@@ -204,7 +207,7 @@ def normalize_poison_stat_evidence(test_name: str, evidence: dict) -> dict:
             "kernel trace, so it cannot establish the exact timing or directly "
             "prove the race."
         ),
-        "threshold": "0 (set by the poison-page-stat test)",
+        "threshold": "0 (set by the poison-page-stat test in this historical run)",
         "expected_warning": expected,
         "warning_observed": warning_seen,
         "hardware_corrupted": "Not captured by this run",

@@ -4,6 +4,7 @@
 import json
 import glob
 import os
+import re
 import socket
 import subprocess
 import threading
@@ -98,7 +99,9 @@ class ConsumerChecks:
             stream.write(code)
         os.chmod(script, 0o700)
         self.scenario.environment["MEM_FAIL_TRIGGER"] = script
-        self.scenario.environment["POISON_STAT_THRESHOLD"] = "0"
+        # rasdaemon interprets this threshold in kB: 4 kB means the second
+        # poisoned 4 kB page crosses it (HardwareCorrupted > threshold).
+        self.scenario.environment["POISON_STAT_THRESHOLD"] = "4"
 
     def prepare_database(self, backend: str) -> None:
         """Provision a private real database server inside the disposable VM."""
@@ -232,14 +235,30 @@ class ConsumerChecks:
                                 if line.startswith("HardwareCorrupted:")), "")
         except OSError as error:
             meminfo = f"Unable to read /proc/meminfo: {error}"
-        valid = warning_observed
+        corrupted_kb = None
+        match = re.search(r"HardwareCorrupted:\s*(\d+)\s+kB", meminfo)
+        if match:
+            corrupted_kb = int(match.group(1))
+        corrupted_pages = (None if corrupted_kb is None else
+                           corrupted_kb * 1024 // os.sysconf("SC_PAGE_SIZE"))
+        threshold_kb = int(self.scenario.environment.get("POISON_STAT_THRESHOLD", "4"))
+        threshold_exceeded = corrupted_kb is not None and corrupted_kb > threshold_kb
+        multiple_pages_observed = corrupted_pages is not None and corrupted_pages > 1
+        valid = warning_observed and threshold_exceeded and multiple_pages_observed
         self.result("poison-page-stat", passed and valid,
-                    "Poison statistics must report a nonzero count after poisoning",
-                    {"threshold": self.scenario.environment.get(
-                         "POISON_STAT_THRESHOLD", "default"),
+                    "Poison statistics must exceed 4 kB after poisoning more than one distinct page",
+                    {"threshold_kb": threshold_kb,
+                     "expected_poisoned_pages": len(evidence.get("poisoned_pages", [])),
                      "expected_warning": warning,
                      "warning_observed": warning_observed,
                      "hardware_corrupted": meminfo,
+                     "hardware_corrupted_kb": corrupted_kb,
+                     "hardware_corrupted_pages": corrupted_pages,
+                     "threshold_exceeded": threshold_exceeded,
+                     "multiple_pages_observed": multiple_pages_observed,
+                     "hardware_corrupted_samples": evidence.get(
+                         "hardware_corrupted_samples", []),
+                     "poisoned_pages": evidence.get("poisoned_pages", []),
                      "kernel_event_observed": evidence.get("kernel_observed", False),
                      "kernel_trace": evidence.get("kernel_trace", ""),
                      "rasdaemon_output": output})

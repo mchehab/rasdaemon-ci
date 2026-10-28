@@ -1018,16 +1018,36 @@ class RecordedScenario:
             raise ScenarioUnavailable("hwpoison_inject module is unavailable")
 
         consume = self.scenario["name"] == "memory-sigbus"
-        holder, physical, page_size = guest_test_page(consume)
-        self.evidence["pfn"] = physical // page_size
-        self.evidence["holder_pid"] = holder
+        # Several independently allocated pages increase the chance that
+        # rasdaemon handles the tracepoint before poison-page accounting catches
+        # up, without paying for another VM boot.
+        pages = 3 if self.scenario["name"] == "memory-failure" else 1
+        self.evidence["poisoned_pages"] = []
+        self.evidence["holder_pids"] = []
+        for _ in range(pages):
+            holder, physical, page_size = guest_test_page(consume)
+            pfn = physical // page_size
+            self.evidence["holder_pids"].append(holder)
+            self.evidence["poisoned_pages"].append({"pfn": pfn, "physical": physical})
+            self.evidence["pfn"] = pfn
 
-        with open("/sys/kernel/debug/hwpoison/corrupt-pfn", "w", encoding="ascii") as stream:
-            stream.write(f"{physical // page_size:#x}\n")
+            with open("/sys/kernel/debug/hwpoison/corrupt-pfn", "w",
+                      encoding="ascii") as stream:
+                stream.write(f"{pfn:#x}\n")
 
-        if consume:
-            with contextlib.suppress(ProcessLookupError):
-                os.kill(holder, signal.SIGUSR1)
+            if consume:
+                with contextlib.suppress(ProcessLookupError):
+                    os.kill(holder, signal.SIGUSR1)
+
+            if self.scenario["name"] == "memory-failure":
+                try:
+                    with open("/proc/meminfo", encoding="ascii") as stream:
+                        sample = next((line.strip() for line in stream
+                                       if line.startswith("HardwareCorrupted:")), "")
+                except OSError as error:
+                    sample = f"Unable to read /proc/meminfo: {error}"
+                self.evidence.setdefault("hardware_corrupted_samples", []).append(
+                    {"after_pfn": f"{pfn:#x}", "value": sample})
 
     def query_cxl_sparing(self) -> None:
         """Ask the disposable QEMU CXL device for sparing resources, not repairs."""
@@ -1103,7 +1123,23 @@ class RecordedScenario:
 
             rows = self.records()
 
-            if any(matching_record(self.scenario, row, self.evidence) for row in rows):
+            if self.scenario["name"] == "memory-failure":
+                expected_pfns = [page["pfn"] for page in
+                                 self.evidence.get("poisoned_pages", [])]
+                matched_pfns = {
+                    pfn for pfn in expected_pfns
+                    if any(matching_record(
+                        self.scenario, row, dict(self.evidence, pfn=pfn))
+                           for row in rows)
+                }
+                if expected_pfns and len(matched_pfns) == len(expected_pfns):
+                    self.evidence["rows"] = [
+                        {key: value.hex() if isinstance(value, bytes) else value
+                         for key, value in row.items()} for row in rows
+                    ]
+                    return
+
+            elif any(matching_record(self.scenario, row, self.evidence) for row in rows):
                 self.evidence["rows"] = [
                     {key: value.hex() if isinstance(value, bytes) else value
                      for key, value in row.items()} for row in rows
@@ -1176,12 +1212,12 @@ class RecordedScenario:
                 with open("/sys/bus/netdevsim/del_device", "w", encoding="ascii") as stream:
                     stream.write("4242\n")
 
-        holder = self.evidence.get("holder_pid")
-
-        if holder is not None:
+        holders = self.evidence.get("holder_pids", [])
+        if not holders and self.evidence.get("holder_pid") is not None:
+            holders = [self.evidence["holder_pid"]]
+        for holder in holders:
             with contextlib.suppress(ProcessLookupError):
                 os.kill(holder, signal.SIGKILL)
-
             with contextlib.suppress(ChildProcessError):
                 os.waitpid(holder, 0)
 
