@@ -1,0 +1,555 @@
+{
+  "accelerator": "tcg",
+  "architecture": "aarch64",
+  "capabilities": [
+    {
+      "available": true,
+      "name": "qemu",
+      "reason": "available",
+      "value": "QEMU emulator version 11.1.50"
+    },
+    {
+      "available": true,
+      "name": "qemu-img",
+      "reason": "available",
+      "value": "/opt/qemu/bin/qemu-img"
+    },
+    {
+      "available": true,
+      "name": "image",
+      "reason": "manifest cache",
+      "value": "/opt/rasdaemon-ci/rasdaemon-guest-aarch64.qcow2"
+    },
+    {
+      "available": false,
+      "name": "firmware-code",
+      "reason": "no matching pair found",
+      "value": ""
+    },
+    {
+      "available": false,
+      "name": "firmware-vars",
+      "reason": "no matching pair found",
+      "value": ""
+    },
+    {
+      "available": false,
+      "name": "kvm",
+      "reason": "/dev/kvm is absent",
+      "value": "/dev/kvm"
+    },
+    {
+      "available": true,
+      "name": "tcg",
+      "reason": "available",
+      "value": ""
+    }
+  ],
+  "component_totals": {
+    "kernel": {
+      "failed": 0,
+      "not_applicable": 1,
+      "passed": 10,
+      "skipped": 0
+    },
+    "rasdaemon": {
+      "failed": 0,
+      "not_applicable": 11,
+      "passed": 0,
+      "skipped": 0
+    }
+  },
+  "feature_inventory": [
+    "abrt-report",
+    "aer",
+    "amp-ns-decode",
+    "ampere-oem-sel",
+    "arm",
+    "arm-vendor-data",
+    "bmc-generic",
+    "cpu-fault-isolation",
+    "cxl",
+    "db",
+    "debug-sql",
+    "devlink",
+    "diskerror",
+    "erst",
+    "extlog",
+    "hisi-ns-decode",
+    "ipmi-bmc",
+    "jaguar-ns-decode",
+    "mc-event",
+    "mce",
+    "memory-ce-pfa",
+    "memory-failure",
+    "memory-row-ce-pfa",
+    "mysql",
+    "non-standard",
+    "nvidia-ns-decode",
+    "openbmc-unified-sel",
+    "page-isolation",
+    "pcie-edpc",
+    "poison-page-stat",
+    "postgresql",
+    "reri",
+    "signal",
+    "sqlite3",
+    "trigger",
+    "yitian-ns-decode"
+  ],
+  "features": [
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "consumer-abrt-report"
+      ],
+      "feature": "abrt-report",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "vendor-ampere"
+      ],
+      "feature": "amp-ns-decode",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": [
+        {
+          "check": "amp-ns-decode-additional-coverage",
+          "reason": "Only the Ampere payload-0 format has a producer; other AMP payload formats remain untested"
+        }
+      ]
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "consumer-arm-sel",
+        "consumer-ampere-oem-sel"
+      ],
+      "feature": "ampere-oem-sel",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "ghes-arm"
+      ],
+      "feature": "arm",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "arm-vendor-data"
+      ],
+      "feature": "arm-vendor-data",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "consumer-cpu-fault-isolation"
+      ],
+      "feature": "cpu-fault-isolation",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "consumer-database-report"
+      ],
+      "feature": "db",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [],
+      "feature": "debug-sql",
+      "reason": "No functional test implementation is assigned to this feature",
+      "untested": [
+        {
+          "check": "debug-sql-additional-coverage",
+          "reason": "No functional SQL debug-logging test or producer is assigned"
+        }
+      ]
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "devlink-health",
+        "net-xmit-timeout"
+      ],
+      "feature": "devlink",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "block-io-native"
+      ],
+      "feature": "diskerror",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "vendor-hisilicon-common",
+        "vendor-hisilicon-type1",
+        "vendor-hisilicon-type2",
+        "vendor-hisilicon-pcie"
+      ],
+      "feature": "hisi-ns-decode",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": [
+        {
+          "check": "hisi-ns-decode-additional-coverage",
+          "reason": "Malformed input and execution through every registered format remain untested"
+        }
+      ]
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "vendor-jaguar"
+      ],
+      "feature": "jaguar-ns-decode",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": [
+        {
+          "check": "jaguar-ns-decode-additional-coverage",
+          "reason": "Only Jaguar payload-0 is produced; additional payload layouts remain untested"
+        }
+      ]
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "ghes-memory"
+      ],
+      "feature": "mc-event",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "consumer-memory-ce-pfa"
+      ],
+      "feature": "memory-ce-pfa",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "memory-failure"
+      ],
+      "feature": "memory-failure",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "consumer-memory-row-ce-pfa"
+      ],
+      "feature": "memory-row-ce-pfa",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "ghes-pci-bus",
+        "ghes-unknown"
+      ],
+      "feature": "non-standard",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "vendor-nvidia"
+      ],
+      "feature": "nvidia-ns-decode",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": [
+        {
+          "check": "nvidia-ns-decode-additional-coverage",
+          "reason": "Only one NVIDIA non-standard format is produced; broader format coverage remains untested"
+        }
+      ]
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "consumer-arm-sel",
+        "consumer-openbmc-unified-sel"
+      ],
+      "feature": "openbmc-unified-sel",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "consumer-memory-ce-pfa",
+        "consumer-memory-row-ce-pfa"
+      ],
+      "feature": "page-isolation",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "consumer-poison-page-stat"
+      ],
+      "feature": "poison-page-stat",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "memory-sigbus"
+      ],
+      "feature": "signal",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "consumer-sqlite3"
+      ],
+      "feature": "sqlite3",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "consumer-trigger"
+      ],
+      "feature": "trigger",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": []
+    },
+    {
+      "FAIL": 0,
+      "N/A": 1,
+      "PASS": 0,
+      "arch": "aarch64",
+      "checks": [
+        "vendor-yitian"
+      ],
+      "feature": "yitian-ns-decode",
+      "reason": "Not run due to infrastructure failure: no matching pair found; no matching pair found",
+      "untested": [
+        {
+          "check": "yitian-ns-decode-additional-coverage",
+          "reason": "Only the Yitian DDR register-dump format is produced; other event types remain untested"
+        }
+      ]
+    }
+  ],
+  "finished_at": "2026-11-07T12:37:23.856342+00:00",
+  "format_version": 1,
+  "host": {
+    "architecture": "aarch64",
+    "kernel": "7.0.0-1017-azure"
+  },
+  "infrastructure_failure": "no matching pair found; no matching pair found",
+  "profile": "injection",
+  "started_at": "2026-11-07T12:37:23.855612+00:00",
+  "tests": [
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_ACPI_APEI_GHES config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_ACPI_APEI_PCIEAER config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_EDAC_GHES config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_MEMORY_FAILURE config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_PCIEAER config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_CXL_BUS config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_CXL_PCI config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_CXL_ACPI config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_CXL_MEM config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "PASS",
+      "name": "Enable Kernel CONFIG_CXL_REGION config",
+      "rasdaemon": "N/A",
+      "reason": "Kernel option is y as requested",
+      "status": "passed"
+    },
+    {
+      "duration_seconds": 0.0,
+      "evidence": {},
+      "kernel": "N/A",
+      "name": "prerequisites",
+      "rasdaemon": "N/A",
+      "reason": "Prerequisites check skipped: QEMU tools, guest image integrity, firmware and a usable accelerator are required to start the VM; no matching pair found; no matching pair found",
+      "status": "skipped"
+    }
+  ],
+  "totals": {
+    "failed": 0,
+    "not_applicable": 0,
+    "passed": 10,
+    "skipped": 1
+  },
+  "vm_status": "failed"
+}
