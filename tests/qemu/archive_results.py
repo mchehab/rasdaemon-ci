@@ -182,6 +182,38 @@ def evidence_summary_lines(evidence: dict) -> list[str]:
     return lines
 
 
+def normalize_poison_stat_evidence(test_name: str, evidence: dict) -> dict:
+    """Explain the poison-stat check even for artifacts predating structured evidence."""
+    if test_name != "consumer-poison-page-stat" or "expected_warning" in evidence:
+        return evidence
+
+    # Older CI artifacts only kept rasdaemon's combined output. Recover the
+    # observable facts from that log, while clearly marking unavailable data.
+    output = str(evidence.get("output", evidence.get("rasdaemon_output", "")))
+    expected = "Poison page statistics exceeded threshold:"
+    warning_seen = expected in output
+    event_seen = "memory_failure_event" in output
+    return {
+        "failure_interpretation": (
+            "The test expected rasdaemon to emit its poison-page statistics "
+            "warning after the injected page was poisoned. That warning is "
+            + ("present" if warning_seen else "absent")
+            + " in the captured daemon output. The memory_failure_event log "
+            + ("is present" if event_seen else "was not found")
+            + ". This older run did not capture /proc/meminfo or an independent "
+            "kernel trace, so it cannot establish the exact timing or directly "
+            "prove the race."
+        ),
+        "threshold": "0 (set by the poison-page-stat test)",
+        "expected_warning": expected,
+        "warning_observed": warning_seen,
+        "hardware_corrupted": "Not captured by this run",
+        "kernel_event_observed": event_seen,
+        "kernel_trace": "Not captured by this run",
+        "rasdaemon_output": output,
+    }
+
+
 def passing_comparison(store: str, retained: list[tuple[str, dict]],
                       run_name: str, metadata: dict, kind: str, label: str,
                       test_name: str) -> dict | None:
@@ -211,7 +243,8 @@ def passing_comparison(store: str, retained: list[tuple[str, dict]],
     _, _, candidate_run, candidate_metadata, passed = min(candidates)
     return {"run_name": candidate_run, "timestamp": candidate_metadata["timestamp"],
             "url": candidate_metadata["url"], "reason": passed.get("reason", ""),
-            "evidence": passed.get("evidence") or {}}
+            "evidence": normalize_poison_stat_evidence(
+                test_name, passed.get("evidence") or {})}
 
 
 def failure_page(destination: str, metadata: dict, kind: str, label: str,
@@ -244,6 +277,10 @@ def failure_page(destination: str, metadata: dict, kind: str, label: str,
     page.append(f"<p><strong>Reason:</strong> {escaped_reason}</p>")
     page.append(f"<p><a href=\"{run_url}\">GitHub Actions run</a> · "
                 f"<a href=\"../../../../{run_name}/\">All run evidence</a></p>")
+    interpretation = evidence.get("failure_interpretation")
+    if interpretation:
+        page.append(f"<h2>What this evidence shows</h2><p>"
+                    f"{html.escape(str(interpretation))}</p>")
     page.append(f"<h2>Failure evidence</h2>{rendered_evidence}")
     page.append("<h2>Comparison with a passing run</h2>")
     if comparison:
@@ -302,7 +339,8 @@ def collect_failures(store: str, retained: list[tuple[str, dict]],
                 found_failed_test = True
                 test_name = str(test.get("name") or "unnamed test")
                 reason = str(test.get("reason") or "")
-                evidence = test.get("evidence") or {}
+                evidence = normalize_poison_stat_evidence(
+                    test_name, test.get("evidence") or {})
                 comparison = passing_comparison(store, retained, run_name, metadata,
                                                 kind, label, test_name)
                 link = failure_page(destination, metadata, kind, label,
