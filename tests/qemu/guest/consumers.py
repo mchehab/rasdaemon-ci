@@ -223,10 +223,26 @@ class ConsumerChecks:
                     {"environment": trigger})
 
         output = evidence.get("rasdaemon_output", "")
-        valid = "Poison page statistics exceeded threshold:" in output
+        warning = "Poison page statistics exceeded threshold:"
+        warning_observed = warning in output
+        meminfo = ""
+        try:
+            with open("/proc/meminfo", encoding="ascii") as stream:
+                meminfo = next((line.strip() for line in stream
+                                if line.startswith("HardwareCorrupted:")), "")
+        except OSError as error:
+            meminfo = f"Unable to read /proc/meminfo: {error}"
+        valid = warning_observed
         self.result("poison-page-stat", passed and valid,
                     "Poison statistics must report a nonzero count after poisoning",
-                    {"output": output})
+                    {"threshold": self.scenario.environment.get(
+                         "POISON_STAT_THRESHOLD", "default"),
+                     "expected_warning": warning,
+                     "warning_observed": warning_observed,
+                     "hardware_corrupted": meminfo,
+                     "kernel_event_observed": evidence.get("kernel_observed", False),
+                     "kernel_trace": evidence.get("kernel_trace", ""),
+                     "rasdaemon_output": output})
         self.result("sqlite3", passed and bool(rows),
                     "SQLite must commit the injected memory-failure record",
                     {"database": self.scenario.paths["database"], "rows": rows})

@@ -6,6 +6,7 @@
 
 import argparse
 import datetime
+import difflib
 import html
 import json
 import os
@@ -20,6 +21,10 @@ from publish_results import PublishedResult, ResultSite
 
 RUN_ID = re.compile(r"^[0-9]+$")
 ARCHIVE_NAME = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[0-9]+$")
+# Historical result files include this synthesized coverage roll-up as a test.
+# The feature table already reports it; listing it as a test failure duplicates
+# the underlying failed or skipped checks and has no separate evidence.
+AGGREGATE_FAILURES = {"feature-coverage"}
 
 
 def read_run(path: str) -> dict:
@@ -131,8 +136,87 @@ def evidence_html(value: object, name: str = "") -> str:
     return html.escape(text) or "<em>Empty</em>"
 
 
+def evidence_summary_lines(evidence: dict) -> list[str]:
+    """Format evidence into concise, labeled lines suitable for a diff."""
+    if "expected_warning" in evidence:
+        lines = [
+            f"Threshold: {evidence.get('threshold', 'unknown')}",
+            f"Expected warning: {evidence.get('expected_warning', '')}",
+            f"Warning observed: {'Yes' if evidence.get('warning_observed') else 'No'}",
+            f"Hardware corrupted: {evidence.get('hardware_corrupted', 'not recorded')}",
+            f"Kernel event observed: {'Yes' if evidence.get('kernel_event_observed') else 'No'}",
+        ]
+        output = str(evidence.get("rasdaemon_output", ""))
+        relevant = [line.strip() for line in output.splitlines()
+                    if evidence.get("expected_warning", "") in line or
+                    "memory_failure_event" in line]
+        if relevant:
+            lines.append("Relevant rasdaemon log lines:")
+            lines.extend("  " + line for line in relevant)
+        trace = str(evidence.get("kernel_trace", ""))
+        relevant_trace = [line.strip() for line in trace.splitlines()
+                          if "memory_failure_event" in line]
+        if relevant_trace:
+            lines.append("Relevant kernel trace lines:")
+            lines.extend("  " + line for line in relevant_trace)
+        return lines
+
+    lines = []
+
+    def append(value: object, path: str) -> None:
+        if isinstance(value, dict):
+            for key in sorted(value):
+                append(value[key], f"{path}.{key}" if path else str(key))
+        elif isinstance(value, (list, tuple)):
+            for index, item in enumerate(value):
+                append(item, f"{path}[{index}]")
+        elif isinstance(value, str) and "\n" in value:
+            lines.append(f"{path}:")
+            lines.extend("  " + line for line in value.splitlines()[:80])
+            if len(value.splitlines()) > 80:
+                lines.append("  … output truncated in comparison; full evidence is above")
+        else:
+            lines.append(f"{path}: {value}")
+
+    append(evidence, "")
+    return lines
+
+
+def passing_comparison(store: str, retained: list[tuple[str, dict]],
+                      run_name: str, metadata: dict, kind: str, label: str,
+                      test_name: str) -> dict | None:
+    """Find the closest retained passing instance of the same check."""
+    failed_at = datetime.datetime.fromisoformat(metadata["created_at"])
+    candidates = []
+    for candidate_run, candidate_metadata in retained:
+        if candidate_run == run_name or candidate_metadata["kind"] != kind:
+            continue
+        result_path = os.path.join(store, candidate_run, kind, label, "result.json")
+        if not os.path.isfile(result_path):
+            continue
+        with open(result_path, encoding="utf-8") as stream:
+            result = json.load(stream)
+        passed = next((test for test in result.get("tests", [])
+                       if test.get("name") == test_name and
+                       test.get("status") == "passed"), None)
+        if passed is None:
+            continue
+        created = datetime.datetime.fromisoformat(candidate_metadata["created_at"])
+        # Prefer the nearest prior pass; if none exists, use the nearest later pass.
+        candidates.append((created >= failed_at, abs((failed_at - created).total_seconds()),
+                           candidate_run, candidate_metadata, passed))
+
+    if not candidates:
+        return None
+    _, _, candidate_run, candidate_metadata, passed = min(candidates)
+    return {"run_name": candidate_run, "timestamp": candidate_metadata["timestamp"],
+            "url": candidate_metadata["url"], "reason": passed.get("reason", ""),
+            "evidence": passed.get("evidence") or {}}
+
+
 def failure_page(destination: str, metadata: dict, kind: str, label: str,
-                 name: str, reason: str, evidence: dict, run_name: str) -> str:
+                 name: str, reason: str, evidence: dict, run_name: str,
+                 comparison: dict | None = None) -> str:
     """Write a focused detail page for one failed check."""
     slug = re.sub(r"[^a-zA-Z0-9_-]+", "-", name).strip("-") or "failure"
     directory = os.path.join(destination, run_name, kind, label)
@@ -161,6 +245,28 @@ def failure_page(destination: str, metadata: dict, kind: str, label: str,
     page.append(f"<p><a href=\"{run_url}\">GitHub Actions run</a> · "
                 f"<a href=\"../../../../{run_name}/\">All run evidence</a></p>")
     page.append(f"<h2>Failure evidence</h2>{rendered_evidence}")
+    page.append("<h2>Comparison with a passing run</h2>")
+    if comparison:
+        comparison_run = html.escape(comparison["run_name"], quote=True)
+        comparison_url = html.escape(comparison["url"], quote=True)
+        page.append(f"<p>Passing result from {html.escape(comparison['timestamp'])}: "
+                    f"<a href=\"../../../../{comparison_run}/{kind}/{label}/\">"
+                    "open the successful report</a> · "
+                    f"<a href=\"{comparison_url}\">GitHub Actions run</a></p>")
+        if comparison.get("reason"):
+            page.append(f"<p><strong>Passing check:</strong> "
+                        f"{html.escape(comparison['reason'])}</p>")
+        diff = difflib.unified_diff(
+            evidence_summary_lines(comparison.get("evidence") or {}),
+            evidence_summary_lines(evidence),
+            fromfile=f"passing {comparison['timestamp']}",
+            tofile=f"failed {metadata['timestamp']}", lineterm="")
+        page.append("<h3>Evidence difference (passing → failed)</h3><pre class=\"evidence-text\">" +
+                    html.escape("\n".join(diff) or "No evidence differences were recorded.") +
+                    "</pre>")
+    else:
+        page.append("<p>No retained passing result for this check and architecture "
+                    "was found.</p>")
     with open(os.path.join(directory, filename), "w", encoding="utf-8") as stream:
         stream.write("\n".join(page) + "\n")
 
@@ -190,12 +296,17 @@ def collect_failures(store: str, retained: list[tuple[str, dict]],
             for test in result.get("tests", []):
                 if test.get("status") != "failed":
                     continue
+                if test.get("name") in AGGREGATE_FAILURES:
+                    found_failed_test = True
+                    continue
                 found_failed_test = True
                 test_name = str(test.get("name") or "unnamed test")
                 reason = str(test.get("reason") or "")
                 evidence = test.get("evidence") or {}
+                comparison = passing_comparison(store, retained, run_name, metadata,
+                                                kind, label, test_name)
                 link = failure_page(destination, metadata, kind, label,
-                                    test_name, reason, evidence, run_name)
+                                    test_name, reason, evidence, run_name, comparison)
                 report_path = os.path.relpath(
                     os.path.join(root, "results.html"), store)
                 report_url = "../" + urllib.parse.quote(

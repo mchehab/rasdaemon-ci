@@ -74,12 +74,14 @@ jobs:
 
           find_daily()
           {
-            if test -n "$DAILY_RUN_ID"; then
-              runs=$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$DAILY_RUN_ID" |
+            output_name=$1
+            requested_run_id=$2
+            if test -n "$requested_run_id"; then
+              runs=$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$requested_run_id" |
                 jq '{workflow_runs: [.] }')
             else
               runs=$(gh api \
-                "/repos/$GITHUB_REPOSITORY/actions/workflows/pipeline.yml/runs?status=completed&per_page=100")
+                "/repos/$GITHUB_REPOSITORY/actions/workflows/pipeline.yml/runs?branch=main&status=completed&per_page=100")
             fi
 
             for run_id in $(printf '%s' "$runs" | jq -r \
@@ -107,11 +109,11 @@ jobs:
               if $compatible &&
                  cmp -s build/candidate/x86_64/rasdaemon-source-revision build/candidate/aarch64/rasdaemon-source-revision; then
                 mkdir -p build/results
-                mv build/candidate build/results/daily
+                mv build/candidate "build/results/$output_name"
                 printf '%s' "$runs" | jq -r --argjson id "$run_id" '
                   .workflow_runs[] | select(.id == $id) |
                   [.html_url, .conclusion, .created_at, (.id | tostring)] | @tsv' \
-                  > build/results/daily/run
+                  > "build/results/$output_name/run"
                 return
               fi
             done
@@ -121,8 +123,10 @@ jobs:
 
           find_weekly()
           {
-            if test -n "$WEEKLY_RUN_ID"; then
-              runs=$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$WEEKLY_RUN_ID" |
+            output_name=$1
+            requested_run_id=$2
+            if test -n "$requested_run_id"; then
+              runs=$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$requested_run_id" |
                 jq '{workflow_runs: [.] }')
             else
               runs=$(gh api \
@@ -164,11 +168,11 @@ jobs:
 
                 if $compatible; then
                   mkdir -p build/results
-                  mv build/candidate build/results/weekly
+                  mv build/candidate "build/results/$output_name"
                   printf '%s' "$runs" | jq -r --argjson id "$run_id" \
                     '.workflow_runs[] | select(.id == $id) |
                      [.html_url, .conclusion, .created_at, (.id | tostring)] | @tsv' \
-                    > build/results/weekly/run
+                    > "build/results/$output_name/run"
                   return
                 fi
               fi
@@ -177,8 +181,17 @@ jobs:
             echo "No compatible weekly fuzz-test artifact was found"
           }
 
-          find_daily
-          find_weekly
+          # Explicitly requested runs are retained as evidence only. Build the
+          # live pages from the newest completed runs so backfills cannot roll
+          # /daily or /weekly backwards in time.
+          if test -n "$DAILY_RUN_ID"; then
+            find_daily preserve-daily "$DAILY_RUN_ID"
+          fi
+          if test -n "$WEEKLY_RUN_ID"; then
+            find_weekly preserve-weekly "$WEEKLY_RUN_ID"
+          fi
+          find_daily daily ""
+          find_weekly weekly ""
           # A failed setup or an incomplete first run must not erase live badges.
           if test -f build/results/daily/run; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
@@ -263,8 +276,14 @@ jobs:
           if test -f build/results/daily/run; then
             archive_args+=(--run "daily=build/results/daily")
           fi
+          if test -f build/results/preserve-daily/run; then
+            archive_args+=(--run "daily=build/results/preserve-daily")
+          fi
           if test -f build/results/weekly/run; then
             archive_args+=(--run "weekly=build/results/weekly")
+          fi
+          if test -f build/results/preserve-weekly/run; then
+            archive_args+=(--run "weekly=build/results/preserve-weekly")
           fi
 
           python3 tests/qemu/archive_results.py "${archive_args[@]}"

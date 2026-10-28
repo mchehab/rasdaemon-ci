@@ -772,10 +772,6 @@ class ResultDocument:
                 self.data.get("infrastructure_failure", ""),
             )
             self.data["features"] = rows
-            failed = [row["feature"] for row in rows if row["FAIL"]]
-            if failed and not any(test["name"] == "feature-coverage" for test in self.data["tests"]):
-                self.add_test("feature-coverage", "failed",
-                              "Functional coverage incomplete: " + ", ".join(failed))
         self.finish()
         result_dir.mkdir(parents=True, exist_ok=True)
         self.write_table(os.fspath(result_dir))
@@ -1738,7 +1734,9 @@ def run_test(args, manifest):
     print_failure_diagnostics(document.data, result_dir)
     if not args.quiet:
         print(path)
-    return 1 if document.data["totals"]["failed"] else 0
+    coverage_failed = any(row.get("FAIL", 0)
+                          for row in document.data.get("features", []))
+    return 1 if document.data["totals"]["failed"] or coverage_failed else 0
 
 
 def create_parser(manifest):
