@@ -11,6 +11,15 @@ Tests cover both Linux Kernel and rasdaemon. QEMU and EDK2 BIOS are also
 indirectly tested, as the error injection logic depends on features that
 exists on both.
 
+The end-to-end tests follow this diagram::
+
+                         +-------------------------+
+                         | +------+  +-----------+ |       +--------+       +-----------+
+        Error inject --> | | QMP  |  | EDK2 BIOS | | ----> | Kernel | ----> | rasdaemon | --> Check
+                         | +------+  +-----------+ |       +--------+       +-----------+
+                         |          QEMU           |
+                         +-------------------------+
+
 Latest reports
 --------------
 
