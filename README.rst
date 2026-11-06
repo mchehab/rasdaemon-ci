@@ -20,7 +20,7 @@ The end-to-end tests follow this diagram::
                          |          QEMU           |
                          +-------------------------+
 
-Latest reports
+Latest results
 --------------
 
 .. |feature-pass| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-feature-pass.svg
@@ -100,6 +100,9 @@ Latest reports
      - |x86-vm|
    * - ARM64
      - |arm64-vm|
+
+Reports
+-------
 
 * `Daily functional-test report
   <https://mchehab.github.io/rasdaemon-ci/daily/>`_
