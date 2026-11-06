@@ -46,6 +46,10 @@ jobs:
     env:
       IMAGE_REF: ${{ (matrix.arch == 'aarch64' && (inputs.arm-image || format('ghcr.io/{0}/rasdaemon-ci:aarch64', github.repository_owner))) || inputs.image || format('ghcr.io/{0}/rasdaemon-ci:x86_64', github.repository_owner) }}
     steps:
+      - name: Check out CI harness
+        uses: actions/checkout@v7
+        with:
+          path: ci-harness
       - name: Check out rasdaemon source
         uses: actions/checkout@v7
         with:
@@ -62,6 +66,10 @@ jobs:
           mkdir -p "build/qemu-results/$TEST_ARCH"
           git -C rasdaemon-source rev-parse HEAD \
             > "build/qemu-results/$TEST_ARCH/rasdaemon-source-revision"
+          python3 ci-harness/tests/qemu/source_refs.py exact-tags \
+            --repository https://github.com/mchehab/rasdaemon.git \
+            --commit "$(cat "build/qemu-results/$TEST_ARCH/rasdaemon-source-revision")" \
+            > "build/qemu-results/$TEST_ARCH/rasdaemon-tags.json"
 
       - name: Download image
         run: |
@@ -74,6 +82,11 @@ jobs:
           set -eux
           docker run --rm --entrypoint cat "$IMAGE_REF" /opt/rasdaemon-ci/kernel/kernel.json > "build/qemu-results/$TEST_ARCH/kernel.json"
           docker run --rm --entrypoint cat "$IMAGE_REF" /opt/rasdaemon-ci/qemu.json > "build/qemu-results/$TEST_ARCH/qemu.json"
+          for component in kernel qemu; do
+            path="/opt/rasdaemon-ci/$component-tags.json"
+            if test "$component" = kernel; then path="/opt/rasdaemon-ci/kernel/kernel-tags.json"; fi
+            docker run --rm --entrypoint cat "$IMAGE_REF" "$path" > "build/qemu-results/$TEST_ARCH/$component-tags.json" || rm -f "build/qemu-results/$TEST_ARCH/$component-tags.json"
+          done
       - name: Run
         env:
           TEST_ARCH: ${{ matrix.arch }}

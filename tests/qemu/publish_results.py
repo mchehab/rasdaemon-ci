@@ -22,6 +22,22 @@ SAFE_LABEL = re.compile(r"^[a-z0-9_-]+$")
 SOURCE_REVISION = re.compile(r"^[0-9a-f]{40}$")
 
 
+def format_version(version: str, commit: str, tag_data: dict) -> str:
+    """Show an exact version tag, or identify the tested commit with its version."""
+    if not version:
+        return "N/A"
+
+    def normalized(value):
+        value = value.removeprefix("v")
+        return re.sub(r"^(\d+\.\d+)\.0(?=-rc\d+$|$)", r"\1", value)
+
+    if tag_data.get("commit") == commit:
+        for tag in tag_data.get("tags", []):
+            if isinstance(tag, str) and normalized(tag) == normalized(version):
+                return tag
+    return version + "-" + (commit[:12] if SOURCE_REVISION.fullmatch(commit) else "unknown")
+
+
 class PublishedResult:  # pylint: disable=R0903
     """One architecture or fuzz-mode result within a published report."""
 
@@ -49,6 +65,41 @@ class PublishedResult:  # pylint: disable=R0903
 
         with open(path, encoding="utf-8") as stream:
             return stream.read().strip()
+
+    def versions(self) -> dict:
+        """Read versions from this result's recorded build and runtime evidence."""
+        def read(name):
+            try:
+                return self._read_text(name)
+            except OSError:
+                return ""
+
+        metadata = {}
+        for name in ("kernel", "qemu"):
+            try:
+                metadata[name] = json.loads(read(name + ".json") or "{}")
+            except json.JSONDecodeError:
+                metadata[name] = {}
+        qemu_line = next((item.get("value", "") for item in
+                          self.data.get("capabilities", [])
+                          if item.get("name") == "qemu"), "")
+        qemu_match = re.search(r"version\s+([0-9][\w.+-]*)", qemu_line)
+        ras_match = re.search(r"rasdaemon payload version=rasdaemon\s+([^\s;]+)",
+                              read("console.log"))
+        kernel_match = re.match(r"[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:-rc[0-9]+)?",
+                                metadata["kernel"].get("release", ""))
+        raw = {"qemu": (qemu_match.group(1) if qemu_match else "", metadata["qemu"]),
+               "kernel": (kernel_match.group(0) if kernel_match else "", metadata["kernel"]),
+               "rasdaemon": (ras_match.group(1) if ras_match else "", {})}
+        values = {}
+        for component, (version, source) in raw.items():
+            try:
+                tags = json.loads(read(component + "-tags.json") or "{}")
+            except json.JSONDecodeError:
+                tags = {}
+            commit = self.revision if component == "rasdaemon" else source.get("commit", "")
+            values[component] = (format_version(version, commit, tags), source)
+        return values
 
 
 class ResultSite:  # pylint: disable=R0903
@@ -183,33 +234,7 @@ class ResultSite:  # pylint: disable=R0903
     def _write_versions(self) -> None:
         """Publish version badges and exact source links for each result."""
         for result in self.results:
-            def read(name):
-                try:
-                    with open(os.path.join(result.directory, name), encoding="utf-8") as stream:
-                        return stream.read()
-                except OSError:
-                    return ""
-
-            try:
-                kernel = json.loads(read("kernel.json") or "{}")
-                qemu = json.loads(read("qemu.json") or "{}")
-            except json.JSONDecodeError:
-                kernel, qemu = {}, {}
-            qemu_line = next((item.get("value", "") for item in
-                              result.data.get("capabilities", [])
-                              if item.get("name") == "qemu"), "")
-            qemu_match = re.search(r"version\s+([0-9][\w.+-]*)", qemu_line)
-            ras_match = re.search(r"rasdaemon payload version=rasdaemon\s+([^\s;]+)",
-                                  read("console.log"))
-            kernel_version = re.match(r"[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:-rc[0-9]+)?",
-                                      kernel.get("release", ""))
-            values = {
-                "qemu": (qemu_match.group(1) if qemu_match else "N/A", qemu),
-                "kernel": (kernel_version.group(0) if kernel_version else "N/A", kernel),
-                "rasdaemon": ((ras_match.group(1) + "-" + result.revision[:12])
-                              if ras_match else "N/A", {}),
-            }
-            for component, (value, metadata) in values.items():
+            for component, (value, metadata) in result.versions().items():
                 name = f"{component}-{result.label}"
                 width = max(40, 7 * len(value) + 16)
                 safe = html.escape(value)
@@ -232,16 +257,17 @@ class ResultSite:  # pylint: disable=R0903
                                  quote=True)
         finished = html.escape(result.data.get("finished_at", "unknown"))
         prefix = "../" if len(self.results) > 1 else ""
-        versions = " ".join(
-            f'<a href="{prefix}{component}-{result.label}.html">'
-            f'{component}: <img src="{prefix}badge-{component}-{result.label}.svg" '
-            f'alt="{component} tested version"></a>'
+        versions = "".join(
+            f'<td><a href="{prefix}{component}-{result.label}.html">'
+            f'<img src="{prefix}badge-{component}-{result.label}.svg" '
+            f'alt="{component} tested version"></a></td>'
             for component in ("qemu", "kernel", "rasdaemon"))
 
         return f'''<p>Completed {finished}. Tested rasdaemon revision
 <a href="{source_url}"><code>{result.revision[:12]}</code></a>.
 See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and artifact.</p>
-<p>Tested versions: {versions}</p>
+<h2>Tested versions</h2><table><thead><tr><th>QEMU</th><th>Linux kernel</th>
+<th>rasdaemon</th></tr></thead><tbody><tr>{versions}</tr></tbody></table>
 <p>Download: <a href="summary.rst">summary</a>, <a href="result.json">JSON</a>,
 <a href="junit.xml">JUnit</a>, <a href="results.log">result log</a>,
 <a href="console.log">guest console</a>, <a href="qemu.log">QEMU log</a>.</p>'''
@@ -320,6 +346,15 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
                        '<table><thead><tr><th>Report</th><th>Check</th><th>Status</th>'
                        '<th>Reason</th></tr></thead><tbody>' + other_body +
                        '</tbody></table>') if other_rows else ""
+        version_result = self.results[0]
+        version_cells = "".join(
+            f'<td><a href="{component}-{version_result.label}.html">'
+            f'<img src="badge-{component}-{version_result.label}.svg" '
+            f'alt="{component} tested version"></a></td>'
+            for component in ("qemu", "kernel", "rasdaemon"))
+        version_table = ('<h2>Tested versions</h2><table><thead><tr>'
+                         '<th>QEMU</th><th>Linux kernel</th><th>rasdaemon</th>'
+                         f'</tr></thead><tbody><tr>{version_cells}</tr></tbody></table>')
         page = f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(self.title)}</title><link rel="stylesheet" href="{assets}/results.css">
@@ -328,6 +363,7 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
  aria-label="Change color theme">◐ Auto</button>
 <h1>{html.escape(self.title)}</h1><p>Latest published result. See the
 <a href="{run_url}">GitHub Actions run</a> for the complete workflow log.</p>
+{version_table}
 {feature_summary}
 <h2>Run status</h2><table><thead><tr><th>Features PASS</th><th>Features FAIL</th>
 <th>Features not tested</th><th>x86 VM</th><th>ARM64 VM</th></tr></thead><tbody><tr>

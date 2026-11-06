@@ -55,5 +55,15 @@ class SourceRefsTest(unittest.TestCase):
                 source_refs.resolve_ref("example", "refs/tags/v7.2"),
                 ("b" * 40, "refs/tags/v7.2"))
 
+    def test_exact_tags_peels_annotated_tags(self):
+        refs = {"refs/tags/v1.0": "a" * 40,
+                "refs/tags/v2.0": "b" * 40,
+                "refs/tags/v2.0^{}": "a" * 40,
+                "refs/tags/v3.0": "a" * 40,
+                "refs/tags/v3.0^{}": "c" * 40}
+        with mock.patch.object(source_refs, "ls_remote", return_value=refs):
+            self.assertEqual(source_refs.exact_tags("example", "a" * 40),
+                             ["v1.0", "v2.0"])
+
 if __name__ == "__main__":
     unittest.main()

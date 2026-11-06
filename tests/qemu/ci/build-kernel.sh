@@ -33,6 +33,8 @@ git -C "$work/source" checkout -q --detach FETCH_HEAD
 commit=$(git -C "$work/source" rev-parse HEAD)
 
 mkdir -p "$work/build" "$output/modules" "$output/metadata"
+python3 "$script_dir/../source_refs.py" exact-tags --repository "$repository" \
+    --commit "$commit" > "$output/metadata/kernel-tags.json"
 case $arch in
 x86_64) kernel_arch=x86; defconfig=x86_64_defconfig; image_target=bzImage; image_path=arch/x86/boot/bzImage ;;
 aarch64|arm64) arch=aarch64; kernel_arch=arm64; defconfig=defconfig; image_target=Image; image_path=arch/arm64/boot/Image ;;

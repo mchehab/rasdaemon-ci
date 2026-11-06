@@ -23,6 +23,10 @@ jobs:
       matrix:
         mode: [random, zero, boundaries]
     steps:
+      - name: Check out CI harness
+        uses: actions/checkout@v7
+        with:
+          path: ci-harness
       - uses: actions/checkout@v7
         with:
           repository: mchehab/rasdaemon
@@ -38,6 +42,10 @@ jobs:
           mkdir -p "build/fuzz/$FUZZ_MODE"
           git -C rasdaemon-source rev-parse HEAD \
             > "build/fuzz/$FUZZ_MODE/rasdaemon-source-revision"
+          python3 ci-harness/tests/qemu/source_refs.py exact-tags \
+            --repository https://github.com/mchehab/rasdaemon.git \
+            --commit "$(cat "build/fuzz/$FUZZ_MODE/rasdaemon-source-revision")" \
+            > "build/fuzz/$FUZZ_MODE/rasdaemon-tags.json"
 
       - name: Run isolated fuzz VM
         env:
@@ -50,6 +58,11 @@ jobs:
           mkdir -p "build/fuzz/$FUZZ_MODE"
           docker run --rm --entrypoint cat "$IMAGE" /opt/rasdaemon-ci/kernel/kernel.json > "build/fuzz/$FUZZ_MODE/kernel.json"
           docker run --rm --entrypoint cat "$IMAGE" /opt/rasdaemon-ci/qemu.json > "build/fuzz/$FUZZ_MODE/qemu.json"
+          for component in kernel qemu; do
+            path="/opt/rasdaemon-ci/$component-tags.json"
+            if test "$component" = kernel; then path="/opt/rasdaemon-ci/kernel/kernel-tags.json"; fi
+            docker run --rm --entrypoint cat "$IMAGE" "$path" > "build/fuzz/$FUZZ_MODE/$component-tags.json" || rm -f "build/fuzz/$FUZZ_MODE/$component-tags.json"
+          done
           docker_args=(--rm)
 
           if test -r /dev/kvm && test -w /dev/kvm; then

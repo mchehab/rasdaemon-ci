@@ -89,6 +89,16 @@ def resolve_ref(repository: str, ref: str) -> tuple[str, str]:
     raise SourceError("%s does not advertise ref %s" % (repository, ref))
 
 
+def exact_tags(repository: str, commit: str) -> list[str]:
+    """Find lightweight and peeled annotated tags pointing at a commit."""
+    if not FULL_SHA.fullmatch(commit):
+        raise SourceError("invalid source commit")
+    refs = ls_remote(repository, "refs/tags/*", include_peeled=True)
+    return sorted(ref.removeprefix("refs/tags/") for ref, value in refs.items()
+                  if ref.startswith("refs/tags/") and not ref.endswith("^{}")
+                  and refs.get(ref + "^{}", value) == commit)
+
+
 def resolve_kernel(repository: str, channel: str,
                    ref: str | None = None) -> dict[str, str]:
     if channel == "custom":
@@ -117,6 +127,9 @@ def create_parser() -> argparse.ArgumentParser:
     kernel.add_argument("--channel", choices=("latest", "release", "rc", "custom"),
                         default="latest")
     kernel.add_argument("--ref")
+    tags = commands.add_parser("exact-tags")
+    tags.add_argument("--repository", required=True)
+    tags.add_argument("--commit", required=True)
     return parser
 
 
@@ -129,6 +142,8 @@ def main(argv: list[str] | None = None) -> int:
                       "commit": commit}
         elif args.command == "resolve-kernel":
             result = resolve_kernel(args.repository, args.channel, args.ref)
+        elif args.command == "exact-tags":
+            result = {"commit": args.commit, "tags": exact_tags(args.repository, args.commit)}
         else:
             raise SourceError("unknown command")
         json.dump(result, sys.stdout, sort_keys=True)

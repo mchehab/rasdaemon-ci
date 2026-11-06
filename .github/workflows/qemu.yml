@@ -35,7 +35,7 @@ jobs:
           changed=false
 
           if ! git diff --quiet "$BEFORE" "$AFTER" -- \
-              tests/qemu/ci/build-qemu.sh .github/workflows/qemu.yml; then
+              tests/qemu/ci/build-qemu.sh tests/qemu/source_refs.py .github/workflows/qemu.yml; then
             changed=true
           fi
 

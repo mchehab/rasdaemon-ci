@@ -93,14 +93,25 @@ def archive_index(retained: list[tuple[str, dict]]) -> str:
         readable = timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
         report = html.escape(f"../{name}/{kind}/index.html", quote=True)
         evidence = html.escape(f"../{name}/", quote=True)
+        selected = next(item for item in items if item["kind"] == kind)
+        versions = selected.get("versions", {})
+        label = selected.get("version_label", "")
+        cells = ""
+        for component in ("qemu", "kernel", "rasdaemon"):
+            value = html.escape(versions.get(component, "—"))
+            if label and component in versions:
+                target = html.escape(f"../{name}/{kind}/{component}-{label}.html", quote=True)
+                value = f'<a href="{target}">{value}</a>'
+            cells += f"<td>{value}</td>"
         rows.append(f'<tr><td><a href="{report}">{readable}</a></td>'
-                    f'<td><a href="{evidence}">{status}</a></td></tr>')
+                    f'<td><a href="{evidence}">{status}</a></td>{cells}</tr>')
 
     page = ["<!doctype html><html lang=\"en\"><meta charset=\"utf-8\">"]
     page.append("<title>rasdaemon CI evidence archive</title>")
     page.append("<h1>rasdaemon CI evidence archive</h1>")
     page.append("<p>Failed runs are retained indefinitely. Successful runs are retained for 30 days.</p>")
-    page.append("<table><thead><tr><th>Time (UTC)</th><th>Status</th></tr></thead><tbody>" +
+    page.append("<table><thead><tr><th>Time (UTC)</th><th>Status</th>"
+                "<th>QEMU</th><th>Linux kernel</th><th>rasdaemon</th></tr></thead><tbody>" +
                 "".join(rows) + "</tbody></table>")
     return "\n".join(page) + "\n"
 
@@ -443,6 +454,21 @@ def archive(store: str, site: str, inputs: list[str], now: datetime.datetime) ->
         destination = os.path.join(store, name)
         os.makedirs(destination, exist_ok=True)
         metadata_path = os.path.join(destination, f"{kind}.json")
+        if os.path.isfile(metadata_path):
+            with open(metadata_path, encoding="utf-8") as stream:
+                previous = json.load(stream)
+            for key in ("versions", "version_label"):
+                if key in previous:
+                    metadata[key] = previous[key]
+        else:
+            for label in sorted(os.listdir(result_dir)):
+                directory = os.path.join(result_dir, label)
+                if os.path.isdir(directory) and os.path.isfile(os.path.join(directory, "result.json")):
+                    result = PublishedResult(label, directory)
+                    metadata["version_label"] = label
+                    metadata["versions"] = {key: value for key, (value, _meta)
+                                            in result.versions().items()}
+                    break
         with open(metadata_path, "w", encoding="utf-8") as stream:
             json.dump({**metadata, "kind": kind}, stream, indent=2)
             stream.write("\n")
