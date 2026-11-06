@@ -2,9 +2,14 @@ rasdaemon-ci
 ============
 
 Independent continuous-integration infrastructure for `rasdaemon
-<https://github.com/mchehab/rasdaemon>`_. It builds current Linux and QEMU
-sources, exercises rasdaemon in isolated virtual machines, and publishes
-results intended for human review.
+<https://github.com/mchehab/rasdaemon>`_.
+
+It builds current Linux and QEMU sources, exercises rasdaemon in isolated
+virtual machines, and publishes end-to-end results.
+
+Tests cover both Linux Kernel and rasdaemon. QEMU and EDK2 BIOS are also
+indirectly tested, as the error injection logic depends on features that
+exists on both.
 
 Latest reports
 --------------
@@ -59,23 +64,23 @@ Latest reports
    * - Scope
      - PASS
      - FAIL
-     - Tested version (x86_64 / ARM64)
+     - Version
    * - Features
      - |feature-pass|
      - |feature-fail|
-     - —
+     - N/A
    * - QEMU
-     - —
-     - —
-     - |qemu-x86_64| / |qemu-aarch64|
+     - N/A
+     - N/A
+     - |qemu-x86_64|
    * - Kernel checks
      - |kernel-pass|
      - |kernel-fail|
-     - |kernel-x86_64| / |kernel-aarch64|
+     - |kernel-x86_64|
    * - rasdaemon checks
      - |rasdaemon-pass|
      - |rasdaemon-fail|
-     - |rasdaemon-x86_64| / |rasdaemon-aarch64|
+     - |rasdaemon-x86_64|
 
 .. list-table:: VM health
    :header-rows: 1
