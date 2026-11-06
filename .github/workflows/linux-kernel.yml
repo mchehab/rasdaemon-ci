@@ -35,22 +35,19 @@ jobs:
           changed=false
 
           if ! git diff --quiet "$BEFORE" "$AFTER" -- \
-              tests/qemu/ci/build-kernel.sh tests/qemu/guest/test-driver .github/workflows/linux-kernel.yml; then
+              tests/qemu/ci/build-kernel.sh tests/qemu/guest/test-driver tests/qemu/source_refs.py .github/workflows/linux-kernel.yml; then
             changed=true
           fi
 
           echo "build_changed=$changed" >> "$GITHUB_OUTPUT"
 
-      - name: Resolve latest Linux release
+      - name: Resolve latest Linux release or release candidate
         id: source
         run: |
-          # Stable releases only; excludes -rc tags.
-          # To use release candidates instead, use --channel rc below.
-
           python3 tests/qemu/source_refs.py \
             resolve-kernel \
             --repository git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git \
-            --channel release > kernel.json
+            --channel latest > kernel.json
 
           ref=$(python3 -c \
             'import json; print(json.load(open("kernel.json"))["commit"])')

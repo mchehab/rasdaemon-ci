@@ -2,7 +2,7 @@
 name: RAS CI pipeline
 
 # Single build/test entry point. Daily polling resolves rasdaemon master,
-# QEMU rasdaemon_tests, and the latest final Linux release. Immediate upstream
+# QEMU rasdaemon_tests, and the latest Linux release or release candidate. Immediate upstream
 # notifications require a source workflow or external webhook to send an
 # upstream-changed repository dispatch; cross-repository pushes do not do so.
 on:

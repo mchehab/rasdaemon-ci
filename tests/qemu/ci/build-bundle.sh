@@ -4,7 +4,7 @@
 set -o pipefail
 
 arch=x86_64
-channel=release
+channel=latest
 kernel_repository=https://github.com/torvalds/linux.git
 kernel_ref=
 qemu_repository=https://gitlab.com/mchehab_kernel/qemu.git

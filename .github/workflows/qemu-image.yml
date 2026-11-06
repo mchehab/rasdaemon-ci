@@ -161,7 +161,7 @@ jobs:
 
       - name: Build image
         run: |
-          tests/qemu/ci/build-bundle.sh --arch "$TEST_ARCH" --channel release \
+          tests/qemu/ci/build-bundle.sh --arch "$TEST_ARCH" \
             --kernel-dir build/kernel --qemu-dir build/qemu \
             --kernel-json build/kernel/metadata/kernel.json \
             --base-sha512 '${{ steps.base.outputs.sha }}' \

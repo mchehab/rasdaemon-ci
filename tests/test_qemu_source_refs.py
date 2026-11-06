@@ -24,6 +24,22 @@ class SourceRefsTest(unittest.TestCase):
         self.assertEqual(source_refs.select_kernel_tag(refs, "rc"),
                          "v6.19-rc1")
 
+    def test_latest_orders_candidates_and_final_releases(self):
+        refs = {"refs/tags/v6.18": "1" * 40,
+                "refs/tags/v6.19-rc2": "2" * 40,
+                "refs/tags/v6.19-rc10": "3" * 40,
+                "refs/tags/v6.18.1": "4" * 40,
+                "refs/tags/v6.20-rc1^{}": "5" * 40}
+        self.assertEqual(source_refs.select_kernel_tag(refs, "latest"), "v6.19-rc10")
+        refs["refs/tags/v6.19"] = "6" * 40
+        self.assertEqual(source_refs.select_kernel_tag(refs, "latest"), "v6.19")
+        refs["refs/tags/v7.0-rc1"] = "7" * 40
+        self.assertEqual(source_refs.select_kernel_tag(refs, "latest"), "v7.0-rc1")
+
+    def test_latest_requires_a_matching_tag(self):
+        with self.assertRaises(source_refs.SourceError):
+            source_refs.select_kernel_tag({"refs/tags/v6.19.1": "1" * 40}, "latest")
+
     def test_resolve_ref_accepts_branch(self):
         with mock.patch.object(source_refs, "ls_remote", return_value={
                 "refs/heads/master": "a" * 40}):

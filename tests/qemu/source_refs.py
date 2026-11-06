@@ -52,15 +52,18 @@ def ls_remote(repository: str, *patterns: str,
 
 
 def select_kernel_tag(refs: dict[str, str], channel: str) -> str:
-    pattern = FINAL_TAG if channel == "release" else RC_TAG
     candidates = []
 
     for ref in refs:
         name = ref.removeprefix("refs/tags/")
-        match = pattern.fullmatch(name)
-        if match:
-            candidates.append((tuple(int(value) for value in match.groups()),
-                               name))
+        final = FINAL_TAG.fullmatch(name)
+        rc = RC_TAG.fullmatch(name)
+        if final and channel in ("release", "latest"):
+            major, minor = (int(value) for value in final.groups())
+            candidates.append(((major, minor, 1, 0), name))
+        elif rc and channel in ("rc", "latest"):
+            major, minor, number = (int(value) for value in rc.groups())
+            candidates.append(((major, minor, 0, number), name))
 
     if not candidates:
         raise SourceError("no %s kernel tags found" % channel)
@@ -111,8 +114,8 @@ def create_parser() -> argparse.ArgumentParser:
     git_ref.add_argument("--ref", required=True)
     kernel = commands.add_parser("resolve-kernel")
     kernel.add_argument("--repository", default=DEFAULT_KERNEL_REPOSITORY)
-    kernel.add_argument("--channel", choices=("release", "rc", "custom"),
-                        default="release")
+    kernel.add_argument("--channel", choices=("latest", "release", "rc", "custom"),
+                        default="latest")
     kernel.add_argument("--ref")
     return parser
 
