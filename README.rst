@@ -13,12 +13,22 @@ exists on both.
 
 The end-to-end tests follow this diagram::
 
-                         +-------------------------+
-                         | +------+  +-----------+ |       +--------+       +-----------+
-        Error inject --> | | QMP  |  | EDK2 BIOS | | ----> | Kernel | ----> | rasdaemon | --> Check
-                         | +------+  +-----------+ |       +--------+       +-----------+
-                         |          QEMU           |
-                         +-------------------------+
+                           +-------------------------------------+
+                           |       Firmware First Handling       |
+                           |     +------+      +-----------+     |
+                           | --> | QMP  | ---> | EDK2 BIOS | --> |
+                           |     +------+      +-----------+     |     +--------+     +-----------+
+          Error inject --> |                                     | --> | Kernel | --> | rasdaemon | --> Check
+                           |        Kernel First Handling        |     +--------+     +-----------+
+                           | ----------------------------------> |
+                           |                                     |
+                           |                QEMU                 |
+                           +-------------------------------------+
+
+For error inject, firmware-first errors are injected via QEMU QMP interface,
+using scripts/ghes_inject.py. There are other mechanisms used as well to inject
+errors that simulate hardware failures and are detected inside either a
+Linux Kernel driver or on a subsystem driver's core.
 
 Latest results
 --------------
