@@ -114,10 +114,12 @@ class ResultSiteTest(unittest.TestCase):
                     json.dump(metadata, stream)
             with open(os.path.join(result_dir, "kernel-tags.json"), "w", encoding="utf-8") as stream:
                 json.dump({"commit": "b" * 40, "tags": ["v7.3"]}, stream)
+            with open(os.path.join(result_dir, "qemu-describe.json"), "w", encoding="utf-8") as stream:
+                json.dump({"commit": "c" * 40, "describe": "v11.1.0-5-g1234567"}, stream)
             with open(os.path.join(result_dir, "console.log"), "w", encoding="utf-8") as stream:
                 stream.write("rasdaemon payload version=rasdaemon 1.0.0; source HEAD=unknown\n")
             ResultSite("Daily", site_dir, "https://example.test/run", "https://github.com/mchehab/rasdaemon", "failure", [PublishedResult("aarch64", result_dir)]).write()
-            for name, version, target in (("qemu", "11.1.1", "/-/commit/" + "c" * 40),
+            for name, version, target in (("qemu", "v11.1.0-5-g1234567", "/-/commit/" + "c" * 40),
                                           ("kernel", "v7.3", "/commit/" + "b" * 40),
                                           ("rasdaemon", "1.0.0-aaaaaaaaaaaa", "/commit/" + "a" * 40)):
                 with open(os.path.join(site_dir, f"badge-{name}-aarch64.svg"), encoding="utf-8") as stream:

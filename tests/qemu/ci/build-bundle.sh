@@ -91,9 +91,6 @@ fi
 
 cp -a "$qemu_dir/root" "$context/root"
 cp "$kernel_dir/metadata/kernel.json" "$context/rasdaemon-ci/kernel/"
-if test -f "$kernel_dir/metadata/kernel-tags.json"; then
-	cp "$kernel_dir/metadata/kernel-tags.json" "$context/rasdaemon-ci/kernel/"
-fi
 
 if test -f "$kernel_dir/metadata/config-status.tsv"; then
 	cp "$kernel_dir/metadata/config-status.tsv" "$context/rasdaemon-ci/kernel/"
@@ -101,9 +98,6 @@ fi
 
 cp "$kernel_dir/config-"* "$context/rasdaemon-ci/kernel/"
 cp "$qemu_dir/metadata/qemu.json" "$context/rasdaemon-ci/"
-if test -f "$qemu_dir/metadata/qemu-tags.json"; then
-	cp "$qemu_dir/metadata/qemu-tags.json" "$context/rasdaemon-ci/"
-fi
 cp "$project_dir/tests/qemu/oci/rasdaemon-ci.py" "$context/"
 cp "$project_dir/tests/qemu/ras_qemu.py" \
 	"$context/rasdaemon-ci/harness/"

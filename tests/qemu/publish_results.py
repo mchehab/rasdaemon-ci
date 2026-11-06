@@ -93,11 +93,21 @@ class PublishedResult:  # pylint: disable=R0903
                "rasdaemon": (ras_match.group(1) if ras_match else "", {})}
         values = {}
         for component, (version, source) in raw.items():
+            commit = self.revision if component == "rasdaemon" else source.get("commit", "")
+            description = read(component + "-describe.json")
+            if description:
+                try:
+                    described = json.loads(description)
+                except json.JSONDecodeError:
+                    described = {}
+                value = described.get("describe") if described.get("commit") == commit else None
+                values[component] = (value if isinstance(value, str) and value else "N/A", source)
+                continue
+            # Older artifacts predate recorded git describe output.
             try:
                 tags = json.loads(read(component + "-tags.json") or "{}")
             except json.JSONDecodeError:
                 tags = {}
-            commit = self.revision if component == "rasdaemon" else source.get("commit", "")
             values[component] = (format_version(version, commit, tags), source)
         return values
 

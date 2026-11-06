@@ -8,6 +8,7 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 
 
 DEFAULT_KERNEL_REPOSITORY = "https://github.com/torvalds/linux.git"
@@ -99,6 +100,22 @@ def exact_tags(repository: str, commit: str) -> list[str]:
                   and refs.get(ref + "^{}", value) == commit)
 
 
+def describe_commit(repository: str, commit: str) -> dict:
+    """Run git describe on the tested commit with its history and tags available."""
+    if not FULL_SHA.fullmatch(commit):
+        raise SourceError("invalid source commit")
+    with tempfile.TemporaryDirectory(prefix="ras-ci-describe-") as directory:
+        run(["git", "init", "-q", directory])
+        run(["git", "-C", directory, "-c", "protocol.version=2", "fetch", "-q",
+             "--filter=tree:0", "--no-recurse-submodules", repository, commit,
+             "+refs/tags/*:refs/tags/*"])
+        result = subprocess.run(["git", "-C", directory, "describe", commit],
+                                check=False, text=True, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+        return {"commit": commit, "describe": result.stdout.strip() if not result.returncode else None,
+                "error": result.stderr.strip() if result.returncode else ""}
+
+
 def resolve_kernel(repository: str, channel: str,
                    ref: str | None = None) -> dict[str, str]:
     if channel == "custom":
@@ -130,6 +147,13 @@ def create_parser() -> argparse.ArgumentParser:
     tags = commands.add_parser("exact-tags")
     tags.add_argument("--repository", required=True)
     tags.add_argument("--commit", required=True)
+    metadata_tags = commands.add_parser("tags-for-metadata")
+    metadata_tags.add_argument("--metadata", required=True)
+    describe = commands.add_parser("describe")
+    describe.add_argument("--repository", required=True)
+    describe.add_argument("--commit", required=True)
+    describe_metadata = commands.add_parser("describe-metadata")
+    describe_metadata.add_argument("--metadata", required=True)
     return parser
 
 
@@ -144,12 +168,23 @@ def main(argv: list[str] | None = None) -> int:
             result = resolve_kernel(args.repository, args.channel, args.ref)
         elif args.command == "exact-tags":
             result = {"commit": args.commit, "tags": exact_tags(args.repository, args.commit)}
+        elif args.command == "tags-for-metadata":
+            with open(args.metadata, encoding="utf-8") as stream:
+                metadata = json.load(stream)
+            commit = metadata["commit"]
+            result = {"commit": commit, "tags": exact_tags(metadata["repository"], commit)}
+        elif args.command == "describe":
+            result = describe_commit(args.repository, args.commit)
+        elif args.command == "describe-metadata":
+            with open(args.metadata, encoding="utf-8") as stream:
+                metadata = json.load(stream)
+            result = describe_commit(metadata["repository"], metadata["commit"])
         else:
             raise SourceError("unknown command")
         json.dump(result, sys.stdout, sort_keys=True)
         sys.stdout.write("\n")
         return 0
-    except (OSError, json.JSONDecodeError, SourceError) as error:
+    except (OSError, json.JSONDecodeError, SourceError, KeyError) as error:
         print("source-refs: %s" % error, file=sys.stderr)
         return 2
 

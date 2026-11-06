@@ -2,6 +2,11 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
 import json
+import contextlib
+import io
+import os
+import subprocess
+import tempfile
 import unittest
 from unittest import mock
 
@@ -64,6 +69,42 @@ class SourceRefsTest(unittest.TestCase):
         with mock.patch.object(source_refs, "ls_remote", return_value=refs):
             self.assertEqual(source_refs.exact_tags("example", "a" * 40),
                              ["v1.0", "v2.0"])
+
+    def test_cached_image_metadata_resolves_actual_annotated_tag(self):
+        with tempfile.TemporaryDirectory() as directory:
+            def git(*args):
+                return subprocess.check_output(["git", "-C", directory, *args],
+                                               text=True, stderr=subprocess.DEVNULL).strip()
+            git("init")
+            git("config", "user.name", "Test")
+            git("config", "user.email", "test@example.test")
+            git("commit", "--allow-empty", "-m", "test")
+            commit = git("rev-parse", "HEAD")
+            git("tag", "-a", "v7.4-rc1", "-m", "release")
+            metadata = os.path.join(directory, "kernel.json")
+            with open(metadata, "w", encoding="utf-8") as stream:
+                json.dump({"repository": directory, "commit": commit}, stream)
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(source_refs.main(["tags-for-metadata", "--metadata", metadata]), 0)
+            self.assertEqual(json.loads(output.getvalue())["tags"],
+                             [git("describe", "--exact-match", "--tags", commit)])
+
+    def test_describe_matches_git_for_tag_and_descendant(self):
+        with tempfile.TemporaryDirectory() as directory:
+            def git(*args):
+                return subprocess.check_output(["git", "-C", directory, *args],
+                                               text=True, stderr=subprocess.DEVNULL).strip()
+            git("init")
+            git("config", "user.name", "Test")
+            git("config", "user.email", "test@example.test")
+            git("commit", "--allow-empty", "-m", "release")
+            git("tag", "-a", "v7.4-rc1", "-m", "release")
+            tagged = git("rev-parse", "HEAD")
+            git("commit", "--allow-empty", "-m", "next")
+            for commit in (tagged, git("rev-parse", "HEAD")):
+                actual = source_refs.describe_commit(directory, commit)
+                self.assertEqual(actual["describe"], git("describe", commit))
 
 if __name__ == "__main__":
     unittest.main()

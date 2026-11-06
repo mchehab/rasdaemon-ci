@@ -6,7 +6,6 @@ set -o pipefail
 repository=https://gitlab.com/mchehab_kernel/qemu.git
 ref=rasdaemon_tests
 output=
-script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 jobs=${JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)}
 
 while test $# -gt 0; do
@@ -61,8 +60,6 @@ qmp_wheel=$(find "$work/source/python/wheels" -maxdepth 1 \
 test -n "$qmp_wheel"
 cp "$qmp_wheel" "$output/root/opt/qemu/libexec/rasdaemon/"
 
-python3 "$script_dir/../source_refs.py" exact-tags --repository "$repository" \
-    --commit "$commit" > "$output/metadata/qemu-tags.json"
 
 rm -rf "$output/root/opt/qemu/share/doc" \
 	"$output/root/opt/qemu/share/man"
