@@ -48,6 +48,8 @@ jobs:
           set -euxo pipefail
           docker pull "$IMAGE"
           mkdir -p "build/fuzz/$FUZZ_MODE"
+          docker run --rm --entrypoint cat "$IMAGE" /opt/rasdaemon-ci/kernel/kernel.json > "build/fuzz/$FUZZ_MODE/kernel.json"
+          docker run --rm --entrypoint cat "$IMAGE" /opt/rasdaemon-ci/qemu.json > "build/fuzz/$FUZZ_MODE/qemu.json"
           docker_args=(--rm)
 
           if test -r /dev/kvm && test -w /dev/kvm; then

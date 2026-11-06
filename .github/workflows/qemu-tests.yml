@@ -67,6 +67,13 @@ jobs:
         run: |
           echo "Using image $IMAGE_REF"
           docker pull "$IMAGE_REF"
+      - name: Record image provenance
+        env:
+          TEST_ARCH: ${{ matrix.arch }}
+        run: |
+          set -eux
+          docker run --rm --entrypoint cat "$IMAGE_REF" /opt/rasdaemon-ci/kernel/kernel.json > "build/qemu-results/$TEST_ARCH/kernel.json"
+          docker run --rm --entrypoint cat "$IMAGE_REF" /opt/rasdaemon-ci/qemu.json > "build/qemu-results/$TEST_ARCH/qemu.json"
       - name: Run
         env:
           TEST_ARCH: ${{ matrix.arch }}

@@ -34,21 +34,48 @@ Latest reports
    :alt: ARM64 VM status
    :target: https://mchehab.github.io/rasdaemon-ci/daily/aarch64/
 
+.. |qemu-x86_64| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-qemu-x86_64.svg
+   :alt: qemu x86_64 tested version
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/qemu-x86_64.html
+.. |qemu-aarch64| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-qemu-aarch64.svg
+   :alt: qemu aarch64 tested version
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/qemu-aarch64.html
+.. |kernel-x86_64| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-kernel-x86_64.svg
+   :alt: kernel x86_64 tested version
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/kernel-x86_64.html
+.. |kernel-aarch64| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-kernel-aarch64.svg
+   :alt: kernel aarch64 tested version
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/kernel-aarch64.html
+.. |rasdaemon-x86_64| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-rasdaemon-x86_64.svg
+   :alt: rasdaemon x86_64 tested version
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/rasdaemon-x86_64.html
+.. |rasdaemon-aarch64| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-rasdaemon-aarch64.svg
+   :alt: rasdaemon aarch64 tested version
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/rasdaemon-aarch64.html
+
 .. list-table:: Daily functional results
    :header-rows: 1
 
    * - Scope
      - PASS
      - FAIL
+     - Tested version (x86_64 / ARM64)
    * - Features
      - |feature-pass|
      - |feature-fail|
+     - —
+   * - QEMU
+     - —
+     - —
+     - |qemu-x86_64| / |qemu-aarch64|
    * - Kernel checks
      - |kernel-pass|
      - |kernel-fail|
+     - |kernel-x86_64| / |kernel-aarch64|
    * - rasdaemon checks
      - |rasdaemon-pass|
      - |rasdaemon-fail|
+     - |rasdaemon-x86_64| / |rasdaemon-aarch64|
 
 .. list-table:: VM health
    :header-rows: 1

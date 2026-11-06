@@ -180,16 +180,68 @@ class ResultSite:  # pylint: disable=R0903
             self._write_vm_badge(os.path.join(self.site_dir, f"badge-{filename}.svg"),
                                  label, status)
 
+    def _write_versions(self) -> None:
+        """Publish version badges and exact source links for each result."""
+        for result in self.results:
+            def read(name):
+                try:
+                    with open(os.path.join(result.directory, name), encoding="utf-8") as stream:
+                        return stream.read()
+                except OSError:
+                    return ""
+
+            try:
+                kernel = json.loads(read("kernel.json") or "{}")
+                qemu = json.loads(read("qemu.json") or "{}")
+            except json.JSONDecodeError:
+                kernel, qemu = {}, {}
+            qemu_line = next((item.get("value", "") for item in
+                              result.data.get("capabilities", [])
+                              if item.get("name") == "qemu"), "")
+            qemu_match = re.search(r"version\s+([0-9][\w.+-]*)", qemu_line)
+            ras_match = re.search(r"rasdaemon payload version=rasdaemon\s+([^\s;]+)",
+                                  read("console.log"))
+            kernel_version = re.match(r"[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:-rc[0-9]+)?",
+                                      kernel.get("release", ""))
+            values = {
+                "qemu": (qemu_match.group(1) if qemu_match else "N/A", qemu),
+                "kernel": (kernel_version.group(0) if kernel_version else "N/A", kernel),
+                "rasdaemon": ((ras_match.group(1) + "-" + result.revision[:12])
+                              if ras_match else "N/A", {}),
+            }
+            for component, (value, metadata) in values.items():
+                name = f"{component}-{result.label}"
+                width = max(40, 7 * len(value) + 16)
+                safe = html.escape(value)
+                with open(os.path.join(self.site_dir, f"badge-{name}.svg"), "w", encoding="utf-8") as stream:
+                    stream.write(f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="20" role="img" aria-label="{safe}"><rect width="{width}" height="20" rx="3" fill="#555"/><text x="{width // 2}" y="14" fill="white" text-anchor="middle" font-family="Verdana,sans-serif" font-size="11">{safe}</text></svg>\n')
+                if component == "rasdaemon":
+                    url = self.source_repository.rstrip("/") + "/commit/" + result.revision
+                else:
+                    repository = metadata.get("repository", "").removesuffix(".git")
+                    commit = metadata.get("commit", "")
+                    url = (repository + ("/-/commit/" if "gitlab.com/" in repository else "/commit/") + commit
+                           if repository.startswith("https://") and SOURCE_REVISION.fullmatch(commit) else self.run_url)
+                with open(os.path.join(self.site_dir, name + ".html"), "w", encoding="utf-8") as stream:
+                    stream.write('<!doctype html><meta http-equiv="refresh" content="0; url=' + html.escape(url, quote=True) + '">')
+
     def _metadata_html(self, result: PublishedResult) -> str:
         run_url = html.escape(self.run_url, quote=True)
         repository = self.source_repository.rstrip("/")
         source_url = html.escape(f"{repository}/commit/{result.revision}",
                                  quote=True)
         finished = html.escape(result.data.get("finished_at", "unknown"))
+        prefix = "../" if len(self.results) > 1 else ""
+        versions = " ".join(
+            f'<a href="{prefix}{component}-{result.label}.html">'
+            f'{component}: <img src="{prefix}badge-{component}-{result.label}.svg" '
+            f'alt="{component} tested version"></a>'
+            for component in ("qemu", "kernel", "rasdaemon"))
 
         return f'''<p>Completed {finished}. Tested rasdaemon revision
 <a href="{source_url}"><code>{result.revision[:12]}</code></a>.
 See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and artifact.</p>
+<p>Tested versions: {versions}</p>
 <p>Download: <a href="summary.rst">summary</a>, <a href="result.json">JSON</a>,
 <a href="junit.xml">JUnit</a>, <a href="results.log">result log</a>,
 <a href="console.log">guest console</a>, <a href="qemu.log">QEMU log</a>.</p>'''
@@ -327,6 +379,7 @@ are not counted as regressions.</p>
             self._write_index(totals)
 
         self._write_badges(totals)
+        self._write_versions()
 
 
 def result_argument(value: str) -> PublishedResult:

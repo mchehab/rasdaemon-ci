@@ -5,8 +5,10 @@ import json
 import os
 import tempfile
 import unittest
+import datetime
 
 from tests.qemu.publish_results import PublishedResult, ResultSite
+from tests.qemu.archive_results import archive
 
 
 class ResultSiteTest(unittest.TestCase):
@@ -85,6 +87,58 @@ class ResultSiteTest(unittest.TestCase):
         self.assertIn("ARM64 VM: unavailable", badges["arm64-vm-fail"])
         self.assertIn(">⬤</text>", badges["x86-vm-fail"])
         self.assertIn('width="40" height="20"', badges["feature-pass"])
+
+    def test_versions_link_to_the_tested_sources(self) -> None:
+        """Version badges identify the image and the exact source commits."""
+        with tempfile.TemporaryDirectory() as temporary:
+            result_dir = os.path.join(temporary, "result")
+            site_dir = os.path.join(temporary, "site")
+            self._write_result(result_dir, "a" * 40, arch="aarch64")
+            with open(os.path.join(result_dir, "result.json"), encoding="utf-8") as stream:
+                data = json.load(stream)
+            data["capabilities"] = [{"name": "qemu", "value": "QEMU emulator version 11.1.1"}]
+            with open(os.path.join(result_dir, "result.json"), "w", encoding="utf-8") as stream:
+                json.dump(data, stream)
+            for name, metadata in (("kernel", {"release": "7.3.0-gabc", "repository": "https://github.com/torvalds/linux.git", "commit": "b" * 40}),
+                                   ("qemu", {"repository": "https://gitlab.com/example/qemu.git", "commit": "c" * 40})):
+                with open(os.path.join(result_dir, name + ".json"), "w", encoding="utf-8") as stream:
+                    json.dump(metadata, stream)
+            with open(os.path.join(result_dir, "console.log"), "w", encoding="utf-8") as stream:
+                stream.write("rasdaemon payload version=rasdaemon 1.0.0; source HEAD=unknown\n")
+            ResultSite("Daily", site_dir, "https://example.test/run", "https://github.com/mchehab/rasdaemon", "failure", [PublishedResult("aarch64", result_dir)]).write()
+            for name, version, target in (("qemu", "11.1.1", "/-/commit/" + "c" * 40),
+                                          ("kernel", "7.3.0", "/commit/" + "b" * 40),
+                                          ("rasdaemon", "1.0.0-aaaaaaaaaaaa", "/commit/" + "a" * 40)):
+                with open(os.path.join(site_dir, f"badge-{name}-aarch64.svg"), encoding="utf-8") as stream:
+                    self.assertIn(version, stream.read())
+                with open(os.path.join(site_dir, f"{name}-aarch64.html"), encoding="utf-8") as stream:
+                    self.assertIn(target, stream.read())
+
+    def test_archive_preserves_version_evidence(self) -> None:
+        """Archived reports retain the run's own version data and links."""
+        with tempfile.TemporaryDirectory() as temporary:
+            source = os.path.join(temporary, "input")
+            result_dir = os.path.join(source, "aarch64")
+            self._write_result(result_dir, "a" * 40, arch="aarch64")
+            with open(os.path.join(source, "run"), "w", encoding="utf-8") as stream:
+                stream.write("https://example.test/run\tfailure\t2026-11-06T04:00:00Z\t42\n")
+            metadata = {"release": "7.3.0-gabc", "repository": "https://github.com/torvalds/linux.git", "commit": "b" * 40}
+            with open(os.path.join(result_dir, "kernel.json"), "w", encoding="utf-8") as stream:
+                json.dump(metadata, stream)
+            store = os.path.join(temporary, "store")
+            site = os.path.join(temporary, "site")
+            archive(store, site, ["daily=" + source],
+                    datetime.datetime(2026, 11, 6, tzinfo=datetime.timezone.utc))
+            name = "20261106T040000Z-42"
+            with open(os.path.join(store, name, "daily", "aarch64", "kernel.json"), encoding="utf-8") as stream:
+                self.assertEqual(json.load(stream), metadata)
+            report = os.path.join(site, name, "daily")
+            with open(os.path.join(report, "index.html"), encoding="utf-8") as stream:
+                self.assertIn('badge-kernel-aarch64.svg', stream.read())
+            with open(os.path.join(report, "badge-kernel-aarch64.svg"), encoding="utf-8") as stream:
+                self.assertIn("7.3.0", stream.read())
+            with open(os.path.join(report, "kernel-aarch64.html"), encoding="utf-8") as stream:
+                self.assertIn("/commit/" + "b" * 40, stream.read())
 
     def test_multiple_results_are_aggregated_and_linked(self) -> None:
         """The weekly page totals all fuzz modes and retains each full report."""

@@ -93,7 +93,7 @@ class ConsumerChecks:
         self.thread.start()
         script = self.scenario.paths["database"] + ".trigger"
         code = ("#!/usr/bin/python3\nimport json, os\n"
-                f"with open({self.trigger_path!r}, 'w', encoding='utf-8') as stream:\n"
+                f"with open({self.trigger_path!r} + '.' + str(os.getpid()), 'w', encoding='utf-8') as stream:\n"
                 "    json.dump(dict(os.environ), stream)\n")
         with open(script, "w", encoding="utf-8") as stream:
             stream.write(code)
@@ -219,14 +219,15 @@ class ConsumerChecks:
                     "ABRT report must contain the injected page's PFN",
                     {"reports": [report.replace("\0", "\n") for report in reports]})
 
-        trigger = {}
-        if os.path.isfile(self.trigger_path):
-            with open(self.trigger_path, encoding="utf-8") as stream:
-                trigger = json.load(stream)
-        valid = trigger.get("PFN") == pfn and bool(trigger.get("ACTION_RESULT"))
+        triggers = []
+        for path in glob.glob(self.trigger_path + ".*"):
+            with open(path, encoding="utf-8") as stream:
+                triggers.append(json.load(stream))
+        valid = any(trigger.get("PFN") == pfn and trigger.get("ACTION_RESULT")
+                    for trigger in triggers)
         self.result("trigger", passed and valid,
                     "Memory-failure trigger must receive the injected PFN and action result",
-                    {"environment": trigger})
+                    {"expected_pfn": pfn, "environments": triggers})
 
         output = evidence.get("rasdaemon_output", "")
         warning = "Poison page statistics exceeded threshold:"
