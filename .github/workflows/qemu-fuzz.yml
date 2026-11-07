@@ -59,9 +59,18 @@ jobs:
           docker run --rm --entrypoint cat "$IMAGE" /opt/rasdaemon-ci/kernel/kernel.json > "build/fuzz/$FUZZ_MODE/kernel.json"
           docker run --rm --entrypoint cat "$IMAGE" /opt/rasdaemon-ci/qemu.json > "build/fuzz/$FUZZ_MODE/qemu.json"
           for component in kernel qemu; do
+            tag_args=()
+
+            if test "$component" = qemu; then
+              tag_args=(--tags-repository https://gitlab.com/qemu-project/qemu.git)
+            fi
+
             python3 ci-harness/tests/qemu/source_refs.py describe-metadata \
               --metadata "build/fuzz/$FUZZ_MODE/$component.json" \
+              "${tag_args[@]}" \
               > "build/fuzz/$FUZZ_MODE/$component-describe.json"
+            cat "build/fuzz/$FUZZ_MODE/$component.json"
+            cat "build/fuzz/$FUZZ_MODE/$component-describe.json"
           done
           docker_args=(--rm)
 

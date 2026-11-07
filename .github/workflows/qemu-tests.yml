@@ -83,9 +83,18 @@ jobs:
           docker run --rm --entrypoint cat "$IMAGE_REF" /opt/rasdaemon-ci/kernel/kernel.json > "build/qemu-results/$TEST_ARCH/kernel.json"
           docker run --rm --entrypoint cat "$IMAGE_REF" /opt/rasdaemon-ci/qemu.json > "build/qemu-results/$TEST_ARCH/qemu.json"
           for component in kernel qemu; do
+            tag_args=()
+
+            if test "$component" = qemu; then
+              tag_args=(--tags-repository https://gitlab.com/qemu-project/qemu.git)
+            fi
+
             python3 ci-harness/tests/qemu/source_refs.py describe-metadata \
               --metadata "build/qemu-results/$TEST_ARCH/$component.json" \
+              "${tag_args[@]}" \
               > "build/qemu-results/$TEST_ARCH/$component-describe.json"
+            cat "build/qemu-results/$TEST_ARCH/$component.json"
+            cat "build/qemu-results/$TEST_ARCH/$component-describe.json"
           done
       - name: Run
         env:

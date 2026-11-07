@@ -106,5 +106,48 @@ class SourceRefsTest(unittest.TestCase):
                 actual = source_refs.describe_commit(directory, commit)
                 self.assertEqual(actual["describe"], git("describe", commit))
 
+    def test_describe_uses_upstream_tags_for_fork_only_commit(self):
+        """Describe the fork's commit using upstream tags, even with conflicting fork tags."""
+        with tempfile.TemporaryDirectory() as directory:
+            upstream = os.path.join(directory, "upstream")
+            fork = os.path.join(directory, "fork")
+
+            def git(repository, *args):
+                return subprocess.check_output(["git", "-C", repository, *args],
+                                               text=True, stderr=subprocess.DEVNULL).strip()
+
+            os.mkdir(upstream)
+            git(upstream, "init")
+            git(upstream, "-c", "user.name=Test", "-c", "user.email=test@example.test",
+                "commit", "--allow-empty", "-m", "release")
+            git(upstream, "-c", "user.name=Test", "-c", "user.email=test@example.test",
+                "tag", "-a", "v11.1.0", "-m", "release")
+            git(directory, "clone", "--no-tags", upstream, fork)
+            git(fork, "-c", "user.name=Test", "-c", "user.email=test@example.test",
+                "commit", "--allow-empty", "-m", "fork changes")
+            commit = git(fork, "rev-parse", "HEAD")
+            metadata = os.path.join(directory, "qemu.json")
+
+            with open(metadata, "w", encoding="utf-8") as stream:
+                json.dump({"repository": fork, "commit": commit}, stream)
+
+            for fork_has_tags in (False, True):
+                if fork_has_tags:
+                    git(fork, "-c", "user.name=Test", "-c", "user.email=test@example.test",
+                        "tag", "-a", "v99.0.0", "-m", "fork-only tag")
+
+                output = io.StringIO()
+
+                with contextlib.redirect_stdout(output):
+                    status = source_refs.main(["describe-metadata", "--metadata", metadata,
+                                               "--tags-repository", upstream])
+
+                self.assertEqual(status, 0)
+                actual = json.loads(output.getvalue())
+                self.assertEqual(actual["commit"], commit)
+                self.assertRegex(actual["describe"], r"^v11\.1\.0-1-g" + commit[:7])
+                self.assertEqual(actual["error"], "")
+
+
 if __name__ == "__main__":
     unittest.main()

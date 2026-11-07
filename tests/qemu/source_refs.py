@@ -100,19 +100,22 @@ def exact_tags(repository: str, commit: str) -> list[str]:
                   and refs.get(ref + "^{}", value) == commit)
 
 
-def describe_commit(repository: str, commit: str) -> dict:
-    """Run git describe on the tested commit with its history and tags available."""
+def describe_commit(repository: str, commit: str, tags_repository: str | None = None) -> dict:
+    """Describe a tested commit using tags from an optional authoritative repository."""
     if not FULL_SHA.fullmatch(commit):
         raise SourceError("invalid source commit")
     with tempfile.TemporaryDirectory(prefix="ras-ci-describe-") as directory:
         run(["git", "init", "-q", directory])
         run(["git", "-C", directory, "-c", "protocol.version=2", "fetch", "-q",
-             "--filter=tree:0", "--no-recurse-submodules", repository, commit,
+             "--filter=tree:0", "--no-recurse-submodules", "--no-tags", repository, commit])
+        run(["git", "-C", directory, "-c", "protocol.version=2", "fetch", "-q",
+             "--filter=tree:0", "--no-recurse-submodules", tags_repository or repository,
              "+refs/tags/*:refs/tags/*"])
         result = subprocess.run(["git", "-C", directory, "describe", commit],
                                 check=False, text=True, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
-        return {"commit": commit, "describe": result.stdout.strip() if not result.returncode else None,
+        description = result.stdout.strip() if not result.returncode else None
+        return {"commit": commit, "describe": description,
                 "error": result.stderr.strip() if result.returncode else ""}
 
 
@@ -152,8 +155,10 @@ def create_parser() -> argparse.ArgumentParser:
     describe = commands.add_parser("describe")
     describe.add_argument("--repository", required=True)
     describe.add_argument("--commit", required=True)
+    describe.add_argument("--tags-repository")
     describe_metadata = commands.add_parser("describe-metadata")
     describe_metadata.add_argument("--metadata", required=True)
+    describe_metadata.add_argument("--tags-repository")
     return parser
 
 
@@ -174,11 +179,12 @@ def main(argv: list[str] | None = None) -> int:
             commit = metadata["commit"]
             result = {"commit": commit, "tags": exact_tags(metadata["repository"], commit)}
         elif args.command == "describe":
-            result = describe_commit(args.repository, args.commit)
+            result = describe_commit(args.repository, args.commit, args.tags_repository)
         elif args.command == "describe-metadata":
             with open(args.metadata, encoding="utf-8") as stream:
                 metadata = json.load(stream)
-            result = describe_commit(metadata["repository"], metadata["commit"])
+            result = describe_commit(metadata["repository"], metadata["commit"],
+                                     args.tags_repository)
         else:
             raise SourceError("unknown command")
         json.dump(result, sys.stdout, sort_keys=True)
