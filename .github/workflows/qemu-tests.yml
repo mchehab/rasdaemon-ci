@@ -4,6 +4,10 @@ name: RAS Daemon functional tests
 
 on:
   workflow_call:
+    inputs:
+      arch:
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -12,16 +16,8 @@ permissions:
 jobs:
   test:
     name: Test QEMU
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x86_64
-            runner: ubuntu-24.04
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
     steps:
       - name: Check out CI harness
         uses: actions/checkout@v7
@@ -29,11 +25,11 @@ jobs:
           path: ci-harness
       - uses: actions/download-artifact@v7
         with:
-          name: selected-image-${{ matrix.arch }}
+          name: selected-image-${{ inputs.arch }}
           path: selected/image
       - uses: actions/download-artifact@v7
         with:
-          name: selected-rasdaemon-${{ matrix.arch }}
+          name: selected-rasdaemon-${{ inputs.arch }}
           path: selected/
       - name: Read the selected image and payload
         id: selected
@@ -58,7 +54,7 @@ jobs:
 
       - name: Record tested rasdaemon revision
         env:
-          TEST_ARCH: ${{ matrix.arch }}
+          TEST_ARCH: ${{ inputs.arch }}
         run: |
           set -eux
 
@@ -76,7 +72,7 @@ jobs:
           docker pull "$IMAGE_REF"
       - name: Record image provenance
         env:
-          TEST_ARCH: ${{ matrix.arch }}
+          TEST_ARCH: ${{ inputs.arch }}
         run: |
           set -eux
           docker run --rm --entrypoint cat "$IMAGE_REF" /opt/rasdaemon-ci/kernel/kernel.json > "build/qemu-results/$TEST_ARCH/kernel.json"
@@ -88,7 +84,7 @@ jobs:
           done
       - name: Run
         env:
-          TEST_ARCH: ${{ matrix.arch }}
+          TEST_ARCH: ${{ inputs.arch }}
         run: |
           mkdir -p "build/qemu-results/$TEST_ARCH"
           docker_args=(--rm)
@@ -112,7 +108,7 @@ jobs:
       - name: Publish kernel and rasdaemon status table
         if: always()
         env:
-          TEST_ARCH: ${{ matrix.arch }}
+          TEST_ARCH: ${{ inputs.arch }}
         run: |
           set -eux
 
@@ -154,7 +150,7 @@ jobs:
         name: Upload
         if: always()
         with:
-          name: rasdaemon-qemu-results-${{ matrix.arch }}
-          path: build/qemu-results/${{ matrix.arch }}
+          name: rasdaemon-qemu-results-${{ inputs.arch }}
+          path: build/qemu-results/${{ inputs.arch }}
           retention-days: 90
           if-no-files-found: error

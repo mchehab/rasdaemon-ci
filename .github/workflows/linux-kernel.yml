@@ -2,43 +2,25 @@
 name: Build Linux kernel
 on:
   workflow_call:
+    inputs:
+      arch:
+        required: true
+        type: string
+      revision:
+        required: true
+        type: string
 permissions:
   actions: read
   contents: read
 jobs:
-  check:
-    name: Resolve kernel source
-    runs-on: ubuntu-24.04
-    outputs:
-      revision: ${{ steps.source.outputs.revision }}
-    steps:
-      - uses: actions/checkout@v7
-      - name: Pin source for both architectures
-        id: source
-        run: |
-          set -euxo pipefail
-          python3 tests/qemu/source_refs.py resolve-kernel --channel latest > kernel.json
-          revision=$(jq -r .commit kernel.json)
-          [[ "$revision" =~ ^[0-9a-f]{40}$ ]]
-          echo "revision=$revision" >> "$GITHUB_OUTPUT"
-
   build:
-    name: Build Linux kernel (${{ matrix.arch }})
-    needs: check
-    runs-on: ${{ matrix.runner }}
+    name: Build Linux kernel (${{ inputs.arch }})
+    runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     timeout-minutes: 360
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x86_64
-            runner: ubuntu-24.04
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
     env:
       COMPONENT: kernel
-      ARCH: ${{ matrix.arch }}
-      REVISION: ${{ needs.check.outputs.revision }}
+      ARCH: ${{ inputs.arch }}
+      REVISION: ${{ inputs.revision }}
     steps:
       - uses: actions/checkout@v7
       - name: Check matching compiled artifact
@@ -83,7 +65,7 @@ jobs:
             '{id: $id, revision: $revision}' > "selected/$COMPONENT.json"
       - uses: actions/upload-artifact@v7
         with:
-          name: selected-kernel-${{ matrix.arch }}
+          name: selected-kernel-${{ inputs.arch }}
           path: selected/
           retention-days: 14
           overwrite: true

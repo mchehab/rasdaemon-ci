@@ -28,20 +28,93 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Reusable builders have no independent automatic triggers. They reuse
-  # existing artifacts; unchanged images are reused even on a manual test rerun.
-  kernel:
+  sources:
+    name: Pin upstream sources
+    runs-on: ubuntu-24.04
+    outputs:
+      kernel: ${{ steps.source.outputs.kernel }}
+      qemu: ${{ steps.source.outputs.qemu }}
+      rasdaemon: ${{ steps.source.outputs.rasdaemon }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: source
+        run: |
+          set -euo pipefail
+          python3 tests/qemu/source_refs.py resolve-kernel --channel latest > kernel.json
+          kernel=$(jq -r .commit kernel.json)
+          qemu=$(git ls-remote https://gitlab.com/mchehab_kernel/qemu.git refs/heads/rasdaemon_tests | awk '{print $1}')
+          rasdaemon=$(git ls-remote https://github.com/mchehab/rasdaemon.git refs/heads/master | awk '{print $1}')
+          [[ "$kernel" =~ ^[0-9a-f]{40}$ && "$qemu" =~ ^[0-9a-f]{40}$ && "$rasdaemon" =~ ^[0-9a-f]{40}$ ]]
+          printf "kernel=%s\nqemu=%s\nrasdaemon=%s\n" "$kernel" "$qemu" "$rasdaemon" >> "$GITHUB_OUTPUT"
+  check:
+    name: Test CI harness
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+  kernel_x86_64:
+    needs: sources
     uses: ./.github/workflows/linux-kernel.yml
+    with:
+      arch: x86_64
+      revision: ${{ needs.sources.outputs.kernel }}
     secrets: inherit
-  qemu:
+  qemu_x86_64:
+    needs: sources
     uses: ./.github/workflows/qemu.yml
+    with:
+      arch: x86_64
+      revision: ${{ needs.sources.outputs.qemu }}
     secrets: inherit
-  rasdaemon:
+  rasdaemon_x86_64:
+    needs: sources
     uses: ./.github/workflows/rasdaemon.yml
+    with:
+      arch: x86_64
+      revision: ${{ needs.sources.outputs.rasdaemon }}
     secrets: inherit
-  image:
-    # Wait for all builders before building images and running functional tests.
-    needs: [kernel, qemu, rasdaemon]
-    if: always() && !cancelled()
+  image_x86_64:
+    needs: [check, kernel_x86_64, qemu_x86_64]
     uses: ./.github/workflows/qemu-image.yml
+    with:
+      arch: x86_64
+    secrets: inherit
+  test_x86_64:
+    needs: [image_x86_64, rasdaemon_x86_64]
+    uses: ./.github/workflows/qemu-tests.yml
+    with:
+      arch: x86_64
+    secrets: inherit
+  kernel_aarch64:
+    needs: sources
+    uses: ./.github/workflows/linux-kernel.yml
+    with:
+      arch: aarch64
+      revision: ${{ needs.sources.outputs.kernel }}
+    secrets: inherit
+  qemu_aarch64:
+    needs: sources
+    uses: ./.github/workflows/qemu.yml
+    with:
+      arch: aarch64
+      revision: ${{ needs.sources.outputs.qemu }}
+    secrets: inherit
+  rasdaemon_aarch64:
+    needs: sources
+    uses: ./.github/workflows/rasdaemon.yml
+    with:
+      arch: aarch64
+      revision: ${{ needs.sources.outputs.rasdaemon }}
+    secrets: inherit
+  image_aarch64:
+    needs: [check, kernel_aarch64, qemu_aarch64]
+    uses: ./.github/workflows/qemu-image.yml
+    with:
+      arch: aarch64
+    secrets: inherit
+  test_aarch64:
+    needs: [image_aarch64, rasdaemon_aarch64]
+    uses: ./.github/workflows/qemu-tests.yml
+    with:
+      arch: aarch64
     secrets: inherit

@@ -2,51 +2,37 @@
 name: Build QEMU test image
 on:
   workflow_call:
+    inputs:
+      arch:
+        required: true
+        type: string
 permissions:
   actions: read
   contents: read
   packages: write
 jobs:
-  check:
-    name: Test CI harness
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7
-      - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
-
   build:
-    name: Build QEMU image (${{ matrix.arch }})
-    needs: check
-    runs-on: ${{ matrix.runner }}
+    name: Build QEMU image (${{ inputs.arch }})
+    runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     timeout-minutes: 180
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x86_64
-            deb_arch: amd64
-            runner: ubuntu-24.04
-          - arch: aarch64
-            deb_arch: arm64
-            runner: ubuntu-24.04-arm
     env:
-      TEST_ARCH: ${{ matrix.arch }}
+      TEST_ARCH: ${{ inputs.arch }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v7
         with:
-          name: selected-kernel-${{ matrix.arch }}
+          name: selected-kernel-${{ inputs.arch }}
           path: selected/
       - uses: actions/download-artifact@v7
         with:
-          name: selected-qemu-${{ matrix.arch }}
+          name: selected-qemu-${{ inputs.arch }}
           path: selected/
       - name: Check Debian base checksum
         id: base
         run: |
           sha=$(curl --fail --location --retry 3 \
             https://cloud.debian.org/images/cloud/trixie/latest/SHA512SUMS | \
-            awk '$2 == "debian-13-genericcloud-${{ matrix.deb_arch }}.qcow2" {print $1; exit}')
+            awk '$2 == "debian-13-genericcloud-${{ inputs.arch == 'aarch64' && 'arm64' || 'amd64' }}.qcow2" {print $1; exit}')
           test -n "$sha"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
@@ -136,7 +122,7 @@ jobs:
       - name: Make the tested image available to this run
         uses: actions/upload-artifact@v7
         with:
-          name: selected-image-${{ matrix.arch }}
+          name: selected-image-${{ inputs.arch }}
           path: build/image/reference
           retention-days: 14
           overwrite: true
@@ -145,14 +131,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: rasdaemon-qemu-image-diagnostics-${{ matrix.arch }}
+          name: rasdaemon-qemu-image-diagnostics-${{ inputs.arch }}
           path: build/rasdaemon-ci/**/*.console.log
           retention-days: 90
           if-no-files-found: ignore
 
-  test:
-    name: Test QEMU image
-    needs: [check, build]
-    if: always() && !cancelled() && needs.check.result == 'success'
-    uses: ./.github/workflows/qemu-tests.yml
-    secrets: inherit
