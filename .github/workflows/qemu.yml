@@ -1,0 +1,87 @@
+# SPDX-License-Identifier: GPL-2.0-only
+name: Build QEMU
+on:
+  workflow_call:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  check:
+    name: Resolve qemu source
+    runs-on: ubuntu-24.04
+    outputs:
+      revision: ${{ steps.source.outputs.revision }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Pin source for both architectures
+        id: source
+        run: |
+          set -euxo pipefail
+          revision=$(git ls-remote https://gitlab.com/mchehab_kernel/qemu.git refs/heads/rasdaemon_tests | awk '{print $1}')
+          [[ "$revision" =~ ^[0-9a-f]{40}$ ]]
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build QEMU (${{ matrix.arch }})
+    needs: check
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    env:
+      COMPONENT: qemu
+      ARCH: ${{ matrix.arch }}
+      REVISION: ${{ needs.check.outputs.revision }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check matching compiled artifact
+        id: cache
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          key=$(python3 tests/qemu/ci/build-key.py "$COMPONENT")
+          name="rasdaemon-$COMPONENT-$ARCH-$REVISION-$key"
+          id=$(tests/qemu/ci/artifact.sh lookup "$name")
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          if test -n "$id"; then
+            echo "Reuse $name (ID $id); compilation is not needed." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Build $name: no matching compiled artifact exists." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Build in the guest/runtime distribution
+        if: steps.cache.outputs.id == ''
+        run: |
+          set -euxo pipefail
+          docker build --build-arg "TEST_ARCH=$ARCH" -f tests/qemu/oci/Containerfile.build -t rasdaemon-builder tests/qemu/oci
+          docker run --rm -v "$PWD:/workspace" rasdaemon-builder tests/qemu/ci/build-qemu.sh --ref "$REVISION" --output build/qemu
+      - uses: actions/upload-artifact@v7
+        if: steps.cache.outputs.id == ''
+        id: upload
+        with:
+          name: ${{ steps.cache.outputs.name }}
+          path: build/qemu/qemu.tar
+          retention-days: 30
+          if-no-files-found: error
+      - name: Record the selected artifact for this run
+        env:
+          ARTIFACT_ID: ${{ steps.cache.outputs.id || steps.upload.outputs.artifact-id }}
+        run: |
+          set -euxo pipefail
+          mkdir -p selected
+          jq -n --arg id "$ARTIFACT_ID" --arg revision "$REVISION" \
+            '{id: $id, revision: $revision}' > "selected/$COMPONENT.json"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: selected-qemu-${{ matrix.arch }}
+          path: selected/
+          retention-days: 14
+          overwrite: true
+          if-no-files-found: error

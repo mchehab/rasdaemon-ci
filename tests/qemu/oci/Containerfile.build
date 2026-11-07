@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Use the same distribution as the runtime and Debian cloud guest. Native
+# runner libraries must not leak into QEMU or the guest's rasdaemon payload.
+FROM debian:13-slim
+ARG TEST_ARCH
+RUN set -eux; server_deps=; \
+    case "$TEST_ARCH" in x86_64) server_deps='libmariadb-dev libmariadb-dev-compat libpq-dev';; aarch64) ;; *) exit 2;; esac; \
+    apt-get update && apt-get install -y --no-install-recommends \
+        build-essential ca-certificates git meson ninja-build pkg-config \
+        python3 python3-venv libglib2.0-dev libpixman-1-dev libslirp-dev \
+        libfdt-dev libaio-dev liburing-dev libcap-ng-dev libseccomp-dev \
+        libgnutls28-dev libudev-dev libtraceevent-dev libsqlite3-dev libpci-dev \
+        $server_deps \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /workspace

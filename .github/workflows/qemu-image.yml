@@ -1,197 +1,158 @@
 # SPDX-License-Identifier: GPL-2.0-only
-
 name: Build QEMU test image
-
 on:
   workflow_call:
-    inputs:
-      arch:
-        required: true
-        type: string
-      kernel-artifact:
-        required: true
-        type: string
-      qemu-artifact:
-        required: true
-        type: string
-    outputs:
-      image:
-        value: ${{ jobs.build.outputs.image || jobs.check.outputs.image }}
-
 permissions:
-  actions: write
+  actions: read
   contents: read
   packages: write
-
 jobs:
   check:
-    name: Check source artifacts
-    runs-on: ubuntu-26.04
-    outputs:
-      build: ${{ steps.changed.outputs.build }}
-      image: ${{ steps.changed.outputs.image }}
-      decision: ${{ steps.changed.outputs.decision }}
-    steps:
-      - name: Check out CI harness
-        uses: actions/checkout@v7
-
-      - name: Test CI harness
-        run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
-
-      - name: Check assembled image
-        id: changed
-        env:
-          GH_TOKEN: ${{ github.token }}
-          NAME: rasdaemon-image-ref-${{ inputs.arch }}-${{ github.sha }}-${{ inputs.kernel-artifact }}-${{ inputs.qemu-artifact }}
-          ARCH: ${{ inputs.arch }}
-          CI_REVISION: ${{ github.sha }}
-          KERNEL_ARTIFACT: ${{ inputs.kernel-artifact }}
-          QEMU_ARTIFACT: ${{ inputs.qemu-artifact }}
-        run: |
-          set -euxo pipefail
-          echo "Image inputs: architecture=$ARCH CI=$CI_REVISION kernel-artifact=$KERNEL_ARTIFACT qemu-artifact=$QEMU_ARTIFACT"
-          id=$(tests/qemu/ci/artifact.sh lookup "$NAME")
-          if test -n "$id"; then
-            tests/qemu/ci/artifact.sh download "$id" image-ref
-            image=$(cat image-ref/image)
-            [[ "$image" == *@sha256:* ]]
-            echo "image=$image" >> "$GITHUB_OUTPUT"
-            echo "build=false" >> "$GITHUB_OUTPUT"
-            decision="SKIP image assembly ($ARCH): matching reference $NAME (ID $id) provides $image."
-          else
-            echo "build=true" >> "$GITHUB_OUTPUT"
-            decision="BUILD image required ($ARCH): no reusable reference $NAME exists for these CI/kernel/QEMU inputs; assemble from the selected compiled artifacts."
-          fi
-          echo "decision=$decision" >> "$GITHUB_OUTPUT"
-          printf '%s\n' "$decision" | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
-
-  build:
-    name: Build QEMU image
-    needs: check
-    if: needs.check.outputs.build == 'true'
-    outputs:
-      image: ${{ steps.publish.outputs.image }}
-    runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
-    env:
-      TEST_ARCH: ${{ inputs.arch }}
-    timeout-minutes: 180
+    name: Test CI harness
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-        name: Checkout
+      - run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential git meson ninja-build pkg-config \
-            python3 python3-venv libglib2.0-dev libpixman-1-dev libslirp-dev \
-            libfdt-dev libaio-dev liburing-dev libcap-ng-dev libseccomp-dev \
-            libgnutls28-dev libudev-dev flex bison bc libelf-dev libssl-dev \
-            dwarves qemu-system-x86 qemu-system-arm qemu-efi-aarch64 qemu-utils cloud-image-utils e2fsprogs \
-            python3-tomli jq unzip
-
-      - name: Download pinned Linux and QEMU artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-          KERNEL_ARTIFACT: ${{ inputs.kernel-artifact }}
-          QEMU_ARTIFACT: ${{ inputs.qemu-artifact }}
-        run: |
-          set -euxo pipefail
-          tests/qemu/ci/artifact.sh download "$KERNEL_ARTIFACT" build/kernel
-          tests/qemu/ci/artifact.sh download "$QEMU_ARTIFACT" build/qemu
-
+  build:
+    name: Build QEMU image (${{ matrix.arch }})
+    needs: check
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            deb_arch: amd64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            deb_arch: arm64
+            runner: ubuntu-24.04-arm
+    env:
+      TEST_ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: selected-kernel-${{ matrix.arch }}
+          path: selected/
+      - uses: actions/download-artifact@v7
+        with:
+          name: selected-qemu-${{ matrix.arch }}
+          path: selected/
       - name: Check Debian base checksum
         id: base
         run: |
           sha=$(curl --fail --location --retry 3 \
             https://cloud.debian.org/images/cloud/trixie/latest/SHA512SUMS | \
-            awk '$2 == "debian-13-genericcloud-${{ inputs.arch == 'aarch64' && 'arm64' || 'amd64' }}.qcow2" {print $1; exit}')
+            awk '$2 == "debian-13-genericcloud-${{ matrix.deb_arch }}.qcow2" {print $1; exit}')
           test -n "$sha"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
-      - name: Build image
+      - name: Check matching image
+        id: cache
         env:
-          BUILD_DECISION: ${{ needs.check.outputs.decision }}
+          GH_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ steps.base.outputs.sha }}
         run: |
           set -euxo pipefail
-          echo "$BUILD_DECISION"
+          kernel=$(jq -r .id selected/kernel.json)
+          qemu=$(jq -r .id selected/qemu.json)
+          key=$(python3 tests/qemu/ci/build-key.py image)
+          name="rasdaemon-image-$TEST_ARCH-$kernel-$qemu-$key-$BASE_SHA"
+          id=$(tests/qemu/ci/artifact.sh lookup "$name")
+          if test -n "$id"; then
+            tests/qemu/ci/artifact.sh download "$id" build/image
+            image=$(cat build/image/reference)
+            owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+            if [[ "$image" != "ghcr.io/$owner/rasdaemon-ci@sha256:"* ]] || ! docker pull "$image"; then
+              echo "Cached image is unavailable; assemble it again."
+              id=
+            fi
+          fi
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          if test -n "$id"; then
+            echo "Reuse image $image; no image build needed." | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Build image from kernel ID $kernel and QEMU ID $qemu." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Download selected compiled artifacts
+        if: steps.cache.outputs.id == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          tests/qemu/ci/artifact.sh download "$(jq -r .id selected/kernel.json)" build/kernel
+          tests/qemu/ci/artifact.sh download "$(jq -r .id selected/qemu.json)" build/qemu
+          tar -xf build/kernel/kernel.tar -C build/kernel
+          tar -xf build/qemu/qemu.tar -C build/qemu
+          jq -e --arg revision "$(jq -r .revision selected/kernel.json)" '.commit == $revision' build/kernel/metadata/kernel.json
+          jq -e --arg revision "$(jq -r .revision selected/qemu.json)" '.commit == $revision' build/qemu/metadata/qemu.json
+      - name: Install dependencies
+        if: steps.cache.outputs.id == ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86 qemu-system-arm qemu-efi-aarch64 \
+            qemu-utils cloud-image-utils e2fsprogs python3 jq unzip curl
+
+      - name: Build image
+        if: steps.cache.outputs.id == ''
+        run: |
           tests/qemu/ci/build-bundle.sh --arch "$TEST_ARCH" \
             --kernel-dir build/kernel --qemu-dir build/qemu \
             --kernel-json build/kernel/metadata/kernel.json \
             --base-sha512 '${{ steps.base.outputs.sha }}' \
-            --tag rasdaemon-ci:$TEST_ARCH
-          mkdir -p build/image
-          docker save rasdaemon-ci:$TEST_ARCH -o build/image/rasdaemon-ci-$TEST_ARCH.tar
+            --tag "rasdaemon-ci:$TEST_ARCH"
 
       - name: Publish image
-        id: publish
+        if: steps.cache.outputs.id == ''
         env:
-          REGISTRY_IMAGE: ghcr.io/${{ github.repository_owner }}/rasdaemon-ci
+          REGISTRY_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
-          echo "${{ github.token }}" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker tag rasdaemon-ci:$TEST_ARCH "ghcr.io/$owner/rasdaemon-ci:$TEST_ARCH"
-          docker push "ghcr.io/$owner/rasdaemon-ci:$TEST_ARCH"
-          image=$(docker inspect --format '{{index .RepoDigests 0}}' \
-            "ghcr.io/$owner/rasdaemon-ci:$TEST_ARCH")
-          case "$image" in
-            *@sha256:*) ;;
-            *) echo "published image digest was not available: $image" >&2; exit 1 ;;
-          esac
-          echo "image=$image" >> "$GITHUB_OUTPUT"
-          mkdir -p build/image-ref
-          printf '%s\n' "$image" > build/image-ref/image
-
-      - name: Retain immutable image reference
+          repository="ghcr.io/$owner/rasdaemon-ci"
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          set -x
+          docker tag "rasdaemon-ci:$TEST_ARCH" "$repository:$TEST_ARCH"
+          docker push "$repository:$TEST_ARCH"
+          # Local images can have several RepoDigests. Select the pushed registry,
+          # not Docker's first entry (which may be an unqualified local name).
+          image=$(docker image inspect "$repository:$TEST_ARCH" | jq -er --arg repository "$repository" \
+            '.[0].RepoDigests | map(select(startswith($repository + "@sha256:"))) | first')
+          docker pull "$image"
+          mkdir -p build/image
+          printf '%s\n' "$image" > build/image/reference
+      - uses: actions/upload-artifact@v7
+        if: steps.cache.outputs.id == ''
+        with:
+          name: ${{ steps.cache.outputs.name }}
+          path: build/image/reference
+          retention-days: 30
+          if-no-files-found: error
+      - name: Make the tested image available to this run
         uses: actions/upload-artifact@v7
         with:
-          name: rasdaemon-image-ref-${{ inputs.arch }}-${{ github.sha }}-${{ inputs.kernel-artifact }}-${{ inputs.qemu-artifact }}
-          path: build/image-ref
-          retention-days: 90
+          name: selected-image-${{ matrix.arch }}
+          path: build/image/reference
+          retention-days: 14
+          overwrite: true
           if-no-files-found: error
-
-      - name: Upload Results
+      - name: Upload image diagnostics
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: rasdaemon-qemu-image-diagnostics-${{ inputs.arch }}
+          name: rasdaemon-qemu-image-diagnostics-${{ matrix.arch }}
           path: build/rasdaemon-ci/**/*.console.log
           retention-days: 90
           if-no-files-found: ignore
 
-      - uses: actions/upload-artifact@v7
-        id: image-artifact
-        with:
-          name: rasdaemon-qemu-image-${{ inputs.arch }}-${{ github.event.workflow_run.head_sha || github.sha }}
-          path: build/image
-          retention-days: 14
-          if-no-files-found: error
-
-      - name: Keep only the latest QEMU image artifact
-        env:
-          GH_TOKEN: ${{ github.token }}
-          IMAGE_ARTIFACT_ID: ${{ steps.image-artifact.outputs.artifact-id }}
-        run: |
-          set -euxo pipefail
-
-          # Verify the replacement before deleting any older image archives.
-          gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/$IMAGE_ARTIFACT_ID" |
-            jq -e --argjson current "$IMAGE_ARTIFACT_ID" '
-              .id == $current and .expired == false and
-              (.name | test("^rasdaemon-qemu-image-${{ inputs.arch }}-[0-9a-f]{40}$"))'
-
-          # Collect every page before deletion changes pagination. Never delete
-          # newer IDs: another image workflow may have uploaded concurrently.
-          artifacts=$(gh api --paginate \
-            "/repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100")
-          obsolete=$(printf '%s' "$artifacts" |
-            jq -sr --argjson current "$IMAGE_ARTIFACT_ID" '
-              .[].artifacts[] |
-              select(.id < $current and
-                (.name | test("^rasdaemon-qemu-image-${{ inputs.arch }}-[0-9a-f]{40}$"))) |
-              .id')
-
-          for artifact_id in $obsolete; do
-            echo "Deleting superseded QEMU image artifact $artifact_id"
-            gh api --method DELETE \
-              "/repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id"
-          done
+  test:
+    name: Test QEMU image
+    needs: [check, build]
+    if: always() && !cancelled() && needs.check.result == 'success'
+    uses: ./.github/workflows/qemu-tests.yml
+    secrets: inherit

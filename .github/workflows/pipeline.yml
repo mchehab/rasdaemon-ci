@@ -28,44 +28,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  source:
-    name: Pin upstream sources for both architectures
-    runs-on: ubuntu-26.04
-    outputs:
-      revision: ${{ steps.source.outputs.revision }}
-      kernel: ${{ steps.source.outputs.kernel }}
-      kernel-tag-object: ${{ steps.source.outputs.kernel-tag-object }}
-      qemu: ${{ steps.source.outputs.qemu }}
-    steps:
-      - uses: actions/checkout@v7
-      - name: Resolve upstream revisions
-        id: source
-        run: |
-          set -euxo pipefail
-          revision=$(git ls-remote https://github.com/mchehab/rasdaemon.git refs/heads/master | awk '{print $1}')
-          test "${#revision}" -eq 40
-          echo "revision=$revision" >> "$GITHUB_OUTPUT"
-          qemu=$(git ls-remote https://gitlab.com/mchehab_kernel/qemu.git refs/heads/rasdaemon_tests | awk '{print $1}')
-          test "${#qemu}" -eq 40
-          echo "qemu=$qemu" >> "$GITHUB_OUTPUT"
-          python3 tests/qemu/source_refs.py resolve-kernel --channel latest > kernel.json
-          kernel=$(jq -r .commit kernel.json)
-          test "${#kernel}" -eq 40
-          echo "kernel=$kernel" >> "$GITHUB_OUTPUT"
-          echo "kernel-tag-object=$(jq -r .tag_object kernel.json)" >> "$GITHUB_OUTPUT"
-
-  architecture:
-    name: ${{ matrix.arch }}
-    needs: source
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [x86_64, aarch64]
-    uses: ./.github/workflows/architecture.yml
-    with:
-      arch: ${{ matrix.arch }}
-      revision: ${{ needs.source.outputs.revision }}
-      kernel: ${{ needs.source.outputs.kernel }}
-      kernel-tag-object: ${{ needs.source.outputs.kernel-tag-object }}
-      qemu: ${{ needs.source.outputs.qemu }}
+  # Reusable builders have no independent automatic triggers. They reuse
+  # existing artifacts; unchanged images are reused even on a manual test rerun.
+  kernel:
+    uses: ./.github/workflows/linux-kernel.yml
+    secrets: inherit
+  qemu:
+    uses: ./.github/workflows/qemu.yml
+    secrets: inherit
+  rasdaemon:
+    uses: ./.github/workflows/rasdaemon.yml
+    secrets: inherit
+  image:
+    # Wait for all builders before building images and running functional tests.
+    needs: [kernel, qemu, rasdaemon]
+    if: always() && !cancelled()
+    uses: ./.github/workflows/qemu-image.yml
     secrets: inherit

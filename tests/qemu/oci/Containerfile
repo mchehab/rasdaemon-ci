@@ -1,21 +1,22 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
-FROM ubuntu:26.04
+FROM debian:13-slim
 
 ARG TEST_ARCH=x86_64
 ARG TEST_MACHINE=q35
 
 COPY root/ /
 
-# Supply a complete x86 UEFI pair when bundled QEMU descriptors reference absent blobs.
-RUN set -eux; server_deps=; firmware_deps=; \
-    case "$TEST_ARCH" in x86_64) server_deps='libmariadb-dev libmariadb-dev-compat libpq-dev'; firmware_deps=ovmf;; aarch64) ;; *) exit 2;; esac; \
+# Install complete firmware pairs: bundled QEMU descriptors may reference
+# blobs removed by upstream. Discovery below skips such incomplete pairs.
+RUN set -eux; server_deps=; \
+    case "$TEST_ARCH" in x86_64) server_deps='libmariadb-dev libmariadb-dev-compat libpq-dev';; aarch64) ;; *) exit 2;; esac; \
     apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         build-essential ca-certificates git meson ninja-build pkg-config python3 \
-        python3-pip \
+        python3-pip ovmf qemu-efi-aarch64 \
         libtraceevent-dev libsqlite3-dev sqlite3 libpci-dev python3-sqlalchemy \
-        $server_deps $firmware_deps \
-        libglib2.0-0t64 libpixman-1-0 zlib1g libslirp0 libcap-ng0 libaio1t64 \
+        $server_deps \
+        libglib2.0-0 libpixman-1-0 zlib1g libslirp0 libcap-ng0 libaio1t64 \
         liburing2 libseccomp2 libfdt1 libgnutls30t64 libudev1 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -23,15 +24,10 @@ RUN python3 -m pip install --break-system-packages --no-cache-dir \
         qmp /opt/qemu/libexec/rasdaemon/qemu_qmp-*.whl
 
 COPY rasdaemon-ci/ /opt/rasdaemon-ci/
-COPY firmware.py /tmp/rasdaemon-ci-firmware.py
-
-# Query the staged binary only in its target runtime, with its libraries installed.
-RUN python3 /tmp/rasdaemon-ci-firmware.py \
-        --binary /opt/qemu/bin/qemu-system-$TEST_ARCH \
+COPY firmware.py /tmp/firmware.py
+RUN python3 /tmp/firmware.py --binary /opt/qemu/bin/qemu-system-$TEST_ARCH \
         --arch "$TEST_ARCH" --machine "$TEST_MACHINE" \
-        --manifest /opt/rasdaemon-ci/images.json \
-    && rm /tmp/rasdaemon-ci-firmware.py
-
+        --manifest /opt/rasdaemon-ci/images.json && rm /tmp/firmware.py
 COPY rasdaemon-ci.py /usr/local/bin/rasdaemon-ci
 
 ENV PATH="/opt/qemu/bin:${PATH}"

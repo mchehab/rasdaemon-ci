@@ -16,9 +16,7 @@ import sys
 import urllib.parse
 
 import features
-import retention
 from publish_results import PublishedResult, ResultSite
-from source_refs import refresh_descriptions
 
 
 RUN_ID = re.compile(r"^[0-9]+$")
@@ -89,7 +87,7 @@ def archive_index(retained: list[tuple[str, dict]]) -> str:
     for name, run in ordered:
         items = run["items"]
         kind = "daily" if any(item["kind"] == "daily" for item in items) else "weekly"
-        status = retention.status(items)
+        status = "success" if all(item["conclusion"] == "success" for item in items) else "failure"
         timestamp = max(datetime.datetime.fromisoformat(item["created_at"])
                         for item in items).astimezone(datetime.timezone.utc)
         readable = timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -111,8 +109,7 @@ def archive_index(retained: list[tuple[str, dict]]) -> str:
     page = ["<!doctype html><html lang=\"en\"><meta charset=\"utf-8\">"]
     page.append("<title>rasdaemon CI evidence archive</title>")
     page.append("<h1>rasdaemon CI evidence archive</h1>")
-    page.append("<p>Test-failure evidence is retained indefinitely. "
-                "Infrastructure-only failures and successful runs are retained for 30 days.</p>")
+    page.append("<p>Failed runs are retained indefinitely. Successful runs are retained for 30 days.</p>")
     page.append("<table><thead><tr><th>Time (UTC)</th><th>Status</th>"
                 "<th>QEMU</th><th>Linux kernel</th><th>rasdaemon</th></tr></thead><tbody>" +
                 "".join(rows) + "</tbody></table>")
@@ -435,29 +432,7 @@ def collect_failures(store: str, retained: list[tuple[str, dict]],
     return failures
 
 
-def refresh_archive_versions(directory: str, metadata: dict) -> None:
-    """Rebuild the archive row from refreshed descriptions of recorded SHAs."""
-    result_root = os.path.join(directory, metadata["kind"])
-
-    for label in sorted(os.listdir(result_root)):
-        result_dir = os.path.join(result_root, label)
-        if not os.path.isfile(os.path.join(result_dir, "result.json")):
-            continue
-
-        result = PublishedResult(label, result_dir)
-        metadata["version_label"] = label
-        metadata["versions"] = {key: value for key, (value, _meta)
-                                in result.versions().items()}
-        break
-
-    metadata_path = os.path.join(directory, metadata["kind"] + ".json")
-    with open(metadata_path, "w", encoding="utf-8") as stream:
-        json.dump(metadata, stream, indent=2)
-        stream.write("\n")
-
-
-def archive(store: str, site: str, inputs: list[str], now: datetime.datetime,
-            refresh_versions: bool = False) -> None:
+def archive(store: str, site: str, inputs: list[str], now: datetime.datetime) -> None:
     """Copy input runs into durable storage and render retained runs for Pages."""
     os.makedirs(store, exist_ok=True)
     os.makedirs(site, exist_ok=True)
@@ -504,7 +479,6 @@ def archive(store: str, site: str, inputs: list[str], now: datetime.datetime,
         page_for_run(destination, metadata, kind)
 
     retained = []
-    description_cache = {}
     for name in sorted(os.listdir(store), reverse=True):
         if not ARCHIVE_NAME.fullmatch(name):
             continue
@@ -520,23 +494,13 @@ def archive(store: str, site: str, inputs: list[str], now: datetime.datetime,
         if not metadata:
             continue
 
-        retention.update_metadata(directory, metadata)
-
         newest = max(datetime.datetime.fromisoformat(item["created_at"])
                      for item in metadata)
-        if newest < cutoff and all(item["failure_kind"] in ("success", "infrastructure_failure")
-                                   for item in metadata):
+        if all(item["conclusion"] == "success" for item in metadata) and newest < cutoff:
             shutil.rmtree(directory)
-            shutil.rmtree(os.path.join(site, name), ignore_errors=True)
             continue
 
-        if refresh_versions:
-            refresh_descriptions(directory, description_cache)
-
         for item in metadata:
-            if refresh_versions:
-                refresh_archive_versions(directory, item)
-
             retained.append((name, item))
 
     archive_site = os.path.join(site, "archive")
@@ -632,11 +596,8 @@ def main() -> int:
     parser.add_argument("--site", required=True, help="Pages archive directory")
     parser.add_argument("--run", action="append", default=[], metavar="KIND=DIR",
                         help="selected daily or weekly result artifact")
-    parser.add_argument("--refresh-versions", action="store_true",
-                        help="retry git describe for all retained test SHAs")
     args = parser.parse_args()
-    archive(args.store, args.site, args.run, datetime.datetime.now(datetime.timezone.utc),
-            refresh_versions=args.refresh_versions)
+    archive(args.store, args.site, args.run, datetime.datetime.now(datetime.timezone.utc))
     return 0
 
 

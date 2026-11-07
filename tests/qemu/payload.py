@@ -1,20 +1,19 @@
 # SPDX-License-Identifier: GPL-2.0-only
-"""Validate a compiled rasdaemon payload before using it in a test VM."""
+"""Validate a compiled payload against the source and recipe being tested."""
 
 import os
 import subprocess
-
-from ci import compilation
+import sys
 
 
 def read_prebuilt(directory: str, arch: str, source: str) -> str:
-    """Require the tested source, architecture and compilation settings to match."""
-    # CI mounts this checkout read-only from the runner into a root container.
+    """Require the source revision, architecture and build recipe to match."""
     command = ["git", "-c", "safe.directory=" + os.path.realpath(source),
                "-C", source, "rev-parse", "HEAD"]
     revision = subprocess.check_output(command, text=True).strip()
-    expected = {"source-revision": revision, "architecture": arch,
-                "build-key": compilation.build_key(compilation.settings("rasdaemon", arch))}
+    recipe = os.path.join(os.path.dirname(__file__), "ci", "build-key.py")
+    key = subprocess.check_output([sys.executable, recipe, "rasdaemon"], text=True).strip()
+    expected = {"source-revision": revision, "architecture": arch, "build-key": key}
 
     for name, value in expected.items():
         with open(os.path.join(directory, name), encoding="utf-8") as stream:

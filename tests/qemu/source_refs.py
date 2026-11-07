@@ -5,7 +5,6 @@
 
 import argparse
 import json
-import os
 import re
 import subprocess
 import sys
@@ -14,7 +13,6 @@ import tempfile
 
 DEFAULT_KERNEL_REPOSITORY = "https://github.com/torvalds/linux.git"
 DEFAULT_QEMU_REPOSITORY = "https://gitlab.com/mchehab_kernel/qemu.git"
-QEMU_TAGS_REPOSITORY = "https://gitlab.com/qemu-project/qemu.git"
 FINAL_TAG = re.compile(r"^v(\d+)\.(\d+)$")
 RC_TAG = re.compile(r"^v(\d+)\.(\d+)-rc(\d+)$")
 FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
@@ -78,7 +76,6 @@ def resolve_ref(repository: str, ref: str) -> tuple[str, str]:
     if not ref.startswith("refs/"):
         candidates.extend(("refs/heads/" + ref, "refs/tags/" + ref))
 
-    # Exact ls-remote patterns exclude the peeled ref unless it is also requested.
     patterns = candidates + [value + "^{}" for value in candidates
                              if value.startswith("refs/tags/")]
     refs = ls_remote(repository, *patterns,
@@ -105,22 +102,19 @@ def exact_tags(repository: str, commit: str) -> list[str]:
                   and refs.get(ref + "^{}", value) == commit)
 
 
-def describe_commit(repository: str, commit: str, tags_repository: str | None = None) -> dict:
-    """Describe a tested commit using tags from an optional authoritative repository."""
+def describe_commit(repository: str, commit: str) -> dict:
+    """Run git describe on the tested commit with its history and tags available."""
     if not FULL_SHA.fullmatch(commit):
         raise SourceError("invalid source commit")
     with tempfile.TemporaryDirectory(prefix="ras-ci-describe-") as directory:
         run(["git", "init", "-q", directory])
         run(["git", "-C", directory, "-c", "protocol.version=2", "fetch", "-q",
-             "--filter=tree:0", "--no-recurse-submodules", "--no-tags", repository, commit])
-        run(["git", "-C", directory, "-c", "protocol.version=2", "fetch", "-q",
-             "--filter=tree:0", "--no-recurse-submodules", tags_repository or repository,
+             "--filter=tree:0", "--no-recurse-submodules", repository, commit,
              "+refs/tags/*:refs/tags/*"])
         result = subprocess.run(["git", "-C", directory, "describe", commit],
                                 check=False, text=True, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
-        description = result.stdout.strip() if not result.returncode else None
-        return {"commit": commit, "describe": description,
+        return {"commit": commit, "describe": result.stdout.strip() if not result.returncode else None,
                 "error": result.stderr.strip() if result.returncode else ""}
 
 
@@ -138,48 +132,7 @@ def resolve_kernel(repository: str, channel: str,
     commit, resolved_ref = resolve_ref(repository, "refs/tags/" + tag)
 
     return {"repository": repository, "channel": channel,
-            "ref": resolved_ref, "tag": tag, "commit": commit,
-            "tag_object": refs[resolved_ref]}
-
-
-def refresh_descriptions(directory: str, cache: dict | None = None) -> None:
-    """Regenerate derived versions from stored SHAs, including previous failures."""
-    if cache is None:
-        cache = {}
-
-    for root, _directories, files in os.walk(directory):
-        for component in ("kernel", "qemu", "rasdaemon"):
-            filename = ("rasdaemon-source-revision" if component == "rasdaemon"
-                        else component + ".json")
-            if filename not in files:
-                continue
-
-            commit = ""
-            try:
-                with open(os.path.join(root, filename), encoding="utf-8") as stream:
-                    if component == "rasdaemon":
-                        metadata = {"commit": stream.read().strip(),
-                                    "repository": "https://github.com/mchehab/rasdaemon.git"}
-                    else:
-                        metadata = json.load(stream)
-
-                commit = metadata["commit"]
-                tags = (QEMU_TAGS_REPOSITORY if component == "qemu"
-                        else metadata["repository"])
-                key = (metadata["repository"], commit, tags)
-                if key not in cache:
-                    cache[key] = describe_commit(*key)
-
-                result = cache[key]
-            except (OSError, ValueError, SourceError, KeyError) as error:
-                result = {"commit": commit, "describe": None, "error": str(error)}
-
-            path = os.path.join(root, component + "-describe.json")
-            with open(path, "w", encoding="utf-8") as stream:
-                json.dump(result, stream, sort_keys=True)
-                stream.write("\n")
-
-            print(f"{path}: {json.dumps(result, sort_keys=True)}")
+            "ref": resolved_ref, "tag": tag, "commit": commit}
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -201,21 +154,13 @@ def create_parser() -> argparse.ArgumentParser:
     describe = commands.add_parser("describe")
     describe.add_argument("--repository", required=True)
     describe.add_argument("--commit", required=True)
-    describe.add_argument("--tags-repository")
     describe_metadata = commands.add_parser("describe-metadata")
     describe_metadata.add_argument("--metadata", required=True)
-    describe_metadata.add_argument("--tags-repository")
-    refresh = commands.add_parser("refresh-descriptions")
-    refresh.add_argument("--directory", required=True)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = create_parser().parse_args(argv)
-    if args.command == "refresh-descriptions":
-        refresh_descriptions(args.directory)
-        return 0
-
     try:
         if args.command == "resolve-git":
             commit, ref = resolve_ref(args.repository, args.ref)
@@ -231,12 +176,11 @@ def main(argv: list[str] | None = None) -> int:
             commit = metadata["commit"]
             result = {"commit": commit, "tags": exact_tags(metadata["repository"], commit)}
         elif args.command == "describe":
-            result = describe_commit(args.repository, args.commit, args.tags_repository)
+            result = describe_commit(args.repository, args.commit)
         elif args.command == "describe-metadata":
             with open(args.metadata, encoding="utf-8") as stream:
                 metadata = json.load(stream)
-            result = describe_commit(metadata["repository"], metadata["commit"],
-                                     args.tags_repository)
+            result = describe_commit(metadata["repository"], metadata["commit"])
         else:
             raise SourceError("unknown command")
         json.dump(result, sys.stdout, sort_keys=True)

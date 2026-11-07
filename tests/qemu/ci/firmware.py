@@ -98,13 +98,12 @@ def select_firmware(root: str, binary: str, arch: str, machine: str) -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Print manifest firmware metadata or a code path for guest provisioning."""
+    """Print matched flash firmware metadata or update an image manifest."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default="/")
     parser.add_argument("--binary", required=True)
     parser.add_argument("--arch", required=True)
     parser.add_argument("--machine", required=True)
-    parser.add_argument("--code-only", action="store_true")
     parser.add_argument("--manifest", help="update this image manifest after runtime discovery")
     args = parser.parse_args(argv)
     binary = shutil.which(args.binary)
@@ -129,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
         print(str(error), file=sys.stderr)
         return 1
 
-    print(firmware["pairs"][0]["code"] if args.code_only else json.dumps(firmware))
+    print(json.dumps(firmware))
     return 0
 
 

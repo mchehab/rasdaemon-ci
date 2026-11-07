@@ -36,21 +36,20 @@ while test $# -gt 0; do
 	esac
 done
 
-# Explicit component directories are dependencies, not permission to compile
-# a replacement if an artifact is corrupt or incomplete.
-for component in qemu kernel; do
-	variable="${component}_dir"
+# An explicit CI input must exist; never silently build a different revision.
+for component in kernel qemu; do
+	variable=${component}_dir
 	directory=${!variable}
 
-	if test -n "$directory" && test ! -f "$directory/metadata/$component.json"; then
-		echo "Supplied $component artifact is missing metadata: $directory" >&2
-		exit 1
+	if test -n "$directory"; then
+		test -f "$directory/metadata/$component.json"
 	fi
 done
 
+# Match the provisioning CPU model; max exposes EDK2 ARM boot regressions.
 case $arch in
-x86_64) machine=q35 ;;
-aarch64|arm64) arch=aarch64; machine=virt ;;
+x86_64) machine=q35; tcg_cpu=max ;;
+aarch64|arm64) arch=aarch64; machine=virt; tcg_cpu=cortex-a57 ;;
 *) echo "Unsupported architecture: $arch" >&2; exit 2 ;;
 esac
 
@@ -102,7 +101,6 @@ else
 fi
 
 cp -a "$qemu_dir/root" "$context/root"
-cp "$script_dir/firmware.py" "$context/firmware.py"
 cp "$kernel_dir/metadata/kernel.json" "$context/rasdaemon-ci/kernel/"
 
 if test -f "$kernel_dir/metadata/config-status.tsv"; then
@@ -112,11 +110,7 @@ fi
 cp "$kernel_dir/config-"* "$context/rasdaemon-ci/kernel/"
 cp "$qemu_dir/metadata/qemu.json" "$context/rasdaemon-ci/"
 cp "$project_dir/tests/qemu/oci/rasdaemon-ci.py" "$context/"
-mkdir -p "$context/rasdaemon-ci/harness/ci"
-cp "$script_dir/compilation.py" "$context/rasdaemon-ci/harness/ci/"
-cp -a "$script_dir/compilation" "$context/rasdaemon-ci/harness/ci/"
-cp "$project_dir/tests/qemu/payload.py" "$context/rasdaemon-ci/harness/"
-cp "$project_dir/tests/qemu/ras_qemu.py" \
+cp "$project_dir/tests/qemu/ras_qemu.py" "$project_dir/tests/qemu/payload.py" \
 	"$context/rasdaemon-ci/harness/"
 cp "$project_dir/tests/qemu/scenarios.json" \
 	"$context/rasdaemon-ci/harness/"
@@ -141,7 +135,7 @@ cat >"$context/rasdaemon-ci/images.json" <<EOF
     "$arch": {
       "qemu_binary": "qemu-system-$arch",
       "machine": "$machine",
-      "cpu": {"kvm": "host", "tcg": "max"},
+      "cpu": {"kvm": "host", "tcg": "$tcg_cpu"},
       "memory_mb": 2048,
       "cpus": 2,
       "firmware": {},
@@ -155,7 +149,7 @@ cat >"$context/rasdaemon-ci/images.json" <<EOF
   "kernel": $kernel_json
 }
 EOF
+cp "$script_dir/firmware.py" "$context/"
 cp "$project_dir/tests/qemu/oci/Containerfile" "$context/Containerfile"
 
-docker build --build-arg "TEST_ARCH=$arch" --build-arg "TEST_MACHINE=$machine" \
-	--file "$context/Containerfile" --tag "$tag" "$context"
+docker build --build-arg "TEST_ARCH=$arch" --build-arg "TEST_MACHINE=$machine" --file "$context/Containerfile" --tag "$tag" "$context"

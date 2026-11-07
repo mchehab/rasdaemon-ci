@@ -26,9 +26,11 @@ test -d "$kernel" || { echo "--kernel must name a build directory: $kernel" >&2;
 test -n "$output" || { echo "--output is required" >&2; exit 2; }
 kernel=$(realpath "$kernel")
 output=$(realpath -m "$output")
+# Keep ARM TCG on a stable CPU model: EDK2 2025.11 hangs with max
+# (tianocore/edk2#11962). KVM still selects host below.
 case $arch in
 x86_64) deb_arch=amd64; machine=q35; cpu=max ;;
-aarch64|arm64) arch=aarch64; deb_arch=arm64; machine=virt; cpu=max ;;
+aarch64|arm64) arch=aarch64; deb_arch=arm64; machine=virt; cpu=cortex-a57 ;;
 *) echo "Unsupported architecture: $arch" >&2; exit 2 ;;
 esac
 test -n "$base_url" || base_url="https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-$deb_arch.qcow2"
@@ -169,9 +171,15 @@ fi
 firmware=()
 
 if test "$arch" = aarch64; then
-	firmware_code=$(python3 "$script_dir/firmware.py" \
-		--binary "qemu-system-$arch" --arch "$arch" --machine "$machine" --code-only)
-	firmware=(-bios "$firmware_code")
+	# Use the descriptor's flash interface and a private writable variable
+	# store, preserving the matching CODE/VARS pair.
+	firmware_json=$(python3 "$script_dir/firmware.py" \
+		--binary "qemu-system-$arch" --arch "$arch" --machine "$machine")
+	firmware_code=$(jq -r '.pairs[0].code' <<< "$firmware_json")
+	firmware_vars=$(jq -r '.pairs[0].vars' <<< "$firmware_json")
+	cp "$firmware_vars" "$work/vars.fd"
+	firmware=(-drive "if=pflash,unit=0,format=raw,readonly=on,file=$firmware_code"
+		-drive "if=pflash,unit=1,format=raw,file=$work/vars.fd")
 fi
 
 echo "guest provisioning accelerator: $accel"

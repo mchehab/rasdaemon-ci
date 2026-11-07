@@ -6,8 +6,6 @@ set -o pipefail
 repository=https://gitlab.com/mchehab_kernel/qemu.git
 ref=rasdaemon_tests
 output=
-arch=$(uname -m)
-script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 jobs=${JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)}
 
 while test $# -gt 0; do
@@ -32,14 +30,21 @@ commit=$(git -C "$work/source" rev-parse HEAD)
 
 # ARM virt does not select PCI IPMI by default. The SEL consumer tests need
 # both the PCI KCS interface and the local BMC simulator it selects.
-settings=$(python3 "$script_dir/compilation.py" qemu "$arch")
-jq -r '.arm_devices[]' <<< "$settings" \
-	> "$work/source/configs/devices/aarch64-softmmu/rasdaemon-ci.mak"
-mapfile -t configure_options < <(jq -r '.configure[]' <<< "$settings")
+cat >"$work/source/configs/devices/aarch64-softmmu/rasdaemon-ci.mak" <<EOF
+include default.mak
+CONFIG_PCI_IPMI_KCS=y
+CONFIG_IPMI_LOCAL=y
+EOF
 
 mkdir -p "$work/build" "$output/root" "$output/metadata"
 cd "$work/build"
-"$work/source/configure" "${configure_options[@]}"
+"$work/source/configure" \
+	--target-list=x86_64-softmmu,aarch64-softmmu \
+	--with-devices-aarch64=rasdaemon-ci \
+	--prefix=/opt/qemu \
+	--disable-docs \
+	--disable-werror \
+	--enable-strip
 make -j"$jobs"
 make install DESTDIR="$output/root"
 
@@ -64,3 +69,6 @@ EOF
 
 "$output/root/opt/qemu/bin/qemu-system-x86_64" --version
 test -x "$output/root/opt/qemu/bin/qemu-img"
+
+# Artifact ZIP transport does not preserve executable bits or symbolic links.
+tar -cf "$output/qemu.tar" -C "$output" root metadata

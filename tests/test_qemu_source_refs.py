@@ -14,64 +14,6 @@ from tests.qemu import source_refs
 
 
 class SourceRefsTest(unittest.TestCase):
-    def test_real_annotated_tag_resolution(self):
-        """Exercise git's ref filtering, which mocked ls-remote replies cannot cover."""
-        with tempfile.TemporaryDirectory() as directory:
-            def git(*args):
-                return subprocess.check_output(["git", "-C", directory, *args],
-                                               text=True, stderr=subprocess.DEVNULL).strip()
-
-            git("init")
-            git("-c", "user.name=Test", "-c", "user.email=test@example.test",
-                "commit", "--allow-empty", "-m", "release")
-            git("-c", "user.name=Test", "-c", "user.email=test@example.test",
-                "tag", "-a", "v7.4-rc1", "-m", "release")
-            commit = git("rev-parse", "HEAD")
-            tag_object = git("rev-parse", "refs/tags/v7.4-rc1")
-            self.assertNotEqual(commit, tag_object)
-
-            for ref in ("v7.4-rc1", "refs/tags/v7.4-rc1"):
-                self.assertEqual(source_refs.resolve_ref(directory, ref),
-                                 (commit, "refs/tags/v7.4-rc1"))
-
-            selected = source_refs.resolve_kernel(directory, "latest")
-            self.assertEqual(selected["commit"], commit)
-            self.assertEqual(selected["tag_object"], tag_object)
-
-    def test_refresh_retries_missing_tags_using_original_sha(self):
-        """A later publication can repair a failed lookup without rerunning tests."""
-        commit = "a" * 40
-
-        with tempfile.TemporaryDirectory() as directory:
-            metadata = os.path.join(directory, "qemu.json")
-            description = os.path.join(directory, "qemu-describe.json")
-            with open(metadata, "w", encoding="utf-8") as stream:
-                json.dump({"repository": "fork", "commit": commit}, stream)
-
-            with mock.patch.object(source_refs, "describe_commit",
-                                   side_effect=source_refs.SourceError("tags unavailable")):
-                with contextlib.redirect_stdout(io.StringIO()):
-                    source_refs.refresh_descriptions(directory)
-
-            with open(description, encoding="utf-8") as stream:
-                failed = json.load(stream)
-
-            self.assertEqual(failed["commit"], commit)
-            self.assertIsNone(failed["describe"])
-            self.assertIn("tags unavailable", failed["error"])
-            resolved = {"commit": commit, "describe": "v11.1.0-1-gaaaaaaa", "error": ""}
-
-            with mock.patch.object(source_refs, "describe_commit", return_value=resolved) as lookup:
-                with contextlib.redirect_stdout(io.StringIO()):
-                    source_refs.refresh_descriptions(directory)
-
-            lookup.assert_called_once_with("fork", commit, source_refs.QEMU_TAGS_REPOSITORY)
-            with open(description, encoding="utf-8") as stream:
-                self.assertEqual(json.load(stream), resolved)
-
-            with open(metadata, encoding="utf-8") as stream:
-                self.assertEqual(json.load(stream)["commit"], commit)
-
     def test_selects_latest_final_release(self):
         refs = {"refs/tags/v6.17": "1" * 40,
                 "refs/tags/v6.18-rc7": "2" * 40,
@@ -118,6 +60,22 @@ class SourceRefsTest(unittest.TestCase):
                 source_refs.resolve_ref("example", "refs/tags/v7.2"),
                 ("b" * 40, "refs/tags/v7.2"))
 
+    def test_resolve_annotated_tag_with_real_git(self):
+        """ls-remote must explicitly request the peeled ref, not just allow it."""
+        with tempfile.TemporaryDirectory() as directory:
+            def git(*args):
+                return subprocess.check_output(["git", "-C", directory, *args],
+                                               text=True, stderr=subprocess.DEVNULL).strip()
+            git("init")
+            git("config", "user.name", "Test")
+            git("config", "user.email", "test@example.test")
+            git("commit", "--allow-empty", "-m", "release")
+            git("tag", "-a", "v7.4-rc1", "-m", "release")
+            commit = git("rev-parse", "HEAD")
+            self.assertNotEqual(commit, git("rev-parse", "refs/tags/v7.4-rc1"))
+            self.assertEqual(source_refs.resolve_ref(directory, "v7.4-rc1"),
+                             (commit, "refs/tags/v7.4-rc1"))
+
     def test_exact_tags_peels_annotated_tags(self):
         refs = {"refs/tags/v1.0": "a" * 40,
                 "refs/tags/v2.0": "b" * 40,
@@ -163,49 +121,6 @@ class SourceRefsTest(unittest.TestCase):
             for commit in (tagged, git("rev-parse", "HEAD")):
                 actual = source_refs.describe_commit(directory, commit)
                 self.assertEqual(actual["describe"], git("describe", commit))
-
-    def test_describe_uses_upstream_tags_for_fork_only_commit(self):
-        """Describe the fork's commit using upstream tags, even with conflicting fork tags."""
-        with tempfile.TemporaryDirectory() as directory:
-            upstream = os.path.join(directory, "upstream")
-            fork = os.path.join(directory, "fork")
-
-            def git(repository, *args):
-                return subprocess.check_output(["git", "-C", repository, *args],
-                                               text=True, stderr=subprocess.DEVNULL).strip()
-
-            os.mkdir(upstream)
-            git(upstream, "init")
-            git(upstream, "-c", "user.name=Test", "-c", "user.email=test@example.test",
-                "commit", "--allow-empty", "-m", "release")
-            git(upstream, "-c", "user.name=Test", "-c", "user.email=test@example.test",
-                "tag", "-a", "v11.1.0", "-m", "release")
-            git(directory, "clone", "--no-tags", upstream, fork)
-            git(fork, "-c", "user.name=Test", "-c", "user.email=test@example.test",
-                "commit", "--allow-empty", "-m", "fork changes")
-            commit = git(fork, "rev-parse", "HEAD")
-            metadata = os.path.join(directory, "qemu.json")
-
-            with open(metadata, "w", encoding="utf-8") as stream:
-                json.dump({"repository": fork, "commit": commit}, stream)
-
-            for fork_has_tags in (False, True):
-                if fork_has_tags:
-                    git(fork, "-c", "user.name=Test", "-c", "user.email=test@example.test",
-                        "tag", "-a", "v99.0.0", "-m", "fork-only tag")
-
-                output = io.StringIO()
-
-                with contextlib.redirect_stdout(output):
-                    status = source_refs.main(["describe-metadata", "--metadata", metadata,
-                                               "--tags-repository", upstream])
-
-                self.assertEqual(status, 0)
-                actual = json.loads(output.getvalue())
-                self.assertEqual(actual["commit"], commit)
-                self.assertRegex(actual["describe"], r"^v11\.1\.0-1-g" + commit[:7])
-                self.assertEqual(actual["error"], "")
-
 
 if __name__ == "__main__":
     unittest.main()

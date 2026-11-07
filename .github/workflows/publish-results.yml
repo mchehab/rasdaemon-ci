@@ -78,17 +78,18 @@ jobs:
             requested_run_id=$2
             if test -n "$requested_run_id"; then
               runs=$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$requested_run_id" |
-                jq '{workflow_runs: [. | select(.status == "completed")] }')
+                jq '{workflow_runs: [.] }')
             else
               runs=$(gh api \
                 "/repos/$GITHUB_REPOSITORY/actions/workflows/pipeline.yml/runs?branch=main&status=completed&per_page=100")
             fi
 
             for run_id in $(printf '%s' "$runs" | jq -r \
-              '.workflow_runs | map(select(.status == "completed")) | sort_by(.id) | reverse | .[].id'); do
+              '.workflow_runs | sort_by(.id) | reverse | .[].id'); do
               artifacts=$(gh api \
                 "/repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts?per_page=100")
-              available=0
+              compatible=0
+              selected_revision=
               rm -rf build/candidate
               for arch in x86_64 aarch64; do
                 artifact_id=$(printf '%s' "$artifacts" | jq -r --arg arch "$arch" '
@@ -100,15 +101,19 @@ jobs:
                 fi
                 download_artifact "$artifact_id" "build/candidate/$arch"
                 revision=$(cat "build/candidate/$arch/rasdaemon-source-revision" 2>/dev/null || true)
-                if ! test -f "build/candidate/$arch/results.html" ||
-                   ! [[ "$revision" =~ ^[0-9a-f]{40}$ ]] ||
+                if ! [[ "$revision" =~ ^[0-9a-f]{40}$ ]] ||
                    ! jq -e '.component_totals and .features' "build/candidate/$arch/result.json" >/dev/null; then
                   rm -rf "build/candidate/$arch"
                   continue
                 fi
-                available=$((available + 1))
+                if test -n "$selected_revision" && test "$revision" != "$selected_revision"; then
+                  compatible=0
+                  break
+                fi
+                selected_revision=$revision
+                compatible=$((compatible + 1))
               done
-              if test "$available" -gt 0; then
+              if test "$compatible" -gt 0; then
                 mkdir -p build/results
                 mv build/candidate "build/results/$output_name"
                 printf '%s' "$runs" | jq -r --argjson id "$run_id" '
@@ -128,14 +133,14 @@ jobs:
             requested_run_id=$2
             if test -n "$requested_run_id"; then
               runs=$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$requested_run_id" |
-                jq '{workflow_runs: [. | select(.status == "completed")] }')
+                jq '{workflow_runs: [.] }')
             else
               runs=$(gh api \
                 "/repos/$GITHUB_REPOSITORY/actions/workflows/qemu-fuzz.yml/runs?branch=main&status=completed&per_page=100")
             fi
 
             for run_id in $(printf '%s' "$runs" | jq -r \
-              '.workflow_runs | map(select(.status == "completed")) | sort_by(.id) | reverse | .[].id'); do
+              '.workflow_runs | sort_by(.id) | reverse | .[].id'); do
               artifacts=$(gh api \
                 "/repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts?per_page=100")
               artifact_rows=$(printf '%s' "$artifacts" | jq -r '
@@ -145,7 +150,7 @@ jobs:
 
               if test -n "$artifact_rows"; then
                 rm -rf build/candidate
-                available=0
+                compatible=true
 
                 while IFS=$'\t' read -r artifact_id artifact_name; do
                   mode=${artifact_name#kernel-rasdaemon-fuzz-}
@@ -160,17 +165,14 @@ jobs:
                   download_artifact "$artifact_id" "$destination"
                   revision=$(cat "$destination/rasdaemon-source-revision" \
                     2>/dev/null || true)
-                  if ! test -f "$destination/results.html" ||
-                     ! [[ "$revision" =~ ^[0-9a-f]{40}$ ]] ||
+                  if ! [[ "$revision" =~ ^[0-9a-f]{40}$ ]] ||
                      ! jq -e '.component_totals' "$destination/result.json" \
                        >/dev/null; then
-                    rm -rf "$destination"
-                    continue
+                    compatible=false
                   fi
-                  available=$((available + 1))
                 done <<< "$artifact_rows"
 
-                if test "$available" -gt 0; then
+                if $compatible; then
                   mkdir -p build/results
                   mv build/candidate "build/results/$output_name"
                   printf '%s' "$runs" | jq -r --argjson id "$run_id" \
@@ -196,16 +198,10 @@ jobs:
           fi
           find_daily daily ""
           find_weekly weekly ""
-          # Either report can publish without waiting for the other workflow.
-          if test -f build/results/daily/run || test -f build/results/weekly/run; then
+          # A failed setup or an incomplete first run must not erase live badges.
+          if test -f build/results/daily/run; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Refresh descriptions from recorded test SHAs
-        if: steps.results.outputs.ready == 'true'
-        run: |
-          set -eux
-          python3 tests/qemu/source_refs.py refresh-descriptions --directory build/results
 
       - name: Build Pages site
         if: steps.results.outputs.ready == 'true'
@@ -223,7 +219,7 @@ jobs:
             IFS=$'\t' read -r daily_url daily_conclusion _ _ \
               < build/results/daily/run
             for arch in x86_64 aarch64; do
-              if test -f "build/results/daily/$arch/result.json"; then
+              if test -d "build/results/daily/$arch"; then
                 daily_results+=(--result "$arch=build/results/daily/$arch")
               fi
             done
@@ -284,7 +280,7 @@ jobs:
           git -C build/evidence-store config user.email \
             "41898282+github-actions[bot]@users.noreply.github.com"
 
-          archive_args=(--refresh-versions --store build/evidence-store/archive \
+          archive_args=(--store build/evidence-store/archive \
                         --site build/pages)
           if test -f build/results/daily/run; then
             archive_args+=(--run "daily=build/results/daily")

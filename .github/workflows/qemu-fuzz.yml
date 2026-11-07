@@ -7,7 +7,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: read
   contents: read
 
 concurrency:
@@ -15,28 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  source:
-    runs-on: ubuntu-26.04
-    outputs:
-      revision: ${{ steps.source.outputs.revision }}
-    steps:
-      - name: Pin rasdaemon source for all fuzz modes
-        id: source
-        run: |
-          set -euxo pipefail
-          revision=$(git ls-remote https://github.com/mchehab/rasdaemon.git refs/heads/master | awk '{print $1}')
-          test "${#revision}" -eq 40
-          echo "revision=$revision" >> "$GITHUB_OUTPUT"
-  rasdaemon:
-    needs: source
-    uses: ./.github/workflows/component.yml
-    with:
-      component: rasdaemon
-      arch: x86_64
-      revision: ${{ needs.source.outputs.revision }}
-    secrets: inherit
   fuzz:
-    needs: [source, rasdaemon]
     name: Fuzz ${{ matrix.mode }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -52,7 +30,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           repository: mchehab/rasdaemon
-          ref: ${{ needs.source.outputs.revision }}
+          ref: master
           path: rasdaemon-source
 
       - name: Record tested rasdaemon revision
@@ -64,14 +42,10 @@ jobs:
           mkdir -p "build/fuzz/$FUZZ_MODE"
           git -C rasdaemon-source rev-parse HEAD \
             > "build/fuzz/$FUZZ_MODE/rasdaemon-source-revision"
-
-      - name: Download compiled rasdaemon payload
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ARTIFACT_ID: ${{ needs.rasdaemon.outputs.artifact-id }}
-        run: |
-          set -euxo pipefail
-          ci-harness/tests/qemu/ci/artifact.sh download "$ARTIFACT_ID" build/rasdaemon-payload
+          python3 ci-harness/tests/qemu/source_refs.py describe \
+            --repository https://github.com/mchehab/rasdaemon.git \
+            --commit "$(cat "build/fuzz/$FUZZ_MODE/rasdaemon-source-revision")" \
+            > "build/fuzz/$FUZZ_MODE/rasdaemon-describe.json"
 
       - name: Run isolated fuzz VM
         env:
@@ -84,6 +58,11 @@ jobs:
           mkdir -p "build/fuzz/$FUZZ_MODE"
           docker run --rm --entrypoint cat "$IMAGE" /opt/rasdaemon-ci/kernel/kernel.json > "build/fuzz/$FUZZ_MODE/kernel.json"
           docker run --rm --entrypoint cat "$IMAGE" /opt/rasdaemon-ci/qemu.json > "build/fuzz/$FUZZ_MODE/qemu.json"
+          for component in kernel qemu; do
+            python3 ci-harness/tests/qemu/source_refs.py describe-metadata \
+              --metadata "build/fuzz/$FUZZ_MODE/$component.json" \
+              > "build/fuzz/$FUZZ_MODE/$component-describe.json"
+          done
           docker_args=(--rm)
 
           if test -r /dev/kvm && test -w /dev/kvm; then
@@ -96,9 +75,6 @@ jobs:
           docker run "${docker_args[@]}" \
             -v "$PWD/rasdaemon-source:$container_source:ro" \
             -e "RASDAEMON_SOURCE=$container_source" \
-            -e RASDAEMON_PREBUILT=/rasdaemon-payload \
-            -v "$PWD/build/rasdaemon-payload:/rasdaemon-payload:ro" \
-            -v "$PWD/ci-harness/tests/qemu:/opt/rasdaemon-ci/harness:ro" \
             -v "$PWD/build/fuzz/$FUZZ_MODE:/results" \
             "$IMAGE" run --arch x86_64 --accelerator auto \
             --profile fuzz --fuzz-mode "$FUZZ_MODE" --fuzz-seed "$FUZZ_SEED" \
@@ -144,15 +120,6 @@ jobs:
           else
             echo '🔴 Infrastructure failure: no VM result table was produced.' >> "$GITHUB_STEP_SUMMARY"
           fi
-
-      - name: Describe tested revisions before upload
-        if: always()
-        env:
-          FUZZ_MODE: ${{ matrix.mode }}
-        run: |
-          set -eux
-          python3 ci-harness/tests/qemu/source_refs.py refresh-descriptions \
-            --directory "build/fuzz/$FUZZ_MODE"
 
       - uses: actions/upload-artifact@v7
         if: always()

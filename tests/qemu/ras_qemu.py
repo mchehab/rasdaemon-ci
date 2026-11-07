@@ -43,8 +43,7 @@ OPTIONAL_BUILD_MACROS = {
 PROJECT_DIR = pathlib.Path(__file__).resolve().parents[2]
 HARNESS_DIR = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, os.fspath(HARNESS_DIR))
-from ci import compilation  # pylint: disable=C0413
-import payload as compiled_payload  # pylint: disable=C0413
+import payload as prebuilt_payload  # pylint: disable=C0413
 import features  # pylint: disable=C0413
 import hisi  # pylint: disable=C0413
 import hmp_inject  # pylint: disable=C0413
@@ -903,11 +902,15 @@ class VirtualMachine:
                 'event = "write_aio"\n'
                 'errno = "5"\n', encoding="ascii")
 
-    def _compile_payload(self, build: str, install: str) -> str:
-        """Compile the payload for standalone runs without a cached CI artifact."""
+    def _build_payload(self, build, install):
+        """Compile and install a payload when no cached build was supplied."""
+        server_backend = "enabled" if self.arch == "x86_64" else "disabled"
         commands = [
             (["meson", "setup", str(build), str(self.source_dir),
-              *compilation.settings("rasdaemon", self.arch)["meson"]], None),
+              "--prefix=/usr", "-Dsqlite3=enabled", f"-Dmysql={server_backend}",
+              "-Denable-arch=all",
+              f"-Dpostgresql={server_backend}", "-Dpcie-edpc=enabled",
+              "-Dbmc-generic=enabled"], None),
             (["ninja", "-C", str(build)], None),
             (["meson", "install", "-C", str(build),
               "--destdir", str(install)], None),
@@ -936,25 +939,24 @@ class VirtualMachine:
             if completed.returncode:
                 raise LabError("host payload build failed: %s\n%s" %
                                (shlex.join(command), log_path.read_text()[-32768:]))
-        with open(os.path.join(build, "config.h"), encoding="utf-8") as stream:
-            return stream.read()
+        return (build / "config.h").read_text(encoding="utf-8")
 
     def _stage_source(self):
-        """Stage cached installed output, or compile for standalone local runs."""
+        """Build rasdaemon on the host and stage only installed output."""
         if architecture_name(platform.machine()) != self.arch:
             raise LabError("Build the payload on a host matching the guest architecture")
         self.payload_dir.mkdir()
         build = self.work_dir / "host-build"
         install = self.work_dir / "host-install"
-        prebuilt = os.environ.get("RASDAEMON_PREBUILT")
+        prebuilt = os.environ.get("RASDAEMON_PREBUILT_PAYLOAD", "")
         if prebuilt:
             try:
-                config = compiled_payload.read_prebuilt(prebuilt, self.arch, str(self.source_dir))
+                config = prebuilt_payload.read_prebuilt(prebuilt, self.arch, str(self.source_dir))
             except (OSError, ValueError, subprocess.CalledProcessError) as error:
                 raise LabError(str(error)) from error
-            self.progress("Using cached rasdaemon payload: " + prebuilt)
+            self.progress("Using the selected compiled rasdaemon payload")
         else:
-            config = self._compile_payload(os.fspath(build), os.fspath(install))
+            config = self._build_payload(build, install)
         # Meson generates config.h in the build directory. Read its defined
         # and undefined HAVE_* entries instead of depending on a source template.
         for macro in re.findall(r"^(?:#define|#undef|/\* #undef) (HAVE_\w+)",
@@ -981,7 +983,7 @@ class VirtualMachine:
                 "evidence": {"configuration": config},
             })
         archive = self.payload_dir / "rasdaemon-install.tar"
-        revision = subprocess.run(["git", "-c", "safe.directory=" + os.fspath(self.source_dir),
+        revision = subprocess.run(["git", "-c", "safe.directory=" + str(self.source_dir),
                                    "-C", str(self.source_dir), "rev-parse", "HEAD"],
                                   check=False, text=True, stdout=subprocess.PIPE,
                                   stderr=subprocess.PIPE, timeout=10)
@@ -1648,7 +1650,7 @@ def run_test(args, manifest):
         try:
             machine.progress(f"Image selected: {image}; SHA256={descriptor['image'].get('sha256') or 'not supplied'}")
             if not args.quiet:
-                print("Preparing guest and staging rasdaemon payload",
+                print("Preparing guest and building rasdaemon payload",
                       file=sys.stderr, flush=True)
             machine.prepare()
             for check in machine.build_checks:

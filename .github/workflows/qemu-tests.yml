@@ -4,81 +4,71 @@ name: RAS Daemon functional tests
 
 on:
   workflow_call:
-    inputs:
-      arch:
-        required: true
-        type: string
-      revision:
-        required: false
-        type: string
-        default: ""
-      rasdaemon-artifact:
-        required: true
-        type: string
-      image:
-        required: true
-        type: string
 
 permissions:
-  actions: read
   contents: read
+  actions: read
 
 jobs:
-  source:
-    name: Use pinned rasdaemon source
-    runs-on: ubuntu-24.04
-    outputs:
-      revision: ${{ steps.source.outputs.revision }}
-    steps:
-      - name: Resolve rasdaemon revision
-        id: source
-        env:
-          PINNED_REVISION: ${{ inputs.revision }}
-        run: |
-          set -euxo pipefail
-          revision=$PINNED_REVISION
-          if test -z "$revision"; then
-            revision=$(git ls-remote https://github.com/mchehab/rasdaemon.git refs/heads/master | awk '{print $1}')
-          fi
-          test "${#revision}" -eq 40
-          echo "revision=$revision" >> "$GITHUB_OUTPUT"
-
   test:
     name: Test QEMU
-    needs: source
-    runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
-    env:
-      IMAGE_REF: ${{ inputs.image || format('ghcr.io/{0}/rasdaemon-ci:{1}', github.repository_owner, inputs.arch) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
     steps:
       - name: Check out CI harness
         uses: actions/checkout@v7
         with:
           path: ci-harness
+      - uses: actions/download-artifact@v7
+        with:
+          name: selected-image-${{ matrix.arch }}
+          path: selected/image
+      - uses: actions/download-artifact@v7
+        with:
+          name: selected-rasdaemon-${{ matrix.arch }}
+          path: selected/
+      - name: Read the selected image and payload
+        id: selected
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          image=$(cat selected/image/reference)
+          owner=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          [[ "$image" == "ghcr.io/$owner/rasdaemon-ci@sha256:"* ]]
+          echo "IMAGE_REF=$image" >> "$GITHUB_ENV"
+          revision=$(jq -r .revision selected/rasdaemon.json)
+          [[ "$revision" =~ ^[0-9a-f]{40}$ ]]
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          ci-harness/tests/qemu/ci/artifact.sh download "$(jq -r .id selected/rasdaemon.json)" build/rasdaemon-payload
       - name: Check out rasdaemon source
         uses: actions/checkout@v7
         with:
           repository: mchehab/rasdaemon
-          ref: ${{ needs.source.outputs.revision }}
+          ref: ${{ steps.selected.outputs.revision }}
           path: rasdaemon-source
 
       - name: Record tested rasdaemon revision
         env:
-          TEST_ARCH: ${{ inputs.arch }}
+          TEST_ARCH: ${{ matrix.arch }}
         run: |
           set -eux
 
           mkdir -p "build/qemu-results/$TEST_ARCH"
           git -C rasdaemon-source rev-parse HEAD \
             > "build/qemu-results/$TEST_ARCH/rasdaemon-source-revision"
-
-      - name: Download compiled rasdaemon payload
-        env:
-          GH_TOKEN: ${{ github.token }}
-          ARTIFACT_ID: ${{ inputs.rasdaemon-artifact }}
-        run: |
-          set -euxo pipefail
-          ci-harness/tests/qemu/ci/artifact.sh download "$ARTIFACT_ID" build/rasdaemon-payload
+          python3 ci-harness/tests/qemu/source_refs.py describe \
+            --repository https://github.com/mchehab/rasdaemon.git \
+            --commit "$(cat "build/qemu-results/$TEST_ARCH/rasdaemon-source-revision")" \
+            > "build/qemu-results/$TEST_ARCH/rasdaemon-describe.json"
 
       - name: Download image
         run: |
@@ -86,16 +76,21 @@ jobs:
           docker pull "$IMAGE_REF"
       - name: Record image provenance
         env:
-          TEST_ARCH: ${{ inputs.arch }}
+          TEST_ARCH: ${{ matrix.arch }}
         run: |
           set -eux
           docker run --rm --entrypoint cat "$IMAGE_REF" /opt/rasdaemon-ci/kernel/kernel.json > "build/qemu-results/$TEST_ARCH/kernel.json"
           docker run --rm --entrypoint cat "$IMAGE_REF" /opt/rasdaemon-ci/qemu.json > "build/qemu-results/$TEST_ARCH/qemu.json"
+          for component in kernel qemu; do
+            python3 ci-harness/tests/qemu/source_refs.py describe-metadata \
+              --metadata "build/qemu-results/$TEST_ARCH/$component.json" \
+              > "build/qemu-results/$TEST_ARCH/$component-describe.json"
+          done
       - name: Run
         env:
-          TEST_ARCH: ${{ inputs.arch }}
+          TEST_ARCH: ${{ matrix.arch }}
         run: |
-          mkdir -p build/qemu-results/$TEST_ARCH
+          mkdir -p "build/qemu-results/$TEST_ARCH"
           docker_args=(--rm)
           if test -r /dev/kvm && test -w /dev/kvm; then
             docker_args+=(--device /dev/kvm)
@@ -104,11 +99,11 @@ jobs:
             -c 'printf "%s/rasdaemon" "$HOME"')
           test "${container_source:0:1}" = /
           docker run "${docker_args[@]}" \
+            -v "$PWD/ci-harness/tests/qemu:/opt/rasdaemon-ci/harness:ro" \
+            -v "$PWD/build/rasdaemon-payload:/opt/rasdaemon-payload:ro" \
+            -e RASDAEMON_PREBUILT_PAYLOAD=/opt/rasdaemon-payload \
             -v "$PWD/rasdaemon-source:$container_source:ro" \
             -e "RASDAEMON_SOURCE=$container_source" \
-            -e RASDAEMON_PREBUILT=/rasdaemon-payload \
-            -v "$PWD/build/rasdaemon-payload:/rasdaemon-payload:ro" \
-            -v "$PWD/ci-harness/tests/qemu:/opt/rasdaemon-ci/harness:ro" \
             -v "$PWD/build/qemu-results/$TEST_ARCH:/results" \
             "$IMAGE_REF" \
             run --arch "$TEST_ARCH" --accelerator auto \
@@ -117,7 +112,7 @@ jobs:
       - name: Publish kernel and rasdaemon status table
         if: always()
         env:
-          TEST_ARCH: ${{ inputs.arch }}
+          TEST_ARCH: ${{ matrix.arch }}
         run: |
           set -eux
 
@@ -155,20 +150,11 @@ jobs:
             echo '🔴 Infrastructure failure: no VM result table was produced.' >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Describe tested revisions before upload
-        if: always()
-        env:
-          TEST_ARCH: ${{ inputs.arch }}
-        run: |
-          set -eux
-          python3 ci-harness/tests/qemu/source_refs.py refresh-descriptions \
-            --directory "build/qemu-results/$TEST_ARCH"
-
       - uses: actions/upload-artifact@v7
         name: Upload
         if: always()
         with:
-          name: rasdaemon-qemu-results-${{ inputs.arch }}
-          path: build/qemu-results/${{ inputs.arch }}
+          name: rasdaemon-qemu-results-${{ matrix.arch }}
+          path: build/qemu-results/${{ matrix.arch }}
           retention-days: 90
           if-no-files-found: error
