@@ -1,0 +1,125 @@
+# SPDX-License-Identifier: GPL-2.0-only
+name: Reuse or build an upstream component
+
+on:
+  workflow_call:
+    inputs:
+      component:
+        required: true
+        type: string
+      arch:
+        required: true
+        type: string
+      revision:
+        required: true
+        type: string
+      legacy-revision:
+        description: Previous artifact naming SHA, verified against the actual source commit
+        required: false
+        type: string
+    outputs:
+      artifact-id:
+        description: Exact artifact to consume, whether reused or newly built
+        value: ${{ jobs.build.outputs.artifact-id || jobs.check.outputs.artifact-id }}
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  check:
+    name: Check ${{ inputs.component }} (${{ inputs.arch }})
+    runs-on: ubuntu-26.04
+    outputs:
+      artifact-id: ${{ steps.artifact.outputs.id }}
+      name: ${{ steps.artifact.outputs.name }}
+      decision: ${{ steps.artifact.outputs.decision }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Find compiled source SHA
+        id: artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMPONENT: ${{ inputs.component }}
+          ARCH: ${{ inputs.arch }}
+          REVISION: ${{ inputs.revision }}
+          LEGACY_REVISION: ${{ inputs.legacy-revision }}
+        run: |
+          set -euxo pipefail
+          [[ "$REVISION" =~ ^[0-9a-f]{40}$ ]]
+          case "$ARCH" in x86_64|aarch64) ;; *) exit 2 ;; esac
+          key=$(python3 tests/qemu/ci/compilation.py "$COMPONENT" "$ARCH" --key)
+          case "$COMPONENT" in
+            kernel|qemu) name="rasdaemon-$COMPONENT-$ARCH-$REVISION-$key" ;;
+            rasdaemon) name="rasdaemon-payload-$ARCH-$REVISION-$key" ;;
+            *) exit 2 ;;
+          esac
+
+          echo "Build inputs: component=$COMPONENT architecture=$ARCH source=$REVISION options=$key"
+          echo "Effective compilation settings:"
+          python3 tests/qemu/ci/compilation.py "$COMPONENT" "$ARCH"
+          selected_name=$name
+          id=$(tests/qemu/ci/artifact.sh lookup "$name")
+          # Migration: reuse old QEMU/kernel builds only when their original
+          # options match. These fixed keys describe pre-keyed artifacts; do
+          # not update them when changing compilation settings.
+          legacy_key=$(jq -r --arg component "$COMPONENT" --arg arch "$ARCH" \
+            '.[$component][$arch] // empty' tests/qemu/ci/compilation/legacy-build-keys.json)
+          if test -z "$id" && test "$key" = "$legacy_key"; then
+            legacy_name="rasdaemon-$COMPONENT-$ARCH-$REVISION"
+            if test "$COMPONENT" = kernel; then
+              legacy_revision=${LEGACY_REVISION:-$REVISION}
+              [[ "$legacy_revision" =~ ^[0-9a-f]{40}$ ]]
+              legacy_name="rasdaemon-kernel-$ARCH-${legacy_revision:0:12}"
+            fi
+            id=$(tests/qemu/ci/artifact.sh lookup "$legacy_name")
+            if test -n "$id"; then
+              tests/qemu/ci/artifact.sh download "$id" legacy
+              if jq -e --arg sha "$REVISION" '.commit == $sha' "legacy/metadata/$COMPONENT.json"; then
+                selected_name=$legacy_name
+              else
+                echo "Legacy artifact $legacy_name (ID $id) does not match source $REVISION; rebuilding."
+                id=
+              fi
+            fi
+          elif test -z "$id"; then
+            echo "Legacy reuse is not eligible: no legacy build with matching compilation settings is defined."
+          fi
+
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          if test -n "$id"; then
+            decision="SKIP compilation: $COMPONENT ($ARCH), source $REVISION, options $key; matching artifact $selected_name (ID $id) is available."
+          else
+            decision="BUILD required: $COMPONENT ($ARCH), source $REVISION, options $key; no reusable artifact is available for these inputs (expected $name)."
+          fi
+          echo "decision=$decision" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$decision" | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+
+  build:
+    name: Build ${{ inputs.component }} (${{ inputs.arch }})
+    needs: check
+    if: needs.check.outputs.artifact-id == ''
+    runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
+    timeout-minutes: 360
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compile pinned source
+        env:
+          COMPONENT: ${{ inputs.component }}
+          ARCH: ${{ inputs.arch }}
+          REVISION: ${{ inputs.revision }}
+          BUILD_DECISION: ${{ needs.check.outputs.decision }}
+        run: |
+          set -euxo pipefail
+          echo "$BUILD_DECISION"
+          tests/qemu/ci/build-component.sh "$COMPONENT" "$ARCH" "$REVISION" build/component
+      - uses: actions/upload-artifact@v7
+        id: upload
+        with:
+          name: ${{ needs.check.outputs.name }}
+          path: build/component
+          retention-days: 90
+          if-no-files-found: error

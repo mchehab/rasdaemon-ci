@@ -16,6 +16,7 @@ import sys
 import urllib.parse
 
 import features
+import retention
 from publish_results import PublishedResult, ResultSite
 from source_refs import refresh_descriptions
 
@@ -88,7 +89,7 @@ def archive_index(retained: list[tuple[str, dict]]) -> str:
     for name, run in ordered:
         items = run["items"]
         kind = "daily" if any(item["kind"] == "daily" for item in items) else "weekly"
-        status = "success" if all(item["conclusion"] == "success" for item in items) else "failure"
+        status = retention.status(items)
         timestamp = max(datetime.datetime.fromisoformat(item["created_at"])
                         for item in items).astimezone(datetime.timezone.utc)
         readable = timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -110,7 +111,8 @@ def archive_index(retained: list[tuple[str, dict]]) -> str:
     page = ["<!doctype html><html lang=\"en\"><meta charset=\"utf-8\">"]
     page.append("<title>rasdaemon CI evidence archive</title>")
     page.append("<h1>rasdaemon CI evidence archive</h1>")
-    page.append("<p>Failed runs are retained indefinitely. Successful runs are retained for 30 days.</p>")
+    page.append("<p>Test-failure evidence is retained indefinitely. "
+                "Infrastructure-only failures and successful runs are retained for 30 days.</p>")
     page.append("<table><thead><tr><th>Time (UTC)</th><th>Status</th>"
                 "<th>QEMU</th><th>Linux kernel</th><th>rasdaemon</th></tr></thead><tbody>" +
                 "".join(rows) + "</tbody></table>")
@@ -518,10 +520,14 @@ def archive(store: str, site: str, inputs: list[str], now: datetime.datetime,
         if not metadata:
             continue
 
+        retention.update_metadata(directory, metadata)
+
         newest = max(datetime.datetime.fromisoformat(item["created_at"])
                      for item in metadata)
-        if all(item["conclusion"] == "success" for item in metadata) and newest < cutoff:
+        if newest < cutoff and all(item["failure_kind"] in ("success", "infrastructure_failure")
+                                   for item in metadata):
             shutil.rmtree(directory)
+            shutil.rmtree(os.path.join(site, name), ignore_errors=True)
             continue
 
         if refresh_versions:

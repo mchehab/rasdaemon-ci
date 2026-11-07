@@ -78,7 +78,10 @@ def resolve_ref(repository: str, ref: str) -> tuple[str, str]:
     if not ref.startswith("refs/"):
         candidates.extend(("refs/heads/" + ref, "refs/tags/" + ref))
 
-    refs = ls_remote(repository, *candidates,
+    # Exact ls-remote patterns exclude the peeled ref unless it is also requested.
+    patterns = candidates + [value + "^{}" for value in candidates
+                             if value.startswith("refs/tags/")]
+    refs = ls_remote(repository, *patterns,
                      include_peeled=any(value.startswith("refs/tags/")
                                         for value in candidates))
 
@@ -135,7 +138,8 @@ def resolve_kernel(repository: str, channel: str,
     commit, resolved_ref = resolve_ref(repository, "refs/tags/" + tag)
 
     return {"repository": repository, "channel": channel,
-            "ref": resolved_ref, "tag": tag, "commit": commit}
+            "ref": resolved_ref, "tag": tag, "commit": commit,
+            "tag_object": refs[resolved_ref]}
 
 
 def refresh_descriptions(directory: str, cache: dict | None = None) -> None:

@@ -14,6 +14,30 @@ from tests.qemu import source_refs
 
 
 class SourceRefsTest(unittest.TestCase):
+    def test_real_annotated_tag_resolution(self):
+        """Exercise git's ref filtering, which mocked ls-remote replies cannot cover."""
+        with tempfile.TemporaryDirectory() as directory:
+            def git(*args):
+                return subprocess.check_output(["git", "-C", directory, *args],
+                                               text=True, stderr=subprocess.DEVNULL).strip()
+
+            git("init")
+            git("-c", "user.name=Test", "-c", "user.email=test@example.test",
+                "commit", "--allow-empty", "-m", "release")
+            git("-c", "user.name=Test", "-c", "user.email=test@example.test",
+                "tag", "-a", "v7.4-rc1", "-m", "release")
+            commit = git("rev-parse", "HEAD")
+            tag_object = git("rev-parse", "refs/tags/v7.4-rc1")
+            self.assertNotEqual(commit, tag_object)
+
+            for ref in ("v7.4-rc1", "refs/tags/v7.4-rc1"):
+                self.assertEqual(source_refs.resolve_ref(directory, ref),
+                                 (commit, "refs/tags/v7.4-rc1"))
+
+            selected = source_refs.resolve_kernel(directory, "latest")
+            self.assertEqual(selected["commit"], commit)
+            self.assertEqual(selected["tag_object"], tag_object)
+
     def test_refresh_retries_missing_tags_using_original_sha(self):
         """A later publication can repair a failed lookup without rerunning tests."""
         commit = "a" * 40

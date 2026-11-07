@@ -36,6 +36,18 @@ while test $# -gt 0; do
 	esac
 done
 
+# Explicit component directories are dependencies, not permission to compile
+# a replacement if an artifact is corrupt or incomplete.
+for component in qemu kernel; do
+	variable="${component}_dir"
+	directory=${!variable}
+
+	if test -n "$directory" && test ! -f "$directory/metadata/$component.json"; then
+		echo "Supplied $component artifact is missing metadata: $directory" >&2
+		exit 1
+	fi
+done
+
 case $arch in
 x86_64) machine=q35 ;;
 aarch64|arm64) arch=aarch64; machine=virt ;;
@@ -100,6 +112,10 @@ fi
 cp "$kernel_dir/config-"* "$context/rasdaemon-ci/kernel/"
 cp "$qemu_dir/metadata/qemu.json" "$context/rasdaemon-ci/"
 cp "$project_dir/tests/qemu/oci/rasdaemon-ci.py" "$context/"
+mkdir -p "$context/rasdaemon-ci/harness/ci"
+cp "$script_dir/compilation.py" "$context/rasdaemon-ci/harness/ci/"
+cp -a "$script_dir/compilation" "$context/rasdaemon-ci/harness/ci/"
+cp "$project_dir/tests/qemu/payload.py" "$context/rasdaemon-ci/harness/"
 cp "$project_dir/tests/qemu/ras_qemu.py" \
 	"$context/rasdaemon-ci/harness/"
 cp "$project_dir/tests/qemu/scenarios.json" \

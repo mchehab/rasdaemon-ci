@@ -12,11 +12,15 @@ on:
         required: false
         type: string
         default: ""
+      rasdaemon-artifact:
+        required: true
+        type: string
       image:
         required: true
         type: string
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -68,6 +72,14 @@ jobs:
           git -C rasdaemon-source rev-parse HEAD \
             > "build/qemu-results/$TEST_ARCH/rasdaemon-source-revision"
 
+      - name: Download compiled rasdaemon payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ inputs.rasdaemon-artifact }}
+        run: |
+          set -euxo pipefail
+          ci-harness/tests/qemu/ci/artifact.sh download "$ARTIFACT_ID" build/rasdaemon-payload
+
       - name: Download image
         run: |
           echo "Using image $IMAGE_REF"
@@ -94,6 +106,9 @@ jobs:
           docker run "${docker_args[@]}" \
             -v "$PWD/rasdaemon-source:$container_source:ro" \
             -e "RASDAEMON_SOURCE=$container_source" \
+            -e RASDAEMON_PREBUILT=/rasdaemon-payload \
+            -v "$PWD/build/rasdaemon-payload:/rasdaemon-payload:ro" \
+            -v "$PWD/ci-harness/tests/qemu:/opt/rasdaemon-ci/harness:ro" \
             -v "$PWD/build/qemu-results/$TEST_ARCH:/results" \
             "$IMAGE_REF" \
             run --arch "$TEST_ARCH" --accelerator auto \

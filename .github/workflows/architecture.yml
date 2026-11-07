@@ -11,6 +11,16 @@ on:
         required: true
         type: string
 
+      kernel:
+        required: true
+        type: string
+      kernel-tag-object:
+        required: false
+        type: string
+      qemu:
+        required: true
+        type: string
+
 permissions:
   actions: write
   contents: read
@@ -18,25 +28,42 @@ permissions:
 
 jobs:
   kernel:
-    uses: ./.github/workflows/linux-kernel.yml
+    uses: ./.github/workflows/component.yml
     with:
       arch: ${{ inputs.arch }}
+      component: kernel
+      revision: ${{ inputs.kernel }}
+      legacy-revision: ${{ inputs.kernel-tag-object }}
     secrets: inherit
   qemu:
-    uses: ./.github/workflows/qemu.yml
+    uses: ./.github/workflows/component.yml
     with:
       arch: ${{ inputs.arch }}
+      component: qemu
+      revision: ${{ inputs.qemu }}
     secrets: inherit
   rasdaemon:
-    uses: ./.github/workflows/rasdaemon.yml
+    uses: ./.github/workflows/component.yml
     with:
       arch: ${{ inputs.arch }}
+      component: rasdaemon
+      revision: ${{ inputs.revision }}
     secrets: inherit
   image:
-    # The image consumes kernel and QEMU artifacts; rasdaemon is built by tests.
     needs: [kernel, qemu]
     uses: ./.github/workflows/qemu-image.yml
     with:
       arch: ${{ inputs.arch }}
+      kernel-artifact: ${{ needs.kernel.outputs.artifact-id }}
+      qemu-artifact: ${{ needs.qemu.outputs.artifact-id }}
+    secrets: inherit
+  test:
+    needs: [image, rasdaemon]
+    if: always() && needs.image.outputs.image != '' && needs.rasdaemon.outputs.artifact-id != ''
+    uses: ./.github/workflows/qemu-tests.yml
+    with:
+      arch: ${{ inputs.arch }}
       revision: ${{ inputs.revision }}
+      image: ${{ needs.image.outputs.image }}
+      rasdaemon-artifact: ${{ needs.rasdaemon.outputs.artifact-id }}
     secrets: inherit

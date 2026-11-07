@@ -8,10 +8,15 @@ on:
       arch:
         required: true
         type: string
-      revision:
-        required: false
+      kernel-artifact:
+        required: true
         type: string
-        default: ""
+      qemu-artifact:
+        required: true
+        type: string
+    outputs:
+      image:
+        value: ${{ jobs.build.outputs.image || jobs.check.outputs.image }}
 
 permissions:
   actions: write
@@ -24,6 +29,8 @@ jobs:
     runs-on: ubuntu-26.04
     outputs:
       build: ${{ steps.changed.outputs.build }}
+      image: ${{ steps.changed.outputs.image }}
+      decision: ${{ steps.changed.outputs.decision }}
     steps:
       - name: Check out CI harness
         uses: actions/checkout@v7
@@ -31,35 +38,32 @@ jobs:
       - name: Test CI harness
         run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
 
-      - name: Check changes
+      - name: Check assembled image
         id: changed
         env:
           GH_TOKEN: ${{ github.token }}
-          EVENT_NAME: ${{ github.event_name }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          NAME: rasdaemon-image-ref-${{ inputs.arch }}-${{ github.sha }}-${{ inputs.kernel-artifact }}-${{ inputs.qemu-artifact }}
+          ARCH: ${{ inputs.arch }}
+          CI_REVISION: ${{ github.sha }}
+          KERNEL_ARTIFACT: ${{ inputs.kernel-artifact }}
+          QEMU_ARTIFACT: ${{ inputs.qemu-artifact }}
         run: |
-          artifacts=$(gh api --paginate --slurp \
-            "/repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" |
-            jq '{artifacts: [.[].artifacts[]]}')
-
-          kernel=$(printf '%s' "$artifacts" | jq -r '
-            [.artifacts[] | select(.expired == false and
-              (.name | test("^rasdaemon-kernel-${{ inputs.arch }}-")))]
-            | max_by(.created_at) | .created_at // empty')
-          qemu=$(printf '%s' "$artifacts" | jq -r '
-            [.artifacts[] | select(.expired == false and
-              (.name | test("^rasdaemon-qemu-${{ inputs.arch }}-")))]
-            | max_by(.created_at) | .created_at // empty')
-          image=$(printf '%s' "$artifacts" | jq -r '
-            [.artifacts[] | select(.expired == false and
-              .name == ("rasdaemon-qemu-image-${{ inputs.arch }}-" + env.HEAD_SHA))]
-            | max_by(.created_at) | .created_at // empty')
-
-          if [[ -z "$image" || "$kernel" > "$image" || "$qemu" > "$image" ]]; then
-            echo "build=true" >> "$GITHUB_OUTPUT"
-          else
+          set -euxo pipefail
+          echo "Image inputs: architecture=$ARCH CI=$CI_REVISION kernel-artifact=$KERNEL_ARTIFACT qemu-artifact=$QEMU_ARTIFACT"
+          id=$(tests/qemu/ci/artifact.sh lookup "$NAME")
+          if test -n "$id"; then
+            tests/qemu/ci/artifact.sh download "$id" image-ref
+            image=$(cat image-ref/image)
+            [[ "$image" == *@sha256:* ]]
+            echo "image=$image" >> "$GITHUB_OUTPUT"
             echo "build=false" >> "$GITHUB_OUTPUT"
+            decision="SKIP image assembly ($ARCH): matching reference $NAME (ID $id) provides $image."
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            decision="BUILD image required ($ARCH): no reusable reference $NAME exists for these CI/kernel/QEMU inputs; assemble from the selected compiled artifacts."
           fi
+          echo "decision=$decision" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$decision" | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
 
   build:
     name: Build QEMU image
@@ -85,52 +89,15 @@ jobs:
             dwarves qemu-system-x86 qemu-system-arm qemu-efi-aarch64 qemu-utils cloud-image-utils e2fsprogs \
             python3-tomli jq unzip
 
-      - name: Download Linux, QEMU and RAS Daemon
+      - name: Download pinned Linux and QEMU artifacts
         env:
           GH_TOKEN: ${{ github.token }}
+          KERNEL_ARTIFACT: ${{ inputs.kernel-artifact }}
+          QEMU_ARTIFACT: ${{ inputs.qemu-artifact }}
         run: |
-          api() {
-            curl --fail --location --silent --show-error \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H 'Accept: application/vnd.github+json' \
-              "https://api.github.com$1"
-          }
-          mkdir -p build/kernel build/qemu
-          download_artifact() {
-            name=$1
-            destination=$2
-            artifact_id=$(api "/repos/$GITHUB_REPOSITORY/actions/artifacts?name=$name" |
-              jq -r '.artifacts[] | select(.expired == false) | .id' | head -n 1)
-            test -n "$artifact_id" || {
-              echo "artifact not available: $name" >&2
-              return 1
-            }
-            archive=$(mktemp)
-            api "/repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id/zip" > "$archive"
-            unzip -q "$archive" -d "$destination"
-            rm -f "$archive"
-          }
-          artifact_name() {
-            prefix=$1
-            api "/repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" |
-              jq -r ".artifacts[] | select(.name | startswith(\"$prefix\")) | select(.expired == false) | .name" |
-              head -n 1
-          }
-          for attempt in $(seq 1 120); do
-            kernel_name=$(artifact_name rasdaemon-kernel-$TEST_ARCH-)
-            qemu_name=$(artifact_name rasdaemon-qemu-$TEST_ARCH-)
-            if test -n "$kernel_name" && test -n "$qemu_name"; then
-              break
-            fi
-            echo "Waiting for kernel and QEMU artifacts (attempt $attempt/120; kernel=${kernel_name:-missing}, qemu=${qemu_name:-missing})"
-            sleep 60
-          done
-          test -n "$kernel_name" && test -n "$qemu_name" || {
-            echo "Timed out waiting for non-expired kernel and QEMU artifacts" >&2
-            exit 1
-          }
-          download_artifact "$kernel_name" build/kernel
-          download_artifact "$qemu_name" build/qemu
+          set -euxo pipefail
+          tests/qemu/ci/artifact.sh download "$KERNEL_ARTIFACT" build/kernel
+          tests/qemu/ci/artifact.sh download "$QEMU_ARTIFACT" build/qemu
 
       - name: Check Debian base checksum
         id: base
@@ -142,7 +109,11 @@ jobs:
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Build image
+        env:
+          BUILD_DECISION: ${{ needs.check.outputs.decision }}
         run: |
+          set -euxo pipefail
+          echo "$BUILD_DECISION"
           tests/qemu/ci/build-bundle.sh --arch "$TEST_ARCH" \
             --kernel-dir build/kernel --qemu-dir build/qemu \
             --kernel-json build/kernel/metadata/kernel.json \
@@ -167,6 +138,16 @@ jobs:
             *) echo "published image digest was not available: $image" >&2; exit 1 ;;
           esac
           echo "image=$image" >> "$GITHUB_OUTPUT"
+          mkdir -p build/image-ref
+          printf '%s\n' "$image" > build/image-ref/image
+
+      - name: Retain immutable image reference
+        uses: actions/upload-artifact@v7
+        with:
+          name: rasdaemon-image-ref-${{ inputs.arch }}-${{ github.sha }}-${{ inputs.kernel-artifact }}-${{ inputs.qemu-artifact }}
+          path: build/image-ref
+          retention-days: 90
+          if-no-files-found: error
 
       - name: Upload Results
         if: always()
@@ -214,14 +195,3 @@ jobs:
             gh api --method DELETE \
               "/repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id"
           done
-
-  test:
-    name: Test QEMU image
-    needs: [check, build]
-    if: always() && needs.check.result == 'success' && (needs.build.outputs.image != '' || needs.build.result == 'skipped')
-    uses: ./.github/workflows/qemu-tests.yml
-    with:
-      arch: ${{ inputs.arch }}
-      revision: ${{ inputs.revision }}
-      image: ${{ needs.build.outputs.image }}
-    secrets: inherit

@@ -99,6 +99,31 @@ class FirmwareTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "missing firmware files:.*renamed-template.fd"):
             firmware.select_firmware(self.root, self.binary, "aarch64", "virt")
 
+    def test_incomplete_bundled_x86_pair_uses_complete_system_pair(self):
+        """An absent bundled vars blob must not be mixed with the system template."""
+        self.descriptor["targets"] = [{"architecture": "x86_64", "machines": ["pc-q35-*"]}]
+        self.run.return_value = subprocess.CompletedProcess(
+            [], 0, "q35  Standard PC (alias of pc-q35-99.0)\n")
+        self.write_descriptor()
+        os.unlink(os.path.join(self.root, self.variables.lstrip("/")))
+        system_data = os.path.join(self.root, "usr", "share", "qemu", "firmware")
+        os.makedirs(system_data)
+        pair = {"code": "/usr/share/OVMF/code.fd", "vars": "/usr/share/OVMF/vars.fd"}
+        os.makedirs(os.path.join(self.root, "usr", "share", "OVMF"))
+
+        for name in pair.values():
+            with open(os.path.join(self.root, name.lstrip("/")), "wb") as stream:
+                stream.write(b"firmware")
+
+        self.descriptor["mapping"]["executable"]["filename"] = pair["code"]
+        self.descriptor["mapping"]["nvram-template"]["filename"] = pair["vars"]
+
+        with open(os.path.join(system_data, "60-system.json"), "w", encoding="utf-8") as stream:
+            json.dump(self.descriptor, stream)
+
+        selected = firmware.select_firmware(self.root, self.binary, "x86_64", "q35")
+        self.assertEqual(selected, {"pairs": [pair]})
+
     def test_rejects_other_architecture(self):
         """Do not substitute another architecture's installed firmware."""
         self.write_descriptor()

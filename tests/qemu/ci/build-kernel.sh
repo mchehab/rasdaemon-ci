@@ -39,73 +39,13 @@ aarch64|arm64) arch=aarch64; kernel_arch=arm64; defconfig=defconfig; image_targe
 *) echo "Unsupported architecture: $arch" >&2; exit 2 ;;
 esac
 export ARCH=$kernel_arch
+settings=$(python3 "$script_dir/compilation.py" kernel "$arch")
+defconfig=$(jq -r .defconfig <<< "$settings")
 make -C "$work/source" O="$work/build" "$defconfig"
 config="$work/source/scripts/config"
-config_enable=()
-config_enable+=(ACPI_APEI)
-config_enable+=(ACPI_APEI_EINJ)
-config_enable+=(ACPI_APEI_GHES)
-config_enable+=(ACPI_APEI_MEMORY_FAILURE)
-config_enable+=(ACPI_APEI_PCIEAER)
-config_enable+=(ACPI_ERST)
-config_enable+=(BLK_DEV_INITRD)
-config_enable+=(CXL_MEM_RAW_COMMANDS)
-config_enable+=(DEBUG_FS)
-config_enable+=(DEBUG_INFO_NONE)
-config_enable+=(DEVTMPFS)
-config_enable+=(DEVTMPFS_MOUNT)
-config_enable+=(EDAC)
-config_enable+=(EDAC_GHES)
-config_enable+=(CXL_ACPI)
-config_enable+=(NUMA)
-config_enable+=(ACPI_NUMA)
-config_enable+=(CXL_REGION)
-config_enable+=(CXL_BUS)
-config_enable+=(CXL_PCI)
-config_enable+=(CXL_MEM)
-config_enable+=(EXT4_FS)
-config_enable+=(FTRACE)
-config_enable+=(MEMORY_FAILURE)
-config_enable+=(PCIEAER)
-config_enable+=(PSTORE)
-config_enable+=(PSTORE_BLK)
-config_enable+=(RAS)
-config_enable+=(SERIAL_8250)
-config_enable+=(SERIAL_8250_CONSOLE)
-config_enable+=(TRACEFS_FS)
-config_enable+=(TRACEPOINTS)
-config_enable+=(TRACING)
-config_enable+=(NET)
-config_enable+=(INET)
-config_enable+=(NETDEVICES)
-config_enable+=(NET_DEVLINK)
-config_enable+=(IPMI_HANDLER)
-config_enable+=(IPMI_DEVICE_INTERFACE)
-config_enable+=(IPMI_SI)
-config_enable+=(VFAT_FS)
-config_enable+=(VIRTIO)
-config_enable+=(VIRTIO_BLK)
-config_enable+=(VIRTIO_CONSOLE)
-config_enable+=(VIRTIO_PCI)
-config_enable+=(X86_MCE)
-config_enable+=(X86_MCE_AMD)
-config_enable+=(X86_MCE_INTEL)
-
-if test "$arch" = aarch64; then
-	config_enable+=(ACPI EFI ARM64_RAS ARM64_ERRATUM_1800710)
-	config_enable+=(SERIAL_AMBA_PL011 SERIAL_AMBA_PL011_CONSOLE)
-fi
-
-config_module=()
-config_module+=(HWPOISON_INJECT)
-config_module+=(NETDEVSIM)
-
-if test "$arch" = x86_64; then
-	config_module+=(ACPI_EXTLOG ACPI_APEI_ERST_DEBUG)
-fi
-
-config_disable=()
-config_disable+=(DEBUG_INFO)
+mapfile -t config_enable < <(jq -r '.enable[]' <<< "$settings")
+mapfile -t config_module < <(jq -r '.module[]' <<< "$settings")
+mapfile -t config_disable < <(jq -r '.disable[]' <<< "$settings")
 
 for option in "${config_enable[@]}"; do
 	"$config" --file "$work/build/.config" --enable "$option"
@@ -137,8 +77,9 @@ done
 
 make -C "$work/source" O="$work/build" -j"$jobs" "$image_target" modules
 release=$(make -s -C "$work/source" O="$work/build" kernelrelease)
+mapfile -t install_options < <(jq -r '.make[]' <<< "$settings")
 make -C "$work/source" O="$work/build" \
-	modules_install INSTALL_MOD_PATH="$output/modules" INSTALL_MOD_STRIP=1
+	modules_install INSTALL_MOD_PATH="$output/modules" "${install_options[@]}"
 mkdir -p "$work/test-driver"
 cp "$script_dir/../guest/test-driver/Makefile" "$script_dir/../guest/test-driver/ras_ci.c" \
 	"$work/test-driver/"

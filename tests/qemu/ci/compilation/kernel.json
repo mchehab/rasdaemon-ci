@@ -1,0 +1,84 @@
+{
+  "common": {
+    "enable": [
+      "ACPI_APEI",
+      "ACPI_APEI_EINJ",
+      "ACPI_APEI_GHES",
+      "ACPI_APEI_MEMORY_FAILURE",
+      "ACPI_APEI_PCIEAER",
+      "ACPI_ERST",
+      "BLK_DEV_INITRD",
+      "CXL_MEM_RAW_COMMANDS",
+      "DEBUG_FS",
+      "DEBUG_INFO_NONE",
+      "DEVTMPFS",
+      "DEVTMPFS_MOUNT",
+      "EDAC",
+      "EDAC_GHES",
+      "CXL_ACPI",
+      "NUMA",
+      "ACPI_NUMA",
+      "CXL_REGION",
+      "CXL_BUS",
+      "CXL_PCI",
+      "CXL_MEM",
+      "EXT4_FS",
+      "FTRACE",
+      "MEMORY_FAILURE",
+      "PCIEAER",
+      "PSTORE",
+      "PSTORE_BLK",
+      "RAS",
+      "SERIAL_8250",
+      "SERIAL_8250_CONSOLE",
+      "TRACEFS_FS",
+      "TRACEPOINTS",
+      "TRACING",
+      "NET",
+      "INET",
+      "NETDEVICES",
+      "NET_DEVLINK",
+      "IPMI_HANDLER",
+      "IPMI_DEVICE_INTERFACE",
+      "IPMI_SI",
+      "VFAT_FS",
+      "VIRTIO",
+      "VIRTIO_BLK",
+      "VIRTIO_CONSOLE",
+      "VIRTIO_PCI",
+      "X86_MCE",
+      "X86_MCE_AMD",
+      "X86_MCE_INTEL"
+    ],
+    "module": [
+      "HWPOISON_INJECT",
+      "NETDEVSIM"
+    ],
+    "disable": [
+      "DEBUG_INFO"
+    ],
+    "make": [
+      "INSTALL_MOD_STRIP=1"
+    ]
+  },
+  "architectures": {
+    "x86_64": {
+      "module": [
+        "ACPI_EXTLOG",
+        "ACPI_APEI_ERST_DEBUG"
+      ],
+      "defconfig": "x86_64_defconfig"
+    },
+    "aarch64": {
+      "enable": [
+        "ACPI",
+        "EFI",
+        "ARM64_RAS",
+        "ARM64_ERRATUM_1800710",
+        "SERIAL_AMBA_PL011",
+        "SERIAL_AMBA_PL011_CONSOLE"
+      ],
+      "defconfig": "defconfig"
+    }
+  }
+}

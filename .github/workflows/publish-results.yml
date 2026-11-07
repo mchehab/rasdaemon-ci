@@ -78,14 +78,14 @@ jobs:
             requested_run_id=$2
             if test -n "$requested_run_id"; then
               runs=$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$requested_run_id" |
-                jq '{workflow_runs: [.] }')
+                jq '{workflow_runs: [. | select(.status == "completed")] }')
             else
               runs=$(gh api \
                 "/repos/$GITHUB_REPOSITORY/actions/workflows/pipeline.yml/runs?branch=main&status=completed&per_page=100")
             fi
 
             for run_id in $(printf '%s' "$runs" | jq -r \
-              '.workflow_runs | sort_by(.id) | reverse | .[].id'); do
+              '.workflow_runs | map(select(.status == "completed")) | sort_by(.id) | reverse | .[].id'); do
               artifacts=$(gh api \
                 "/repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts?per_page=100")
               available=0
@@ -128,14 +128,14 @@ jobs:
             requested_run_id=$2
             if test -n "$requested_run_id"; then
               runs=$(gh api "/repos/$GITHUB_REPOSITORY/actions/runs/$requested_run_id" |
-                jq '{workflow_runs: [.] }')
+                jq '{workflow_runs: [. | select(.status == "completed")] }')
             else
               runs=$(gh api \
                 "/repos/$GITHUB_REPOSITORY/actions/workflows/qemu-fuzz.yml/runs?branch=main&status=completed&per_page=100")
             fi
 
             for run_id in $(printf '%s' "$runs" | jq -r \
-              '.workflow_runs | sort_by(.id) | reverse | .[].id'); do
+              '.workflow_runs | map(select(.status == "completed")) | sort_by(.id) | reverse | .[].id'); do
               artifacts=$(gh api \
                 "/repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts?per_page=100")
               artifact_rows=$(printf '%s' "$artifacts" | jq -r '
