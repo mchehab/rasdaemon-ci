@@ -943,8 +943,6 @@ class VirtualMachine:
 
     def _stage_source(self):
         """Build rasdaemon on the host and stage only installed output."""
-        if architecture_name(platform.machine()) != self.arch:
-            raise LabError("Build the payload on a host matching the guest architecture")
         self.payload_dir.mkdir()
         build = self.work_dir / "host-build"
         install = self.work_dir / "host-install"
@@ -956,6 +954,8 @@ class VirtualMachine:
                 raise LabError(str(error)) from error
             self.progress("Using the selected compiled rasdaemon payload")
         else:
+            if architecture_name(platform.machine()) != self.arch:
+                raise LabError("Build the payload on a host matching the guest architecture")
             config = self._build_payload(build, install)
         # Meson generates config.h in the build directory. Read its defined
         # and undefined HAVE_* entries instead of depending on a source template.
