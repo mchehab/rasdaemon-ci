@@ -88,7 +88,7 @@ jobs:
               '.workflow_runs | sort_by(.id) | reverse | .[].id'); do
               artifacts=$(gh api \
                 "/repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts?per_page=100")
-              compatible=true
+              available=0
               rm -rf build/candidate
               for arch in x86_64 aarch64; do
                 artifact_id=$(printf '%s' "$artifacts" | jq -r --arg arch "$arch" '
@@ -96,18 +96,19 @@ jobs:
                     .name == ("rasdaemon-qemu-results-" + $arch))]
                   | max_by(.created_at) | .id // empty')
                 if test -z "$artifact_id"; then
-                  compatible=false
-                  break
+                  continue
                 fi
                 download_artifact "$artifact_id" "build/candidate/$arch"
                 revision=$(cat "build/candidate/$arch/rasdaemon-source-revision" 2>/dev/null || true)
-                if ! [[ "$revision" =~ ^[0-9a-f]{40}$ ]] ||
+                if ! test -f "build/candidate/$arch/results.html" ||
+                   ! [[ "$revision" =~ ^[0-9a-f]{40}$ ]] ||
                    ! jq -e '.component_totals and .features' "build/candidate/$arch/result.json" >/dev/null; then
-                  compatible=false
+                  rm -rf "build/candidate/$arch"
+                  continue
                 fi
+                available=$((available + 1))
               done
-              if $compatible &&
-                 cmp -s build/candidate/x86_64/rasdaemon-source-revision build/candidate/aarch64/rasdaemon-source-revision; then
+              if test "$available" -gt 0; then
                 mkdir -p build/results
                 mv build/candidate "build/results/$output_name"
                 printf '%s' "$runs" | jq -r --argjson id "$run_id" '
@@ -144,7 +145,7 @@ jobs:
 
               if test -n "$artifact_rows"; then
                 rm -rf build/candidate
-                compatible=true
+                available=0
 
                 while IFS=$'\t' read -r artifact_id artifact_name; do
                   mode=${artifact_name#kernel-rasdaemon-fuzz-}
@@ -159,14 +160,17 @@ jobs:
                   download_artifact "$artifact_id" "$destination"
                   revision=$(cat "$destination/rasdaemon-source-revision" \
                     2>/dev/null || true)
-                  if ! [[ "$revision" =~ ^[0-9a-f]{40}$ ]] ||
+                  if ! test -f "$destination/results.html" ||
+                     ! [[ "$revision" =~ ^[0-9a-f]{40}$ ]] ||
                      ! jq -e '.component_totals' "$destination/result.json" \
                        >/dev/null; then
-                    compatible=false
+                    rm -rf "$destination"
+                    continue
                   fi
+                  available=$((available + 1))
                 done <<< "$artifact_rows"
 
-                if $compatible; then
+                if test "$available" -gt 0; then
                   mkdir -p build/results
                   mv build/candidate "build/results/$output_name"
                   printf '%s' "$runs" | jq -r --argjson id "$run_id" \
@@ -192,8 +196,8 @@ jobs:
           fi
           find_daily daily ""
           find_weekly weekly ""
-          # A failed setup or an incomplete first run must not erase live badges.
-          if test -f build/results/daily/run; then
+          # Either report can publish without waiting for the other workflow.
+          if test -f build/results/daily/run || test -f build/results/weekly/run; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
 
@@ -218,8 +222,11 @@ jobs:
           if test -f build/results/daily/run; then
             IFS=$'\t' read -r daily_url daily_conclusion _ _ \
               < build/results/daily/run
-            daily_results+=(--result x86_64=build/results/daily/x86_64)
-            daily_results+=(--result aarch64=build/results/daily/aarch64)
+            for arch in x86_64 aarch64; do
+              if test -f "build/results/daily/$arch/result.json"; then
+                daily_results+=(--result "$arch=build/results/daily/$arch")
+              fi
+            done
           fi
 
           if test -f build/results/weekly/run; then

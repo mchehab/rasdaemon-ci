@@ -74,10 +74,6 @@ if test ! -f "$qemu_dir/metadata/qemu.json"; then
 		--ref "$qemu_ref" --output "$qemu_dir"
 fi
 
-firmware_json=$(python3 "$script_dir/firmware.py" --root "$qemu_dir/root" \
-	--binary "$qemu_dir/root/opt/qemu/bin/qemu-system-$arch" \
-	--arch "$arch" --machine "$machine")
-
 if test ! -f "$kernel_dir/metadata/kernel.json"; then
 	"$script_dir/build-kernel.sh" --arch "$arch" --repository "$kernel_repository" \
 		--ref "$resolved_kernel_ref" \
@@ -94,6 +90,7 @@ else
 fi
 
 cp -a "$qemu_dir/root" "$context/root"
+cp "$script_dir/firmware.py" "$context/firmware.py"
 cp "$kernel_dir/metadata/kernel.json" "$context/rasdaemon-ci/kernel/"
 
 if test -f "$kernel_dir/metadata/config-status.tsv"; then
@@ -131,7 +128,7 @@ cat >"$context/rasdaemon-ci/images.json" <<EOF
       "cpu": {"kvm": "host", "tcg": "max"},
       "memory_mb": 2048,
       "cpus": 2,
-      "firmware": $firmware_json,
+      "firmware": {},
       "image": {
         "filename": "rasdaemon-guest-$arch.qcow2",
         "sha256": "$image_sha",
@@ -144,4 +141,5 @@ cat >"$context/rasdaemon-ci/images.json" <<EOF
 EOF
 cp "$project_dir/tests/qemu/oci/Containerfile" "$context/Containerfile"
 
-docker build --build-arg "TEST_ARCH=$arch" --file "$context/Containerfile" --tag "$tag" "$context"
+docker build --build-arg "TEST_ARCH=$arch" --build-arg "TEST_MACHINE=$machine" \
+	--file "$context/Containerfile" --tag "$tag" "$context"

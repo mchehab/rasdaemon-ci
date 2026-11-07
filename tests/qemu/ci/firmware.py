@@ -16,8 +16,14 @@ import sys
 
 def machine_names(binary: str, machine: str) -> set[str]:
     """Resolve aliases using the selected QEMU binary, not a version table."""
-    listing = subprocess.run([binary, "-machine", "help"], check=True,
-                             capture_output=True, text=True).stdout
+    result = subprocess.run([binary, "-machine", "help"], check=False,
+                            capture_output=True, text=True)
+
+    if result.returncode:
+        raise ValueError(f"{binary} -machine help exited {result.returncode}: "
+                         f"{result.stderr.strip()}")
+
+    listing = result.stdout
     machines = {machine}
 
     for line in listing.splitlines():
@@ -91,7 +97,7 @@ def select_firmware(root: str, binary: str, arch: str, machine: str) -> dict:
     raise ValueError(f"QEMU firmware for {arch}/{machine}: {detail}")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     """Print manifest firmware metadata or a code path for guest provisioning."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default="/")
@@ -99,7 +105,8 @@ def main() -> int:
     parser.add_argument("--arch", required=True)
     parser.add_argument("--machine", required=True)
     parser.add_argument("--code-only", action="store_true")
-    args = parser.parse_args()
+    parser.add_argument("--manifest", help="update this image manifest after runtime discovery")
+    args = parser.parse_args(argv)
     binary = shutil.which(args.binary)
 
     if not binary:
@@ -107,6 +114,17 @@ def main() -> int:
 
     try:
         firmware = select_firmware(args.root, binary, args.arch, args.machine)
+
+        if args.manifest:
+            with open(args.manifest, encoding="utf-8") as stream:
+                manifest = json.load(stream)
+
+            manifest["architectures"][args.arch]["firmware"] = firmware
+
+            with open(args.manifest, "w", encoding="utf-8") as stream:
+                json.dump(manifest, stream, indent=2)
+                stream.write("\n")
+
     except (OSError, ValueError, subprocess.CalledProcessError) as error:
         print(str(error), file=sys.stderr)
         return 1

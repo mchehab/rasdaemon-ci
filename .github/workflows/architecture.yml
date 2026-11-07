@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: GPL-2.0-only
+name: Build and test one architecture
+
+on:
+  workflow_call:
+    inputs:
+      arch:
+        required: true
+        type: string
+      revision:
+        required: true
+        type: string
+
+permissions:
+  actions: write
+  contents: read
+  packages: write
+
+jobs:
+  kernel:
+    uses: ./.github/workflows/linux-kernel.yml
+    with:
+      arch: ${{ inputs.arch }}
+    secrets: inherit
+  qemu:
+    uses: ./.github/workflows/qemu.yml
+    with:
+      arch: ${{ inputs.arch }}
+    secrets: inherit
+  rasdaemon:
+    uses: ./.github/workflows/rasdaemon.yml
+    with:
+      arch: ${{ inputs.arch }}
+    secrets: inherit
+  image:
+    # The image consumes kernel and QEMU artifacts; rasdaemon is built by tests.
+    needs: [kernel, qemu]
+    uses: ./.github/workflows/qemu-image.yml
+    with:
+      arch: ${{ inputs.arch }}
+      revision: ${{ inputs.revision }}
+    secrets: inherit

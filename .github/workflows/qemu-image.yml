@@ -4,6 +4,14 @@ name: Build QEMU test image
 
 on:
   workflow_call:
+    inputs:
+      arch:
+        required: true
+        type: string
+      revision:
+        required: false
+        type: string
+        default: ""
 
 permissions:
   actions: write
@@ -13,7 +21,7 @@ permissions:
 jobs:
   check:
     name: Check source artifacts
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-26.04
     outputs:
       build: ${{ steps.changed.outputs.build }}
     steps:
@@ -36,33 +44,18 @@ jobs:
 
           kernel=$(printf '%s' "$artifacts" | jq -r '
             [.artifacts[] | select(.expired == false and
-              (.name | test("^rasdaemon-kernel-(x86_64|aarch64)-")))]
+              (.name | test("^rasdaemon-kernel-${{ inputs.arch }}-")))]
             | max_by(.created_at) | .created_at // empty')
           qemu=$(printf '%s' "$artifacts" | jq -r '
             [.artifacts[] | select(.expired == false and
-              (.name | test("^rasdaemon-qemu-(x86_64|aarch64)-")))]
-            | max_by(.created_at) | .created_at // empty')
-          rasdaemon=$(printf '%s' "$artifacts" | jq -r '
-            [.artifacts[] | select(.expired == false and
-              (.name | test("^rasdaemon-(x86_64|aarch64)-")))]
+              (.name | test("^rasdaemon-qemu-${{ inputs.arch }}-")))]
             | max_by(.created_at) | .created_at // empty')
           image=$(printf '%s' "$artifacts" | jq -r '
             [.artifacts[] | select(.expired == false and
-              .name == ("rasdaemon-qemu-image-x86_64-" + env.HEAD_SHA))]
+              .name == ("rasdaemon-qemu-image-${{ inputs.arch }}-" + env.HEAD_SHA))]
             | max_by(.created_at) | .created_at // empty')
 
-          arm_image=$(printf '%s' "$artifacts" | jq -r '
-            [.artifacts[] | select(.expired == false and
-              .name == ("rasdaemon-qemu-image-aarch64-" + env.HEAD_SHA))]
-            | max_by(.created_at) | .created_at // empty')
-
-          if [[ -n "$image" && -n "$arm_image" && "$arm_image" < "$image" ]]; then
-            image=$arm_image
-          fi
-
-          if [[ -z "$arm_image" || -z "$image" ||
-                "$kernel" > "$image" ||
-                "$qemu" > "$image" || "$rasdaemon" > "$image" ]]; then
+          if [[ -z "$image" || "$kernel" > "$image" || "$qemu" > "$image" ]]; then
             echo "build=true" >> "$GITHUB_OUTPUT"
           else
             echo "build=false" >> "$GITHUB_OUTPUT"
@@ -73,21 +66,10 @@ jobs:
     needs: check
     if: needs.check.outputs.build == 'true'
     outputs:
-      x86_image: ${{ steps.publish.outputs.image_x86_64 }}
-      arm_image: ${{ steps.publish.outputs.image_aarch64 }}
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x86_64
-            deb_arch: amd64
-            runner: ubuntu-22.04
-          - arch: aarch64
-            deb_arch: arm64
-            runner: ubuntu-24.04-arm
+      image: ${{ steps.publish.outputs.image }}
+    runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
     env:
-      TEST_ARCH: ${{ matrix.arch }}
+      TEST_ARCH: ${{ inputs.arch }}
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v7
@@ -155,7 +137,7 @@ jobs:
         run: |
           sha=$(curl --fail --location --retry 3 \
             https://cloud.debian.org/images/cloud/trixie/latest/SHA512SUMS | \
-            awk '$2 == "debian-13-genericcloud-${{ matrix.deb_arch }}.qcow2" {print $1; exit}')
+            awk '$2 == "debian-13-genericcloud-${{ inputs.arch == 'aarch64' && 'arm64' || 'amd64' }}.qcow2" {print $1; exit}')
           test -n "$sha"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
@@ -184,13 +166,13 @@ jobs:
             *@sha256:*) ;;
             *) echo "published image digest was not available: $image" >&2; exit 1 ;;
           esac
-          echo "image_${TEST_ARCH}=$image" >> "$GITHUB_OUTPUT"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
 
       - name: Upload Results
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: rasdaemon-qemu-image-diagnostics-${{ matrix.arch }}
+          name: rasdaemon-qemu-image-diagnostics-${{ inputs.arch }}
           path: build/rasdaemon-ci/**/*.console.log
           retention-days: 90
           if-no-files-found: ignore
@@ -198,7 +180,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         id: image-artifact
         with:
-          name: rasdaemon-qemu-image-${{ matrix.arch }}-${{ github.event.workflow_run.head_sha || github.sha }}
+          name: rasdaemon-qemu-image-${{ inputs.arch }}-${{ github.event.workflow_run.head_sha || github.sha }}
           path: build/image
           retention-days: 14
           if-no-files-found: error
@@ -214,7 +196,7 @@ jobs:
           gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts/$IMAGE_ARTIFACT_ID" |
             jq -e --argjson current "$IMAGE_ARTIFACT_ID" '
               .id == $current and .expired == false and
-              (.name | test("^rasdaemon-qemu-image-${{ matrix.arch }}-[0-9a-f]{40}$"))'
+              (.name | test("^rasdaemon-qemu-image-${{ inputs.arch }}-[0-9a-f]{40}$"))'
 
           # Collect every page before deletion changes pagination. Never delete
           # newer IDs: another image workflow may have uploaded concurrently.
@@ -224,7 +206,7 @@ jobs:
             jq -sr --argjson current "$IMAGE_ARTIFACT_ID" '
               .[].artifacts[] |
               select(.id < $current and
-                (.name | test("^rasdaemon-qemu-image-${{ matrix.arch }}-[0-9a-f]{40}$"))) |
+                (.name | test("^rasdaemon-qemu-image-${{ inputs.arch }}-[0-9a-f]{40}$"))) |
               .id')
 
           for artifact_id in $obsolete; do
@@ -236,9 +218,10 @@ jobs:
   test:
     name: Test QEMU image
     needs: [check, build]
-    if: always() && needs.check.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    if: always() && needs.check.result == 'success' && (needs.build.outputs.image != '' || needs.build.result == 'skipped')
     uses: ./.github/workflows/qemu-tests.yml
     with:
-      image: ${{ needs.build.outputs.x86_image }}
-      arm-image: ${{ needs.build.outputs.arm_image }}
+      arch: ${{ inputs.arch }}
+      revision: ${{ inputs.revision }}
+      image: ${{ needs.build.outputs.image }}
     secrets: inherit

@@ -4,6 +4,8 @@
 """Exercise descriptor-driven firmware discovery without a QEMU checkout."""
 
 import json
+import contextlib
+import io
 import os
 import shutil
 import subprocess
@@ -54,7 +56,40 @@ class FirmwareTest(unittest.TestCase):
         selected = firmware.select_firmware(self.root, self.binary, "aarch64", "virt")
         self.assertEqual(selected, {"pairs": [{"code": self.code, "vars": self.variables}]})
         self.run.assert_called_once_with([self.binary, "-machine", "help"],
-                                         check=True, capture_output=True, text=True)
+                                         check=False, capture_output=True, text=True)
+
+    def test_machine_query_reports_runtime_loader_error(self):
+        """Keep the actual loader diagnostic when the binary cannot run."""
+        self.run.return_value = subprocess.CompletedProcess(
+            [], 127, "", "error while loading shared libraries: libexample.so: not found")
+
+        with self.assertRaisesRegex(ValueError, "exited 127:.*libexample.so"):
+            firmware.select_firmware(self.root, self.binary, "aarch64", "virt")
+
+    def test_runtime_discovery_updates_manifest_and_preserves_provenance(self):
+        """Container-time discovery fills firmware without replacing source SHAs."""
+        self.write_descriptor()
+        manifest_path = os.path.join(self.root, "images.json")
+        manifest = {"architectures": {"aarch64": {"machine": "virt", "firmware": {}}},
+                    "kernel": {"commit": "a" * 40}}
+
+        with open(manifest_path, "w", encoding="utf-8") as stream:
+            json.dump(manifest, stream)
+
+        with mock.patch.object(firmware.shutil, "which", return_value=self.binary):
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = firmware.main(["--root", self.root, "--binary", self.binary,
+                                        "--arch", "aarch64", "--machine", "virt",
+                                        "--manifest", manifest_path])
+
+        self.assertEqual(status, 0)
+
+        with open(manifest_path, encoding="utf-8") as stream:
+            actual = json.load(stream)
+
+        manifest["architectures"]["aarch64"]["firmware"] = {
+            "pairs": [{"code": self.code, "vars": self.variables}]}
+        self.assertEqual(actual, manifest)
 
     def test_reports_missing_file_from_upstream_descriptor(self):
         """Fail before guest creation when installed firmware is incomplete."""

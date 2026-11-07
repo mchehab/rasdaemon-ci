@@ -4,6 +4,10 @@ name: Build QEMU
 
 on:
   workflow_call:
+    inputs:
+      arch:
+        required: true
+        type: string
 
 permissions:
   actions: read
@@ -12,7 +16,7 @@ permissions:
 jobs:
   check:
     name: Check QEMU revision
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       sha: ${{ steps.source.outputs.sha }}
       exists: ${{ steps.artifact.outputs.exists }}
@@ -58,7 +62,7 @@ jobs:
         id: artifact
         env:
           GH_TOKEN: ${{ github.token }}
-          NAME: rasdaemon-qemu-x86_64-${{ steps.source.outputs.sha }}
+          NAME: rasdaemon-qemu-${{ inputs.arch }}-${{ steps.source.outputs.sha }}
         run: |
           id=$(gh api \
               "/repos/$GITHUB_REPOSITORY/actions/artifacts?name=$NAME" \
@@ -66,29 +70,14 @@ jobs:
                   select(.expired == false and .name == env.NAME) |
                   .id' |
               head -n 1)
-          arm_name=${NAME/x86_64/aarch64}
-          arm_id=$(gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts?name=$arm_name" \
-            --jq '.artifacts[] | select(.expired == false) | .id' | head -n 1)
-          if [ -n "$id" ] && [ -n "$arm_id" ]; then
-              echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-              echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
+          echo "exists=$([ -n "$id" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build QEMU
     needs: check
     if: needs.check.outputs.exists != 'true' || needs.check.outputs.build_changed == 'true'
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
     timeout-minutes: 360
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x86_64
-            runner: ubuntu-24.04
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
 
@@ -108,7 +97,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: rasdaemon-qemu-${{ matrix.arch }}-${{ needs.check.outputs.sha }}
+          name: rasdaemon-qemu-${{ inputs.arch }}-${{ needs.check.outputs.sha }}
           path: build/qemu
           retention-days: 30
           if-no-files-found: error

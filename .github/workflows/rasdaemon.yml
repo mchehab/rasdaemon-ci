@@ -4,6 +4,10 @@ name: Build RAS Daemon
 
 on:
   workflow_call:
+    inputs:
+      arch:
+        required: true
+        type: string
 
 permissions:
   actions: read
@@ -12,7 +16,7 @@ permissions:
 jobs:
   check:
     name: Check rasdaemon revision
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       sha: ${{ steps.source.outputs.sha }}
       exists: ${{ steps.artifact.outputs.exists }}
@@ -35,32 +39,20 @@ jobs:
         id: artifact
         env:
           GH_TOKEN: ${{ github.token }}
-          NAME: rasdaemon-x86_64-${{ steps.source.outputs.sha }}
+          NAME: rasdaemon-${{ inputs.arch }}-${{ steps.source.outputs.sha }}
         run: |
           id=$(gh api \
             "/repos/$GITHUB_REPOSITORY/actions/artifacts?name=$NAME" \
             --jq '.artifacts[] |
               select(.expired == false and .name == env.NAME) |
               .id' | head -n 1)
-          arm_name=${NAME/x86_64/aarch64}
-          arm_id=$(gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts?name=$arm_name" \
-            --jq '.artifacts[] | select(.expired == false) | .id' | head -n 1)
-          echo "exists=$([ -n "$id" ] && [ -n "$arm_id" ] && echo true || echo false)" \
-            >> "$GITHUB_OUTPUT"
+          echo "exists=$([ -n "$id" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build RAS Daemon
     needs: check
     if: needs.check.outputs.exists != 'true'
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: x86_64
-            runner: ubuntu-24.04
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
+    runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-26.04-arm' || 'ubuntu-26.04' }}
     steps:
       - name: Check out rasdaemon source
         uses: actions/checkout@v7
@@ -81,7 +73,7 @@ jobs:
           ninja -C build/rasdaemon
       - uses: actions/upload-artifact@v7
         with:
-          name: rasdaemon-${{ matrix.arch }}-${{ needs.check.outputs.sha }}
+          name: rasdaemon-${{ inputs.arch }}-${{ needs.check.outputs.sha }}
           path: build/rasdaemon
           retention-days: 30
           if-no-files-found: error
