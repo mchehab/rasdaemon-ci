@@ -169,7 +169,9 @@ fi
 firmware=()
 
 if test "$arch" = aarch64; then
-	firmware=(-bios /usr/share/AAVMF/AAVMF_CODE.fd)
+	firmware_code=$(python3 "$script_dir/firmware.py" \
+		--binary "qemu-system-$arch" --arch "$arch" --machine "$machine" --code-only)
+	firmware=(-bios "$firmware_code")
 fi
 
 echo "guest provisioning accelerator: $accel"

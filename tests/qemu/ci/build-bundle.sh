@@ -37,8 +37,8 @@ while test $# -gt 0; do
 done
 
 case $arch in
-x86_64) machine=q35; firmware_code=edk2-x86_64-code.fd; firmware_vars=edk2-i386-vars.fd ;;
-aarch64|arm64) arch=aarch64; machine=virt; firmware_code=edk2-aarch64-code.fd; firmware_vars=edk2-arm-vars.fd ;;
+x86_64) machine=q35 ;;
+aarch64|arm64) arch=aarch64; machine=virt ;;
 *) echo "Unsupported architecture: $arch" >&2; exit 2 ;;
 esac
 
@@ -73,6 +73,10 @@ if test ! -f "$qemu_dir/metadata/qemu.json"; then
 	"$script_dir/build-qemu.sh" --repository "$qemu_repository" \
 		--ref "$qemu_ref" --output "$qemu_dir"
 fi
+
+firmware_json=$(python3 "$script_dir/firmware.py" --root "$qemu_dir/root" \
+	--binary "$qemu_dir/root/opt/qemu/bin/qemu-system-$arch" \
+	--arch "$arch" --machine "$machine")
 
 if test ! -f "$kernel_dir/metadata/kernel.json"; then
 	"$script_dir/build-kernel.sh" --arch "$arch" --repository "$kernel_repository" \
@@ -127,10 +131,7 @@ cat >"$context/rasdaemon-ci/images.json" <<EOF
       "cpu": {"kvm": "host", "tcg": "max"},
       "memory_mb": 2048,
       "cpus": 2,
-      "firmware": {"pairs": [{
-        "code": "/opt/qemu/share/qemu/$firmware_code",
-        "vars": "/opt/qemu/share/qemu/$firmware_vars"
-      }]},
+      "firmware": $firmware_json,
       "image": {
         "filename": "rasdaemon-guest-$arch.qcow2",
         "sha256": "$image_sha",
