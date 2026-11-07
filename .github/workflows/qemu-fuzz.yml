@@ -42,10 +42,6 @@ jobs:
           mkdir -p "build/fuzz/$FUZZ_MODE"
           git -C rasdaemon-source rev-parse HEAD \
             > "build/fuzz/$FUZZ_MODE/rasdaemon-source-revision"
-          python3 ci-harness/tests/qemu/source_refs.py describe \
-            --repository https://github.com/mchehab/rasdaemon.git \
-            --commit "$(cat "build/fuzz/$FUZZ_MODE/rasdaemon-source-revision")" \
-            > "build/fuzz/$FUZZ_MODE/rasdaemon-describe.json"
 
       - name: Run isolated fuzz VM
         env:
@@ -58,20 +54,6 @@ jobs:
           mkdir -p "build/fuzz/$FUZZ_MODE"
           docker run --rm --entrypoint cat "$IMAGE" /opt/rasdaemon-ci/kernel/kernel.json > "build/fuzz/$FUZZ_MODE/kernel.json"
           docker run --rm --entrypoint cat "$IMAGE" /opt/rasdaemon-ci/qemu.json > "build/fuzz/$FUZZ_MODE/qemu.json"
-          for component in kernel qemu; do
-            tag_args=()
-
-            if test "$component" = qemu; then
-              tag_args=(--tags-repository https://gitlab.com/qemu-project/qemu.git)
-            fi
-
-            python3 ci-harness/tests/qemu/source_refs.py describe-metadata \
-              --metadata "build/fuzz/$FUZZ_MODE/$component.json" \
-              "${tag_args[@]}" \
-              > "build/fuzz/$FUZZ_MODE/$component-describe.json"
-            cat "build/fuzz/$FUZZ_MODE/$component.json"
-            cat "build/fuzz/$FUZZ_MODE/$component-describe.json"
-          done
           docker_args=(--rm)
 
           if test -r /dev/kvm && test -w /dev/kvm; then
@@ -129,6 +111,15 @@ jobs:
           else
             echo '🔴 Infrastructure failure: no VM result table was produced.' >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Describe tested revisions before upload
+        if: always()
+        env:
+          FUZZ_MODE: ${{ matrix.mode }}
+        run: |
+          set -eux
+          python3 ci-harness/tests/qemu/source_refs.py refresh-descriptions \
+            --directory "build/fuzz/$FUZZ_MODE"
 
       - uses: actions/upload-artifact@v7
         if: always()

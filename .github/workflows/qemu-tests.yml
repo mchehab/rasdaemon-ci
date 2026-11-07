@@ -66,10 +66,6 @@ jobs:
           mkdir -p "build/qemu-results/$TEST_ARCH"
           git -C rasdaemon-source rev-parse HEAD \
             > "build/qemu-results/$TEST_ARCH/rasdaemon-source-revision"
-          python3 ci-harness/tests/qemu/source_refs.py describe \
-            --repository https://github.com/mchehab/rasdaemon.git \
-            --commit "$(cat "build/qemu-results/$TEST_ARCH/rasdaemon-source-revision")" \
-            > "build/qemu-results/$TEST_ARCH/rasdaemon-describe.json"
 
       - name: Download image
         run: |
@@ -82,20 +78,6 @@ jobs:
           set -eux
           docker run --rm --entrypoint cat "$IMAGE_REF" /opt/rasdaemon-ci/kernel/kernel.json > "build/qemu-results/$TEST_ARCH/kernel.json"
           docker run --rm --entrypoint cat "$IMAGE_REF" /opt/rasdaemon-ci/qemu.json > "build/qemu-results/$TEST_ARCH/qemu.json"
-          for component in kernel qemu; do
-            tag_args=()
-
-            if test "$component" = qemu; then
-              tag_args=(--tags-repository https://gitlab.com/qemu-project/qemu.git)
-            fi
-
-            python3 ci-harness/tests/qemu/source_refs.py describe-metadata \
-              --metadata "build/qemu-results/$TEST_ARCH/$component.json" \
-              "${tag_args[@]}" \
-              > "build/qemu-results/$TEST_ARCH/$component-describe.json"
-            cat "build/qemu-results/$TEST_ARCH/$component.json"
-            cat "build/qemu-results/$TEST_ARCH/$component-describe.json"
-          done
       - name: Run
         env:
           TEST_ARCH: ${{ matrix.arch }}
@@ -156,6 +138,15 @@ jobs:
           else
             echo '🔴 Infrastructure failure: no VM result table was produced.' >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Describe tested revisions before upload
+        if: always()
+        env:
+          TEST_ARCH: ${{ matrix.arch }}
+        run: |
+          set -eux
+          python3 ci-harness/tests/qemu/source_refs.py refresh-descriptions \
+            --directory "build/qemu-results/$TEST_ARCH"
 
       - uses: actions/upload-artifact@v7
         name: Upload

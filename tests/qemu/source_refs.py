@@ -5,6 +5,7 @@
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -13,6 +14,7 @@ import tempfile
 
 DEFAULT_KERNEL_REPOSITORY = "https://github.com/torvalds/linux.git"
 DEFAULT_QEMU_REPOSITORY = "https://gitlab.com/mchehab_kernel/qemu.git"
+QEMU_TAGS_REPOSITORY = "https://gitlab.com/qemu-project/qemu.git"
 FINAL_TAG = re.compile(r"^v(\d+)\.(\d+)$")
 RC_TAG = re.compile(r"^v(\d+)\.(\d+)-rc(\d+)$")
 FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
@@ -136,6 +138,46 @@ def resolve_kernel(repository: str, channel: str,
             "ref": resolved_ref, "tag": tag, "commit": commit}
 
 
+def refresh_descriptions(directory: str, cache: dict | None = None) -> None:
+    """Regenerate derived versions from stored SHAs, including previous failures."""
+    if cache is None:
+        cache = {}
+
+    for root, _directories, files in os.walk(directory):
+        for component in ("kernel", "qemu", "rasdaemon"):
+            filename = ("rasdaemon-source-revision" if component == "rasdaemon"
+                        else component + ".json")
+            if filename not in files:
+                continue
+
+            commit = ""
+            try:
+                with open(os.path.join(root, filename), encoding="utf-8") as stream:
+                    if component == "rasdaemon":
+                        metadata = {"commit": stream.read().strip(),
+                                    "repository": "https://github.com/mchehab/rasdaemon.git"}
+                    else:
+                        metadata = json.load(stream)
+
+                commit = metadata["commit"]
+                tags = (QEMU_TAGS_REPOSITORY if component == "qemu"
+                        else metadata["repository"])
+                key = (metadata["repository"], commit, tags)
+                if key not in cache:
+                    cache[key] = describe_commit(*key)
+
+                result = cache[key]
+            except (OSError, ValueError, SourceError, KeyError) as error:
+                result = {"commit": commit, "describe": None, "error": str(error)}
+
+            path = os.path.join(root, component + "-describe.json")
+            with open(path, "w", encoding="utf-8") as stream:
+                json.dump(result, stream, sort_keys=True)
+                stream.write("\n")
+
+            print(f"{path}: {json.dumps(result, sort_keys=True)}")
+
+
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -159,11 +201,17 @@ def create_parser() -> argparse.ArgumentParser:
     describe_metadata = commands.add_parser("describe-metadata")
     describe_metadata.add_argument("--metadata", required=True)
     describe_metadata.add_argument("--tags-repository")
+    refresh = commands.add_parser("refresh-descriptions")
+    refresh.add_argument("--directory", required=True)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = create_parser().parse_args(argv)
+    if args.command == "refresh-descriptions":
+        refresh_descriptions(args.directory)
+        return 0
+
     try:
         if args.command == "resolve-git":
             commit, ref = resolve_ref(args.repository, args.ref)

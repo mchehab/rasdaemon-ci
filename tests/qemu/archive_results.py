@@ -17,6 +17,7 @@ import urllib.parse
 
 import features
 from publish_results import PublishedResult, ResultSite
+from source_refs import refresh_descriptions
 
 
 RUN_ID = re.compile(r"^[0-9]+$")
@@ -432,7 +433,29 @@ def collect_failures(store: str, retained: list[tuple[str, dict]],
     return failures
 
 
-def archive(store: str, site: str, inputs: list[str], now: datetime.datetime) -> None:
+def refresh_archive_versions(directory: str, metadata: dict) -> None:
+    """Rebuild the archive row from refreshed descriptions of recorded SHAs."""
+    result_root = os.path.join(directory, metadata["kind"])
+
+    for label in sorted(os.listdir(result_root)):
+        result_dir = os.path.join(result_root, label)
+        if not os.path.isfile(os.path.join(result_dir, "result.json")):
+            continue
+
+        result = PublishedResult(label, result_dir)
+        metadata["version_label"] = label
+        metadata["versions"] = {key: value for key, (value, _meta)
+                                in result.versions().items()}
+        break
+
+    metadata_path = os.path.join(directory, metadata["kind"] + ".json")
+    with open(metadata_path, "w", encoding="utf-8") as stream:
+        json.dump(metadata, stream, indent=2)
+        stream.write("\n")
+
+
+def archive(store: str, site: str, inputs: list[str], now: datetime.datetime,
+            refresh_versions: bool = False) -> None:
     """Copy input runs into durable storage and render retained runs for Pages."""
     os.makedirs(store, exist_ok=True)
     os.makedirs(site, exist_ok=True)
@@ -479,6 +502,7 @@ def archive(store: str, site: str, inputs: list[str], now: datetime.datetime) ->
         page_for_run(destination, metadata, kind)
 
     retained = []
+    description_cache = {}
     for name in sorted(os.listdir(store), reverse=True):
         if not ARCHIVE_NAME.fullmatch(name):
             continue
@@ -500,7 +524,13 @@ def archive(store: str, site: str, inputs: list[str], now: datetime.datetime) ->
             shutil.rmtree(directory)
             continue
 
+        if refresh_versions:
+            refresh_descriptions(directory, description_cache)
+
         for item in metadata:
+            if refresh_versions:
+                refresh_archive_versions(directory, item)
+
             retained.append((name, item))
 
     archive_site = os.path.join(site, "archive")
@@ -596,8 +626,11 @@ def main() -> int:
     parser.add_argument("--site", required=True, help="Pages archive directory")
     parser.add_argument("--run", action="append", default=[], metavar="KIND=DIR",
                         help="selected daily or weekly result artifact")
+    parser.add_argument("--refresh-versions", action="store_true",
+                        help="retry git describe for all retained test SHAs")
     args = parser.parse_args()
-    archive(args.store, args.site, args.run, datetime.datetime.now(datetime.timezone.utc))
+    archive(args.store, args.site, args.run, datetime.datetime.now(datetime.timezone.utc),
+            refresh_versions=args.refresh_versions)
     return 0
 
 

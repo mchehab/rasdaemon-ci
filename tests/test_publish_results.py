@@ -6,6 +6,7 @@ import os
 import tempfile
 import unittest
 import datetime
+from unittest import mock
 
 from tests.qemu.publish_results import PublishedResult, ResultSite, format_version
 from tests.qemu.archive_results import archive
@@ -169,6 +170,28 @@ class ResultSiteTest(unittest.TestCase):
                     datetime.datetime(2026, 11, 6, tzinfo=datetime.timezone.utc))
             with open(os.path.join(store, name, "daily.json"), encoding="utf-8") as stream:
                 self.assertNotIn("versions", json.load(stream))
+
+            # A Pages refresh retries descriptions even with no new artifacts.
+            def describe(_repository, commit, _tags_repository):
+                return {"commit": commit, "describe": "v7.3-5-g" + commit[:7], "error": ""}
+
+            with mock.patch("source_refs.describe_commit", side_effect=describe):
+                archive(store, site, [],
+                        datetime.datetime(2026, 11, 6, tzinfo=datetime.timezone.utc),
+                        refresh_versions=True)
+
+            with open(os.path.join(store, name, "daily.json"), encoding="utf-8") as stream:
+                self.assertEqual(json.load(stream)["versions"]["kernel"], "v7.3-5-gbbbbbbb")
+
+            with open(os.path.join(report, "badge-kernel-aarch64.svg"), encoding="utf-8") as stream:
+                self.assertIn("v7.3-5-gbbbbbbb", stream.read())
+
+            with open(os.path.join(site, "archive", "index.html"), encoding="utf-8") as stream:
+                self.assertIn("v7.3-5-gbbbbbbb", stream.read())
+
+            with open(os.path.join(store, name, "daily", "aarch64", "kernel.json"),
+                      encoding="utf-8") as stream:
+                self.assertEqual(json.load(stream), metadata)
 
     def test_multiple_results_are_aggregated_and_linked(self) -> None:
         """The weekly page totals all fuzz modes and retains each full report."""

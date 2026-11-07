@@ -14,6 +14,40 @@ from tests.qemu import source_refs
 
 
 class SourceRefsTest(unittest.TestCase):
+    def test_refresh_retries_missing_tags_using_original_sha(self):
+        """A later publication can repair a failed lookup without rerunning tests."""
+        commit = "a" * 40
+
+        with tempfile.TemporaryDirectory() as directory:
+            metadata = os.path.join(directory, "qemu.json")
+            description = os.path.join(directory, "qemu-describe.json")
+            with open(metadata, "w", encoding="utf-8") as stream:
+                json.dump({"repository": "fork", "commit": commit}, stream)
+
+            with mock.patch.object(source_refs, "describe_commit",
+                                   side_effect=source_refs.SourceError("tags unavailable")):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    source_refs.refresh_descriptions(directory)
+
+            with open(description, encoding="utf-8") as stream:
+                failed = json.load(stream)
+
+            self.assertEqual(failed["commit"], commit)
+            self.assertIsNone(failed["describe"])
+            self.assertIn("tags unavailable", failed["error"])
+            resolved = {"commit": commit, "describe": "v11.1.0-1-gaaaaaaa", "error": ""}
+
+            with mock.patch.object(source_refs, "describe_commit", return_value=resolved) as lookup:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    source_refs.refresh_descriptions(directory)
+
+            lookup.assert_called_once_with("fork", commit, source_refs.QEMU_TAGS_REPOSITORY)
+            with open(description, encoding="utf-8") as stream:
+                self.assertEqual(json.load(stream), resolved)
+
+            with open(metadata, encoding="utf-8") as stream:
+                self.assertEqual(json.load(stream)["commit"], commit)
+
     def test_selects_latest_final_release(self):
         refs = {"refs/tags/v6.17": "1" * 40,
                 "refs/tags/v6.18-rc7": "2" * 40,

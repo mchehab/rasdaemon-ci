@@ -197,6 +197,12 @@ jobs:
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Refresh descriptions from recorded test SHAs
+        if: steps.results.outputs.ready == 'true'
+        run: |
+          set -eux
+          python3 tests/qemu/source_refs.py refresh-descriptions --directory build/results
+
       - name: Build Pages site
         if: steps.results.outputs.ready == 'true'
         run: |
@@ -271,7 +277,7 @@ jobs:
           git -C build/evidence-store config user.email \
             "41898282+github-actions[bot]@users.noreply.github.com"
 
-          archive_args=(--store build/evidence-store/archive \
+          archive_args=(--refresh-versions --store build/evidence-store/archive \
                         --site build/pages)
           if test -f build/results/daily/run; then
             archive_args+=(--run "daily=build/results/daily")
