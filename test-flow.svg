@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="300" viewBox="0 0 1040 300" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="300" viewBox="0 0 1120 300" role="img" aria-labelledby="title desc">
   <title id="title">End-to-end test flow</title>
-  <desc id="desc">Error injection enters QEMU. The firmware-first path passes through QMP and EDK2 BIOS; the kernel-first path bypasses them. Both paths continue through the kernel and rasdaemon to a check.</desc>
+  <desc id="desc">Error injection enters QEMU. The firmware-first path passes through QMP and EDK2 BIOS; the kernel-first path bypasses them. Both paths continue through the kernel and rasdaemon in x86_64 and ARM64 virtual machines to a single check.</desc>
   <style>
     .background, .box { fill: #fff; }
     .container { fill: #f4f7fa; }
@@ -18,23 +18,31 @@
       <path d="M 0 0 L 10 5 L 0 10 z" class="foreground"/>
     </marker>
   </defs>
-  <rect width="1040" height="300" class="background"/>
+  <rect width="1120" height="300" class="background"/>
   <g class="outline" stroke-width="2">
     <rect x="170" y="25" width="445" height="250" rx="8" class="container"/>
     <rect x="270" y="85" width="85" height="45" rx="4" class="box"/>
     <rect x="405" y="85" width="125" height="45" rx="4" class="box"/>
-    <rect x="660" y="128" width="100" height="45" rx="4" class="box"/>
-    <rect x="804" y="128" width="120" height="45" rx="4" class="box"/>
+    <rect x="660" y="25" width="330" height="115" rx="8" class="container"/>
+    <rect x="660" y="160" width="330" height="115" rx="8" class="container"/>
+    <rect x="680" y="45" width="100" height="45" rx="4" class="box"/>
+    <rect x="824" y="45" width="120" height="45" rx="4" class="box"/>
+    <rect x="680" y="180" width="100" height="45" rx="4" class="box"/>
+    <rect x="824" y="180" width="120" height="45" rx="4" class="box"/>
   </g>
+  <path d="M 616 150 H 638 M 638 67.5 V 202.5" fill="none" class="outline" stroke-width="2"/>
+  <path d="M 944 67.5 H 1007 V 202.5 H 944" fill="none" class="outline" stroke-width="2"/>
   <g fill="none" class="outline" stroke-width="2" marker-end="url(#arrow)">
     <path d="M 126 150 H 169"/>
     <path d="M 185 107 H 269"/>
     <path d="M 355 107 H 404"/>
     <path d="M 530 107 H 600"/>
     <path d="M 185 205 H 600"/>
-    <path d="M 616 150 H 659"/>
-    <path d="M 760 150 H 803"/>
-    <path d="M 924 150 H 967"/>
+    <path d="M 638 67.5 H 679"/>
+    <path d="M 638 202.5 H 679"/>
+    <path d="M 780 67.5 H 823"/>
+    <path d="M 780 202.5 H 823"/>
+    <path d="M 1007 150 H 1050"/>
   </g>
   <g class="foreground" font-family="sans-serif" text-anchor="middle">
     <text x="69" y="155" font-size="16">Error inject</text>
@@ -43,8 +51,12 @@
     <text x="467" y="113" font-size="16">EDK2 BIOS</text>
     <text x="392" y="197" font-size="18" font-weight="bold">Kernel First Handling</text>
     <text x="392" y="252" font-size="18" font-weight="bold">QEMU</text>
-    <text x="710" y="156" font-size="16">Kernel</text>
-    <text x="864" y="156" font-size="16">rasdaemon</text>
-    <text x="975" y="155" font-size="16" text-anchor="start">Check</text>
+    <text x="825" y="122" font-size="18" font-weight="bold">x86_64 VM</text>
+    <text x="825" y="257" font-size="18" font-weight="bold">ARM64 VM</text>
+    <text x="730" y="73" font-size="16">Kernel</text>
+    <text x="884" y="73" font-size="16">rasdaemon</text>
+    <text x="730" y="208" font-size="16">Kernel</text>
+    <text x="884" y="208" font-size="16">rasdaemon</text>
+    <text x="1058" y="155" font-size="16" text-anchor="start">Check</text>
   </g>
 </svg>
