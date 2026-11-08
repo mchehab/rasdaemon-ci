@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="300" viewBox="0 0 1040 300" role="img" aria-labelledby="title desc">
+  <title id="title">End-to-end test flow</title>
+  <desc id="desc">Error injection enters QEMU. The firmware-first path passes through QMP and EDK2 BIOS; the kernel-first path bypasses them. Both paths continue through the kernel and rasdaemon to a check.</desc>
+  <style>
+    .background, .box { fill: #fff; }
+    .container { fill: #f4f7fa; }
+    .outline { stroke: #243447; }
+    .foreground { fill: #243447; }
+    @media (prefers-color-scheme: dark) {
+      .background, .box { fill: #0d1117; }
+      .container { fill: #1b2633; }
+      .outline { stroke: #e6edf3; }
+      .foreground { fill: #e6edf3; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" class="foreground"/>
+    </marker>
+  </defs>
+  <rect width="1040" height="300" class="background"/>
+  <g class="outline" stroke-width="2">
+    <rect x="170" y="25" width="445" height="250" rx="8" class="container"/>
+    <rect x="270" y="85" width="85" height="45" rx="4" class="box"/>
+    <rect x="405" y="85" width="125" height="45" rx="4" class="box"/>
+    <rect x="660" y="128" width="100" height="45" rx="4" class="box"/>
+    <rect x="804" y="128" width="120" height="45" rx="4" class="box"/>
+  </g>
+  <g fill="none" class="outline" stroke-width="2" marker-end="url(#arrow)">
+    <path d="M 126 150 H 169"/>
+    <path d="M 185 107 H 269"/>
+    <path d="M 355 107 H 404"/>
+    <path d="M 530 107 H 600"/>
+    <path d="M 185 205 H 600"/>
+    <path d="M 616 150 H 659"/>
+    <path d="M 760 150 H 803"/>
+    <path d="M 924 150 H 967"/>
+  </g>
+  <g class="foreground" font-family="sans-serif" text-anchor="middle">
+    <text x="69" y="155" font-size="16">Error inject</text>
+    <text x="392" y="77" font-size="18" font-weight="bold">Firmware First Handling</text>
+    <text x="312" y="113" font-size="16">QMP</text>
+    <text x="467" y="113" font-size="16">EDK2 BIOS</text>
+    <text x="392" y="197" font-size="18" font-weight="bold">Kernel First Handling</text>
+    <text x="392" y="252" font-size="18" font-weight="bold">QEMU</text>
+    <text x="710" y="156" font-size="16">Kernel</text>
+    <text x="864" y="156" font-size="16">rasdaemon</text>
+    <text x="975" y="155" font-size="16" text-anchor="start">Check</text>
+  </g>
+</svg>

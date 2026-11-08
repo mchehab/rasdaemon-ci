@@ -11,19 +11,10 @@ Tests cover both Linux Kernel and rasdaemon. QEMU and EDK2 BIOS are also
 indirectly tested, as the error injection logic depends on features that
 exists on both.
 
-The end-to-end tests follow this diagram::
+The end-to-end tests follow this diagram:
 
-                           +-------------------------------------+
-                           |       Firmware First Handling       |
-                           |     +------+      +-----------+     |
-                           | --> | QMP  | ---> | EDK2 BIOS | --> |
-                           |     +------+      +-----------+     |     +--------+     +-----------+
-          Error inject --> |                                     | --> | Kernel | --> | rasdaemon | --> Check
-                           |        Kernel First Handling        |     +--------+     +-----------+
-                           | ----------------------------------> |
-                           |                                     |
-                           |                QEMU                 |
-                           +-------------------------------------+
+.. image:: test-flow.svg
+   :alt: Error injection enters QEMU through firmware-first or kernel-first handling, then proceeds to the kernel, rasdaemon, and a check.
 
 For error inject, firmware-first errors are injected via QEMU QMP interface,
 using scripts/ghes_inject.py. There are other mechanisms used as well to inject
