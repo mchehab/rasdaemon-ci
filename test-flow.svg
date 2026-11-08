@@ -1,6 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="300" viewBox="0 0 1120 300" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="310" viewBox="0 0 1120 310" role="img" aria-labelledby="title desc">
   <title id="title">End-to-end test flow</title>
-  <desc id="desc">Error injection enters QEMU. The firmware-first path passes through QMP and EDK2 BIOS; the kernel-first path bypasses them. Both paths continue through the kernel and rasdaemon in x86_64 and ARM64 virtual machines to a single check.</desc>
   <style>
     .background, .box { fill: #fff; }
     .container { fill: #f4f7fa; }
@@ -18,9 +17,9 @@
       <path d="M 0 0 L 10 5 L 0 10 z" class="foreground"/>
     </marker>
   </defs>
-  <rect width="1120" height="300" class="background"/>
+  <rect width="1120" height="310" class="background"/>
   <g class="outline" stroke-width="2">
-    <rect x="170" y="25" width="445" height="250" rx="8" class="container"/>
+    <rect x="170" y="25" width="435" height="250" rx="8" class="container"/>
     <rect x="270" y="85" width="85" height="45" rx="4" class="box"/>
     <rect x="405" y="85" width="125" height="45" rx="4" class="box"/>
     <rect x="660" y="25" width="330" height="115" rx="8" class="container"/>
@@ -30,26 +29,49 @@
     <rect x="680" y="180" width="100" height="45" rx="4" class="box"/>
     <rect x="824" y="180" width="120" height="45" rx="4" class="box"/>
   </g>
-  <path d="M 616 150 H 638 M 638 67.5 V 202.5" fill="none" class="outline" stroke-width="2"/>
-  <path d="M 944 67.5 H 1007 V 202.5 H 944" fill="none" class="outline" stroke-width="2"/>
+  <!-- Dotted lines link the switches that move together. -->
+  <g fill="none" class="outline" stroke-width="1.5" stroke-dasharray="2 5" stroke-linecap="round">
+    <path d="M 200 142.5 V 290 H 575 V 142.5"/>
+    <path d="M 637.5 142.5 V 290 H 1015 V 142.5"/>
+  </g>
+  <g fill="none" class="outline" stroke-width="1.5">
+    <circle cx="200" cy="150" r="27"/>
+    <circle cx="575" cy="150" r="27"/>
+    <circle cx="637.5" cy="150" r="27"/>
+    <circle cx="1015" cy="150" r="27"/>
+  </g>
+  <g fill="none" class="outline" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 170 150 H 185 M 185 150 L 215 135"/>
+    <circle cx="185" cy="150" r="2" class="box"/>
+    <circle cx="215" cy="135" r="2" class="box"/>
+    <circle cx="215" cy="165" r="2" class="box"/>
+    <path d="M 215 133 V 107 H 269 M 215 167 V 205 H 560 V 167"/>
+    <path d="M 616 150 H 625 M 625 150 L 650 135"/>
+    <circle cx="625" cy="150" r="2" class="box"/>
+    <circle cx="650" cy="135" r="2" class="box"/>
+    <circle cx="650" cy="165" r="2" class="box"/>
+    <path d="M 650 133 V 67.5 H 679 M 650 167 V 202.5 H 679" marker-end="url(#arrow)"/>
+    <path d="M 530 107 H 560 V 133 M 560 135 L 590 150 M 590 150 H 616"/>
+    <circle cx="560" cy="135" r="2" class="box"/>
+    <circle cx="560" cy="165" r="2" class="box"/>
+    <circle cx="590" cy="150" r="2" class="box"/>
+    <path d="M 944 67.5 H 1000 V 133 M 944 202.5 H 1000 V 167 M 1000 135 L 1030 150 M 1030 150 H 1050"/>
+    <circle cx="1000" cy="135" r="2" class="box"/>
+    <circle cx="1000" cy="165" r="2" class="box"/>
+    <circle cx="1030" cy="150" r="2" class="box"/>
+  </g>
   <g fill="none" class="outline" stroke-width="2" marker-end="url(#arrow)">
     <path d="M 126 150 H 169"/>
-    <path d="M 185 107 H 269"/>
     <path d="M 355 107 H 404"/>
-    <path d="M 530 107 H 600"/>
-    <path d="M 185 205 H 600"/>
-    <path d="M 638 67.5 H 679"/>
-    <path d="M 638 202.5 H 679"/>
     <path d="M 780 67.5 H 823"/>
     <path d="M 780 202.5 H 823"/>
-    <path d="M 1007 150 H 1050"/>
   </g>
   <g class="foreground" font-family="sans-serif" text-anchor="middle">
     <text x="69" y="155" font-size="16">Error inject</text>
     <text x="392" y="77" font-size="18" font-weight="bold">Firmware First Handling</text>
     <text x="312" y="113" font-size="16">QMP</text>
     <text x="467" y="113" font-size="16">EDK2 BIOS</text>
-    <text x="392" y="197" font-size="18" font-weight="bold">Kernel First Handling</text>
+    <text x="392" y="197" font-size="18" font-weight="bold">Hardware / Kernel First Handling</text>
     <text x="392" y="252" font-size="18" font-weight="bold">QEMU</text>
     <text x="825" y="122" font-size="18" font-weight="bold">x86_64 VM</text>
     <text x="825" y="257" font-size="18" font-weight="bold">ARM64 VM</text>
