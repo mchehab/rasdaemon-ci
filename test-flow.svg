@@ -34,12 +34,6 @@
     <path d="M 200 142.5 V 290 H 575 V 142.5"/>
     <path d="M 637.5 142.5 V 290 H 1015 V 142.5"/>
   </g>
-  <g fill="none" class="outline" stroke-width="1.5">
-    <circle cx="200" cy="150" r="27"/>
-    <circle cx="575" cy="150" r="27"/>
-    <circle cx="637.5" cy="150" r="27"/>
-    <circle cx="1015" cy="150" r="27"/>
-  </g>
   <g fill="none" class="outline" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M 170 150 H 185 M 185 150 L 215 135"/>
     <circle cx="185" cy="150" r="2" class="box"/>
@@ -50,12 +44,14 @@
     <circle cx="625" cy="150" r="2" class="box"/>
     <circle cx="650" cy="135" r="2" class="box"/>
     <circle cx="650" cy="165" r="2" class="box"/>
-    <path d="M 650 133 V 67.5 H 679 M 650 167 V 202.5 H 679" marker-end="url(#arrow)"/>
+    <path d="M 650 133 V 67.5 H 679" marker-end="url(#arrow)"/>
+    <path d="M 650 167 V 202.5 H 679" marker-end="url(#arrow)"/>
     <path d="M 530 107 H 560 V 133 M 560 135 L 590 150 M 590 150 H 616"/>
     <circle cx="560" cy="135" r="2" class="box"/>
     <circle cx="560" cy="165" r="2" class="box"/>
     <circle cx="590" cy="150" r="2" class="box"/>
-    <path d="M 944 67.5 H 1000 V 133 M 944 202.5 H 1000 V 167 M 1000 135 L 1030 150 M 1030 150 H 1050"/>
+    <path d="M 944 67.5 H 1000 V 133 M 944 202.5 H 1000 V 167 M 1000 135 L 1030 150"/>
+    <path d="M 1030 150 H 1050" marker-end="url(#arrow)"/>
     <circle cx="1000" cy="135" r="2" class="box"/>
     <circle cx="1000" cy="165" r="2" class="box"/>
     <circle cx="1030" cy="150" r="2" class="box"/>
