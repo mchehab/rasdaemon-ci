@@ -194,17 +194,20 @@ class ResultSite:  # pylint: disable=R0903
     @staticmethod
     def _write_vm_badge(path: str, label: str, status: str) -> None:
         """Write a compact, high-signal VM health indicator."""
-        symbols = {"completed": "⬤", "partial": "⬤", "failed": "⛔",
-                   "unavailable": "?"}
         colors = {"completed": "#2da44e", "partial": "#bf8700",
                   "failed": "#d73a49", "unavailable": "#6e7781"}
-        symbol = symbols.get(status, "?")
         color = colors.get(status, colors["unavailable"])
         title = html.escape(f"{label}: {status}", quote=True)
+        if status == "failed":
+            mark = '<path d="M10 10l12 12m0-12L10 22" stroke="#fff" stroke-width="3"/>'
+        elif status not in ("completed", "partial"):
+            mark = ('<text x="16" y="23" fill="#fff" text-anchor="middle" '
+                    'font-family="sans-serif" font-size="20">?</text>')
+        else:
+            mark = ""
         badge = f'''<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"
  role="img" aria-label="{title}"><title>{title}</title>
-<text x="16" y="24" fill="{color}" text-anchor="middle"
- font-family="DejaVu Sans,sans-serif" font-size="25">{symbol}</text></svg>
+<circle cx="16" cy="16" r="12" fill="{color}"/>{mark}</svg>
 '''
         with open(path, "w", encoding="utf-8") as stream:
             stream.write(badge)

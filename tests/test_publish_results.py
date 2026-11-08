@@ -94,7 +94,8 @@ class ResultSiteTest(unittest.TestCase):
         self.assertIn("features FAIL: 0", badges["feature-fail"])
         self.assertIn("x86 VM: completed", badges["x86-vm-fail"])
         self.assertIn("ARM64 VM: unavailable", badges["arm64-vm-fail"])
-        self.assertIn(">⬤</text>", badges["x86-vm-fail"])
+        self.assertIn('<circle cx="16" cy="16" r="12" fill="#2da44e"/>',
+                      badges["x86-vm-fail"])
         self.assertIn('width="40" height="20"', badges["feature-pass"])
 
     def test_versions_link_to_the_tested_sources(self) -> None:
@@ -230,9 +231,9 @@ class ResultSiteTest(unittest.TestCase):
                 vm_badge = stream.read()
         self.assertIn("features FAIL: 1", feature_badge)
         self.assertIn("ARM64 VM: failed", vm_badge)
-        self.assertIn(">⛔</text>", vm_badge)
+        self.assertIn('<path d="M10 10l12 12m0-12L10 22"', vm_badge)
 
-    def test_partial_vm_has_yellow_open_circle(self) -> None:
+    def test_partial_vm_has_yellow_circle(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             result_dir = os.path.join(temporary, "arm")
             site_dir = os.path.join(temporary, "site")
@@ -245,7 +246,7 @@ class ResultSiteTest(unittest.TestCase):
                       encoding="utf-8") as stream:
                 badge = stream.read()
         self.assertIn("ARM64 VM: partial", badge)
-        self.assertIn(">⬤</text>", badge)
+        self.assertIn('<circle cx="16" cy="16" r="12" fill="#bf8700"/>', badge)
         self.assertIn("#bf8700", badge)
 
     def test_na_does_not_inflate_totals_after_vm_failure(self) -> None:
