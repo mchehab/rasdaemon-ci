@@ -16,16 +16,19 @@ The end-to-end data flow for error checks is represented on this diagram:
 .. image:: test-flow.svg
    :alt: Error injection enters QEMU through firmware-first or kernel-first handling, then proceeds to the kernel, rasdaemon, and a check.
 
+Each error is tested on a virtual machine (VM). Two VMs are supported: ARM64 and x86_64.
+
 - for Firmware First, an error is injected using scripts/ghes_inject.py from
-  QEMU project, using QMP interface. The script produces a CPER data which is
-  then written inside ACPI HEST table using GHESv2, via EDK2 BIOS;
+  QEMU project via its QMP interface. The script produces a CPER data which is
+  then written inside ACPI HEST table using GHESv2, via EDK2 BIOS.
+  QEMU ghes driver then forwards it to the OSPM (the Linux Kernel):
 
-- for Hardware/Kernel First, some other mechanism is used to generate an
-  error simulation that either the Kernel driver or the Kernel core can
-  detect.
+  - For ARM64, errors use Generic Event Device (GED) notifications.
+  - For x86_64, errors use System Control Input (SCI) notifications.
 
-Depending on the error type, it may be executed either inside a X86 64bits
-VM or on an ARM64 one.
+- for Hardware/Kernel First, other mechanisms can simulate a hardware error
+  that will be detected either by a Linux driver or a driver core logic.
+
 
 Latest results
 --------------
