@@ -134,9 +134,11 @@ packages:
   - util-linux
   - iproute2
   - iputils-ping
-  - ipmitool
 $server_packages
 runcmd:
+  # The IPMI kernel drivers are built into our kernel. Avoid pulling in
+  # openipmi's obsolete SysV service via ipmitool's Recommends.
+  - [ apt-get, install, -y, --no-install-recommends, ipmitool ]
   - [sh, -c, 'echo "Provisioning: package setup finished; kernel installation starting"']
   - [ bash, -c, "set -euxo pipefail; device=\$(blkid -U '$payload_uuid'); test -b \"\$device\"; mkdir -p /mnt/payload; mount -o ro \"\$device\" /mnt/payload; bash /mnt/payload/guest/install-kernel.sh '$release'" ]
 power_state:
