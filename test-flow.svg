@@ -64,10 +64,10 @@
   </g>
   <g class="foreground" font-family="sans-serif" text-anchor="middle">
     <text x="69" y="155" font-size="16">Error inject</text>
-    <text x="392" y="77" font-size="18" font-weight="bold">Firmware First Handling</text>
+    <text x="392" y="77" font-size="18" font-weight="bold">Firmware-First Handling</text>
     <text x="312" y="113" font-size="16">QMP</text>
     <text x="467" y="113" font-size="16">EDK2 BIOS</text>
-    <text x="392" y="197" font-size="18" font-weight="bold">Hardware / Kernel First Handling</text>
+    <text x="392" y="197" font-size="18" font-weight="bold">OS-First / Kernel-First Handling</text>
     <text x="392" y="252" font-size="18" font-weight="bold">QEMU</text>
     <text x="825" y="122" font-size="18" font-weight="bold">x86_64 VM</text>
     <text x="825" y="257" font-size="18" font-weight="bold">ARM64 VM</text>

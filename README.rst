@@ -26,8 +26,9 @@ Each error is tested on a virtual machine (VM). Two VMs are supported: ARM64 and
   - For ARM64, errors use Generic Event Device (GED) notifications.
   - For x86_64, errors use System Control Input (SCI) notifications.
 
-- for Hardware/Kernel First, other mechanisms can simulate a hardware error
-  that will be detected either by a Linux driver or a driver core logic.
+- for OS-First (also referred as Kernel-First or Hardware-First), other
+  mechanisms can simulate a hardware error that will be detected either
+  by a Linux driver or a driver core logic.
 
 
 Latest results
