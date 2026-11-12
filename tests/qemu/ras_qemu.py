@@ -866,6 +866,7 @@ class VirtualMachine:
         self.watchdog = GuestWatchdog(os.fspath(self.qmp_path))
         self.fuzz_mode = "random"
         self.fuzz_seed = 1
+        self.fuzz_count = 1000
         self.fuzz_process = None
         self.fuzz_log = None
         self.fuzz_size = 0
@@ -1380,7 +1381,8 @@ class VirtualMachine:
         if self.fuzz_process is None:
             command = [sys.executable, "-u", os.path.join(HARNESS_DIR, "fuzz.py"),
                        "--mode", self.fuzz_mode, "--seed", str(self.fuzz_seed),
-                       "--count", "1000", "--port", str(GHES_QMP_PORT), "--corpus", corpus]
+                       "--count", str(self.fuzz_count), "--port", str(GHES_QMP_PORT),
+                       "--corpus", corpus]
             self.injection_evidence["fuzz"] = {"command": command, "seed": self.fuzz_seed,
                                                 "mode": self.fuzz_mode}
             self.fuzz_log = open(os.path.join(self.work_dir, "fuzz.log"), "w", encoding="utf-8")
@@ -1645,6 +1647,7 @@ def run_test(args, manifest):
             pathlib.Path(args.source_dir).resolve(), args.timeout, args.profile,
         )
         machine.fuzz_mode = getattr(args, "fuzz_mode", "random")
+        machine.fuzz_count = args.fuzz_count
         machine.verbose_console = getattr(args, "verbose_console", False)
         machine.fuzz_seed = getattr(args, "fuzz_seed", 1)
         try:
@@ -1796,6 +1799,8 @@ def create_parser(manifest):
                      default="injection")
     run.add_argument("--fuzz-mode", choices=("random", "zero", "boundaries"), default="random")
     run.add_argument("--fuzz-seed", type=int, default=1)
+    run.add_argument("--fuzz-count", type=int, default=1000,
+                     help="number of fuzz cases to generate")
     run.add_argument("--result-dir", default="qemu-output")
     run.add_argument("--source-dir", default=os.environ.get(
         "RASDAEMON_SOURCE", str(PROJECT_DIR)),
