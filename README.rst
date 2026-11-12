@@ -118,6 +118,12 @@ Reports
 * `Daily functional-test report
   <https://mchehab.github.io/rasdaemon-ci/daily/>`_
 
+* `Weekly fuzz-test report
+  <https://mchehab.github.io/rasdaemon-ci/weekly/>`_
+
+* `Weekly fuzz-test workflow runs
+  <https://github.com/mchehab/rasdaemon-ci/actions/workflows/qemu-fuzz.yml>`_
+
 * `Past runs
   <https://mchehab.github.io/rasdaemon-ci/archive/>`_
 

@@ -52,6 +52,7 @@ jobs:
           IMAGE: ghcr.io/${{ github.repository_owner }}/rasdaemon-ci:x86_64
           FUZZ_MODE: ${{ matrix.mode }}
           FUZZ_SEED: ${{ github.run_number }}
+          FUZZ_COUNT: 1000
         run: |
           set -euxo pipefail
           docker pull "$IMAGE"
@@ -78,6 +79,7 @@ jobs:
             -v "$PWD/build/fuzz/$FUZZ_MODE:/results" \
             "$IMAGE" run --arch x86_64 --accelerator auto \
             --profile fuzz --fuzz-mode "$FUZZ_MODE" --fuzz-seed "$FUZZ_SEED" \
+            --fuzz-count "$FUZZ_COUNT" \
             --timeout 3600
 
       - name: Publish status table
@@ -115,11 +117,36 @@ jobs:
               print("Infrastructure failure: no result.json was produced", flush=True)
           PYTHON
 
-          if test -f "build/fuzz/$FUZZ_MODE/summary.md"; then
-            cat "build/fuzz/$FUZZ_MODE/summary.md" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo '🔴 Infrastructure failure: no VM result table was produced.' >> "$GITHUB_STEP_SUMMARY"
-          fi
+          python3 - "build/fuzz/$FUZZ_MODE/result.json" \
+            "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "$FUZZ_MODE" \
+            >> "$GITHUB_STEP_SUMMARY" <<'PYTHON'
+          import json
+          import pathlib
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          repository, run_id, mode = sys.argv[2:]
+          if not path.is_file():
+              print(f"## {mode.capitalize()} fuzz results\n")
+              print("Infrastructure failure: no VM result was produced.")
+              raise SystemExit(0)
+
+          data = json.loads(path.read_text())
+          totals = data.get("totals", {})
+          print(f"## {mode.capitalize()} fuzz results\n")
+          print(f"VM status: **{data.get('vm_status', 'unavailable')}**. "
+                f"Passed: {totals.get('passed', 0)}, "
+                f"failed: {totals.get('failed', 0)}, "
+                f"skipped: {totals.get('skipped', 0)}.\n")
+          print("| Component | PASS | FAIL | SKIP | N/A |\n"
+                "| --- | ---: | ---: | ---: | ---: |")
+          for component, values in data.get("component_totals", {}).items():
+              print(f"| {component} | {values.get('passed', 0)} | "
+                    f"{values.get('failed', 0)} | {values.get('skipped', 0)} | "
+                    f"{values.get('not_applicable', 0)} |")
+          print(f"\n[Full report, corpus, and logs in the Actions run]"
+                f"(https://github.com/{repository}/actions/runs/{run_id})")
+          PYTHON
 
       - uses: actions/upload-artifact@v7
         if: always()
