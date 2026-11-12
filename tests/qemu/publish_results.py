@@ -371,6 +371,17 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
         version_table = ('<h2>Tested versions</h2><table><thead><tr>'
                          '<th>QEMU</th><th>Linux kernel</th><th>rasdaemon</th>'
                          f'</tr></thead><tbody><tr>{version_cells}</tr></tbody></table>')
+
+        def status_cell(value: int | str, css_class: str | None = None) -> str:
+            klass = f' class="{css_class}"' if css_class else ""
+            return f"<td{klass}>{html.escape(str(value))}</td>"
+
+        vm_classes = {"completed": "PASS", "partial": "SKIP",
+                      "failed": "FAIL", "unavailable": "NA"}
+        passed_cell = status_cell(totals["passed"], "PASS" if totals["passed"] else None)
+        failed_cell = status_cell(totals["failed"], "FAIL" if totals["failed"] else None)
+        na_cell = status_cell(feature_counts["N/A"], "NA" if feature_counts["N/A"] else None)
+        x86_status = totals["vm_status"]["x86_64"]
         page = f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(self.title)}</title><link rel="stylesheet" href="{assets}/results.css">
@@ -382,10 +393,9 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
 {version_table}
 {feature_summary}
 <h2>Run status</h2><table><thead><tr><th>Features PASS</th><th>Features FAIL</th>
-<th>Features not tested</th><th>x86 VM</th><th>ARM64 VM</th></tr></thead><tbody><tr>
-<td>{totals['passed']}</td><td>{totals['failed']}</td><td>{feature_counts['N/A']}</td>
-<td>{totals['vm_status']['x86_64']}</td>
-<td>{totals['vm_status']['aarch64']}</td></tr></tbody></table>
+<th>Features not tested</th><th>x86 VM</th></tr></thead><tbody><tr>
+{passed_cell}{failed_cell}{na_cell}
+{status_cell(x86_status, vm_classes[x86_status])}</tr></tbody></table>
 <p>VM status is completed, partial, failed, or unavailable. Unexecuted features
 are not counted as regressions.</p>
 {feature_table}

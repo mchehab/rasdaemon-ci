@@ -112,6 +112,62 @@ Latest results
    * - ARM64
      - |arm64-vm|
 
+.. |weekly-feature-pass| image:: https://mchehab.github.io/rasdaemon-ci/weekly/badge-feature-pass.svg
+   :alt: Weekly features passed
+   :target: https://mchehab.github.io/rasdaemon-ci/weekly/
+.. |weekly-feature-fail| image:: https://mchehab.github.io/rasdaemon-ci/weekly/badge-feature-fail.svg
+   :alt: Weekly features failed
+   :target: https://mchehab.github.io/rasdaemon-ci/weekly/
+.. |weekly-kernel-pass| image:: https://mchehab.github.io/rasdaemon-ci/weekly/badge-kernel-pass.svg
+   :alt: Weekly kernel checks passed
+   :target: https://mchehab.github.io/rasdaemon-ci/weekly/
+.. |weekly-kernel-fail| image:: https://mchehab.github.io/rasdaemon-ci/weekly/badge-kernel-fail.svg
+   :alt: Weekly kernel checks failed
+   :target: https://mchehab.github.io/rasdaemon-ci/weekly/
+.. |weekly-kernel-skip| image:: https://mchehab.github.io/rasdaemon-ci/weekly/badge-kernel-skip.svg
+   :alt: Weekly kernel checks skipped
+   :target: https://mchehab.github.io/rasdaemon-ci/weekly/
+.. |weekly-rasdaemon-pass| image:: https://mchehab.github.io/rasdaemon-ci/weekly/badge-rasdaemon-pass.svg
+   :alt: Weekly rasdaemon checks passed
+   :target: https://mchehab.github.io/rasdaemon-ci/weekly/
+.. |weekly-rasdaemon-fail| image:: https://mchehab.github.io/rasdaemon-ci/weekly/badge-rasdaemon-fail.svg
+   :alt: Weekly rasdaemon checks failed
+   :target: https://mchehab.github.io/rasdaemon-ci/weekly/
+.. |weekly-rasdaemon-skip| image:: https://mchehab.github.io/rasdaemon-ci/weekly/badge-rasdaemon-skip.svg
+   :alt: Weekly rasdaemon checks skipped
+   :target: https://mchehab.github.io/rasdaemon-ci/weekly/
+.. |weekly-x86-vm| image:: https://mchehab.github.io/rasdaemon-ci/weekly/badge-x86-vm-fail.svg
+   :alt: Weekly x86_64 VM status
+   :target: https://mchehab.github.io/rasdaemon-ci/weekly/
+
+.. list-table:: Weekly fuzz test results
+   :header-rows: 1
+
+   * - Scope
+     - PASS
+     - FAIL
+     - SKIP / N/A
+   * - Features
+     - |weekly-feature-pass|
+     - |weekly-feature-fail|
+     - N/A
+   * - Kernel checks
+     - |weekly-kernel-pass|
+     - |weekly-kernel-fail|
+     - |weekly-kernel-skip|
+   * - rasdaemon checks
+     - |weekly-rasdaemon-pass|
+     - |weekly-rasdaemon-fail|
+     - |weekly-rasdaemon-skip|
+
+.. list-table:: Weekly fuzz-test VM health
+   :header-rows: 1
+
+   * - Architecture
+     - Status
+   * - x86_64
+     - |weekly-x86-vm|
+
 Reports
 -------
 

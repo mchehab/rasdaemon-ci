@@ -196,10 +196,11 @@ class ResultSiteTest(unittest.TestCase):
             zero_dir = os.path.join(temporary, "zero")
             site_dir = os.path.join(temporary, "site")
             self._write_result(random_dir, "b" * 40)
-            self._write_result(zero_dir, "b" * 40, failed=1, arch="aarch64")
+            self._write_result(zero_dir, "b" * 40, failed=1, arch="aarch64",
+                               vm_status="partial")
             results = [PublishedResult("random", random_dir),
                        PublishedResult("zero", zero_dir)]
-            site = ResultSite("Weekly media CI tests", site_dir,
+            site = ResultSite("Weekly fuzz tests", site_dir,
                               "https://example.test/run",
                               "https://example.test/source", "failure", results)
             site.write()
@@ -216,9 +217,15 @@ class ResultSiteTest(unittest.TestCase):
 
         self.assertIn("random report", page)
         self.assertIn("zero report", page)
+        self.assertIn('<td class="PASS">1</td>', page)
+        self.assertIn('<td class="FAIL">1</td>', page)
+        self.assertIn('<td class="PASS">completed</td>', page)
+        self.assertIn('<td class="SKIP">partial</td>', page)
+        self.assertIn("<th>x86 VM</th>", page)
+        self.assertNotIn("ARM64 VM", page)
         self.assertIn('class="theme-toggle"', page)
         self.assertIn('random/results.css', page)
-        self.assertIn("<td>1</td><td>1</td>", page)
+        self.assertIn('<td class="PASS">1</td><td class="FAIL">1</td>', page)
         self.assertLess(page.index("<h2>Feature status summary</h2>"),
                         page.index("<h2>Run status</h2>"))
         self.assertLess(page.index("<h2>Run status</h2>"),
@@ -226,7 +233,8 @@ class ResultSiteTest(unittest.TestCase):
         self.assertIn("<h2>Feature status summary</h2>", page)
         self.assertIn('<td class="NA">2</td>', page)
         self.assertIn("<th>Features not tested</th>", page)
-        self.assertIn("<td>1</td><td>1</td><td>2</td>", page)
+        self.assertIn('<td class="PASS">1</td><td class="FAIL">1</td>'
+                      '<td class="NA">2</td>', page)
         self.assertIn("features FAIL: 1", badge)
         self.assertIn("#d73a49", badge)
 
@@ -298,7 +306,7 @@ class ResultSiteTest(unittest.TestCase):
         """Pages can start before both new report cadences have completed."""
         with tempfile.TemporaryDirectory() as temporary:
             site_dir = os.path.join(temporary, "site")
-            site = ResultSite("Weekly media CI tests", site_dir,
+            site = ResultSite("Weekly fuzz tests", site_dir,
                               "https://example.test/run",
                               "https://example.test/source", "unavailable", [])
             site.write()

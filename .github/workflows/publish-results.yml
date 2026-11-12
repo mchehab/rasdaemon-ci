@@ -247,7 +247,7 @@ jobs:
             "${daily_results[@]}"
 
           python3 tests/qemu/publish_results.py \
-            --title "Weekly media CI tests" \
+            --title "Weekly fuzz tests" \
             --site build/pages/weekly \
             --run-url "$weekly_url" \
             --conclusion "$weekly_conclusion" \
