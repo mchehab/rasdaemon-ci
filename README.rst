@@ -112,12 +112,6 @@ Latest results
    * - ARM64
      - |arm64-vm|
 
-.. |weekly-feature-pass| image:: https://mchehab.github.io/rasdaemon-ci/weekly/badge-feature-pass.svg
-   :alt: Weekly features passed
-   :target: https://mchehab.github.io/rasdaemon-ci/weekly/
-.. |weekly-feature-fail| image:: https://mchehab.github.io/rasdaemon-ci/weekly/badge-feature-fail.svg
-   :alt: Weekly features failed
-   :target: https://mchehab.github.io/rasdaemon-ci/weekly/
 .. |weekly-kernel-pass| image:: https://mchehab.github.io/rasdaemon-ci/weekly/badge-kernel-pass.svg
    :alt: Weekly kernel checks passed
    :target: https://mchehab.github.io/rasdaemon-ci/weekly/
@@ -147,10 +141,6 @@ Latest results
      - PASS
      - FAIL
      - SKIP / N/A
-   * - Features
-     - |weekly-feature-pass|
-     - |weekly-feature-fail|
-     - N/A
    * - Kernel checks
      - |weekly-kernel-pass|
      - |weekly-kernel-fail|
