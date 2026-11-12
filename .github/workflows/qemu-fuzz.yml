@@ -74,6 +74,8 @@ jobs:
             -c 'printf "%s/rasdaemon" "$HOME"')
           test "${container_source:0:1}" = /
           docker run "${docker_args[@]}" \
+            -v "$PWD/ci-harness/tests/qemu:/opt/rasdaemon-ci/harness:ro" \
+            -v "$PWD/ci-harness/tests/qemu/oci/rasdaemon-ci.py:/usr/local/bin/rasdaemon-ci:ro" \
             -v "$PWD/rasdaemon-source:$container_source:ro" \
             -e "RASDAEMON_SOURCE=$container_source" \
             -v "$PWD/build/fuzz/$FUZZ_MODE:/results" \

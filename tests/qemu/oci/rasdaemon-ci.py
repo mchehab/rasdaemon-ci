@@ -25,6 +25,7 @@ def parser() -> argparse.ArgumentParser:
             command.add_argument("--fuzz-mode", choices=("random", "zero", "boundaries"),
                                  default="random")
             command.add_argument("--fuzz-seed", type=int, default=1)
+            command.add_argument("--fuzz-count", type=int, default=1000)
             command.add_argument("--accelerator", choices=("auto", "kvm", "tcg"),
                                  default="auto")
             command.add_argument("--timeout", type=int, default=900)
@@ -56,6 +57,7 @@ def main(argv: list[str] | None = None) -> int:
                         "--result-dir", str(results), "--source-dir",
                         str(source)))
         command.extend(("--fuzz-mode", args.fuzz_mode, "--fuzz-seed", str(args.fuzz_seed)))
+        command.extend(("--fuzz-count", str(args.fuzz_count)))
         if args.verbose_console:
             command.append("--verbose-console")
     return subprocess.call(command, cwd=source)

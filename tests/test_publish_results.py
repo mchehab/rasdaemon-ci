@@ -61,6 +61,24 @@ class ResultSiteTest(unittest.TestCase):
             with open(os.path.join(directory, filename), "w", encoding="utf-8") as stream:
                 stream.write(filename)
 
+    def test_weekly_vm_health_keeps_worst_mode_in_any_order(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            results = []
+            for mode, status in (("random", "failed"), ("zero", "partial"),
+                                 ("boundaries", "completed")):
+                directory = os.path.join(temporary, mode)
+                self._write_result(directory, "a" * 40, vm_status=status)
+                results.append(PublishedResult(mode, directory))
+            for selected, expected in ((results, "failed"), (results[::-1], "failed"),
+                                       (results[1:], "partial")):
+                site = ResultSite("Weekly", os.path.join(temporary, "site"),
+                                  "https://example.test/run", "https://example.test/source",
+                                  "failure", selected)
+                site.write()
+                with open(os.path.join(site.site_dir, "badge-x86-vm-fail.svg"),
+                          encoding="utf-8") as stream:
+                    self.assertIn("x86 VM: " + expected, stream.read())
+
     def test_single_result_is_the_report_landing_page(self) -> None:
         """The daily badge opens the detailed report without another click."""
         with tempfile.TemporaryDirectory() as temporary:

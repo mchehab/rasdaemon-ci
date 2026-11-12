@@ -67,6 +67,14 @@ class LabError(RuntimeError):
     """A deterministic test-lab failure."""
 
 
+def fuzz_case_count(value: str) -> int:
+    """Reject unsupported corpus sizes before building or booting a guest."""
+    count = int(value)
+    if not 1 <= count <= 10000:
+        raise argparse.ArgumentTypeError("fuzz count must be between 1 and 10000")
+    return count
+
+
 def injection_progress(method):
     """Log the request and observed completion of every injection helper."""
     @functools.wraps(method)
@@ -1647,7 +1655,7 @@ def run_test(args, manifest):
             pathlib.Path(args.source_dir).resolve(), args.timeout, args.profile,
         )
         machine.fuzz_mode = getattr(args, "fuzz_mode", "random")
-        machine.fuzz_count = args.fuzz_count
+        machine.fuzz_count = getattr(args, "fuzz_count", 1000)
         machine.verbose_console = getattr(args, "verbose_console", False)
         machine.fuzz_seed = getattr(args, "fuzz_seed", 1)
         try:
@@ -1799,7 +1807,7 @@ def create_parser(manifest):
                      default="injection")
     run.add_argument("--fuzz-mode", choices=("random", "zero", "boundaries"), default="random")
     run.add_argument("--fuzz-seed", type=int, default=1)
-    run.add_argument("--fuzz-count", type=int, default=1000,
+    run.add_argument("--fuzz-count", type=fuzz_case_count, default=1000,
                      help="number of fuzz cases to generate")
     run.add_argument("--result-dir", default="qemu-output")
     run.add_argument("--source-dir", default=os.environ.get(

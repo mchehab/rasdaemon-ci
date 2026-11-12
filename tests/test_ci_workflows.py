@@ -22,11 +22,12 @@ class PublicationTest(unittest.TestCase):
     """One usable architecture must survive a failure in its peer."""
 
     @staticmethod
-    def publish(results: dict[str, str | None]) -> set[str]:
+    def publish(results: dict[str, str | None], kind: str = "daily") -> set[str]:
         """Execute the actual daily selection function with local artifact fixtures."""
         workflow = workflow_text("publish-results.yml")
-        start = workflow.index("          find_daily()")
-        function = workflow[start:workflow.index("          find_weekly()", start)]
+        start = workflow.index(f"          find_{kind}()")
+        end = "          find_weekly()" if kind == "daily" else "          # Requested and triggering"
+        function = workflow[start:workflow.index(end, start)]
         function = "\n".join(line[10:] for line in function.splitlines())
 
         with tempfile.TemporaryDirectory() as directory:
@@ -35,7 +36,8 @@ class PublicationTest(unittest.TestCase):
             for number, (arch, revision) in enumerate(results.items(), start=1):
                 os.makedirs(os.path.join(directory, str(number)))
                 artifacts.append({"id": number, "expired": False, "created_at": "2026-11-07",
-                                  "name": "rasdaemon-qemu-results-" + arch})
+                                  "name": ("rasdaemon-qemu-results-" + arch if kind == "daily"
+                                           else "kernel-rasdaemon-fuzz-" + arch + "-1")})
 
                 if revision:
                     path = os.path.join(directory, str(number), "rasdaemon-source-revision")
@@ -68,15 +70,21 @@ download_artifact() {
   cp -a "$FIXTURES/$1/." "$2/"
 }
 '''
-            subprocess.run(["bash", "-c", stubs + function + '\nfind_daily daily ""'],
+            subprocess.run(["bash", "-c", stubs + function + f'\nfind_{kind} {kind} ""'],
                            cwd=directory, env=environment, check=True,
                            capture_output=True, text=True)
-            selected = os.path.join(directory, "build", "results", "daily")
+            selected = os.path.join(directory, "build", "results", kind)
 
             if not os.path.isdir(selected):
                 return set()
 
             return set(os.listdir(selected)) - {"run"}
+
+    def test_weekly_setup_failure_does_not_discard_other_modes(self):
+        self.assertEqual(self.publish({"random": "a" * 40, "zero": None,
+                                      "boundaries": "a" * 40}, "weekly"),
+                         {"random", "boundaries"})
+        self.assertEqual(self.publish({"random": None}, "weekly"), set())
 
     def test_either_architecture_can_publish_alone(self):
         """A missing peer artifact must not suppress the successful report."""

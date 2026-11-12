@@ -48,6 +48,25 @@ class RasQemuTest(unittest.TestCase):
             "architectures": {"x86_64": self.descriptor()},
         }
 
+    def test_fuzz_count_is_validated_before_vm_start(self):
+        parser = ras_qemu.create_parser(self.manifest())
+        base = ["--manifest", "unused", "run", "--arch", "x86_64"]
+        self.assertEqual(parser.parse_args(base).fuzz_count, 1000)
+        self.assertEqual(parser.parse_args(base + ["--fuzz-count", "10000"]).fuzz_count, 10000)
+        for count in ("0", "-1", "10001", "invalid"):
+            with self.subTest(count=count), contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit):
+                    parser.parse_args(base + ["--fuzz-count", count])
+
+    def test_container_forwards_fuzz_count(self):
+        with patch.object(rasdaemon_ci.os.path, "isfile", return_value=True), \
+                patch.object(rasdaemon_ci.os, "makedirs"), \
+                patch.object(rasdaemon_ci.subprocess, "call", return_value=0) as call:
+            self.assertEqual(rasdaemon_ci.main(["run", "--profile", "fuzz",
+                                               "--fuzz-count", "10000"]), 0)
+        command = call.call_args.args[0]
+        self.assertEqual(command[command.index("--fuzz-count") + 1], "10000")
+
     def test_architecture_aliases(self):
         self.assertEqual(ras_qemu.architecture_name("amd64"), "x86_64")
         self.assertEqual(ras_qemu.architecture_name("arm64"), "aarch64")

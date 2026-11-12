@@ -158,10 +158,13 @@ class ResultSite:  # pylint: disable=R0903
                   "components": {component: {state: 0 for state in
                                 ("passed", "failed", "skipped", "not_applicable")}
                                for component in ("kernel", "rasdaemon")}}
+        health_priority = {"unavailable": -1, "completed": 0, "partial": 1, "failed": 2}
         for result in self.results:
             arch = result.data.get("architecture", result.label)
             if arch in totals["vm_status"]:
-                totals["vm_status"][arch] = self._vm_status(result)
+                status = self._vm_status(result)
+                if health_priority[status] > health_priority[totals["vm_status"][arch]]:
+                    totals["vm_status"][arch] = status
             for component, values in result.data.get("component_totals", {}).items():
                 if component in totals["components"]:
                     for state in totals["components"][component]:

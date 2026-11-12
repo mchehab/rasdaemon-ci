@@ -47,8 +47,8 @@ jobs:
         id: results
         env:
           GH_TOKEN: ${{ github.token }}
-          DAILY_RUN_ID: ${{ inputs.daily_run_id }}
-          WEEKLY_RUN_ID: ${{ inputs.weekly_run_id }}
+          DAILY_RUN_ID: ${{ inputs.daily_run_id || (github.event.workflow_run.name == 'RAS CI pipeline' && github.event.workflow_run.id) || '' }}
+          WEEKLY_RUN_ID: ${{ inputs.weekly_run_id || (github.event.workflow_run.name == 'Fuzzy logic stress tests' && github.event.workflow_run.id) || '' }}
         run: |
           set -euxo pipefail
 
@@ -150,7 +150,7 @@ jobs:
 
               if test -n "$artifact_rows"; then
                 rm -rf build/candidate
-                compatible=true
+                compatible=0
 
                 while IFS=$'\t' read -r artifact_id artifact_name; do
                   mode=${artifact_name#kernel-rasdaemon-fuzz-}
@@ -166,13 +166,15 @@ jobs:
                   revision=$(cat "$destination/rasdaemon-source-revision" \
                     2>/dev/null || true)
                   if ! [[ "$revision" =~ ^[0-9a-f]{40}$ ]] ||
-                     ! jq -e '.component_totals' "$destination/result.json" \
+                     ! jq -e '.component_totals and .features' "$destination/result.json" \
                        >/dev/null; then
-                    compatible=false
+                    rm -rf "$destination"
+                    continue
                   fi
+                  compatible=$((compatible + 1))
                 done <<< "$artifact_rows"
 
-                if $compatible; then
+                if test "$compatible" -gt 0; then
                   mkdir -p build/results
                   mv build/candidate "build/results/$output_name"
                   printf '%s' "$runs" | jq -r --argjson id "$run_id" \
@@ -187,7 +189,7 @@ jobs:
             echo "No compatible weekly fuzz-test artifact was found"
           }
 
-          # Explicitly requested runs are retained as evidence only. Build the
+          # Requested and triggering runs are retained as evidence. Build the
           # live pages from the newest completed runs so backfills cannot roll
           # /daily or /weekly backwards in time.
           if test -n "$DAILY_RUN_ID"; then
