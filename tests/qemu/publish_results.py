@@ -452,10 +452,18 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
         os.makedirs(self.site_dir)
 
         if not self.results:
-            page = ("<!doctype html><meta charset=\"utf-8\"><title>" +
+            for asset in ("results.css", "results.js"):
+                shutil.copyfile(os.path.join(os.path.dirname(__file__), asset),
+                                os.path.join(self.site_dir, asset))
+            page = ("<!doctype html><html lang=\"en\"><meta charset=\"utf-8\">"
+                    "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                    "<link rel=\"stylesheet\" href=\"results.css\">"
+                    "<script src=\"results.js\" defer></script><title>" +
                     html.escape(self.title) + "</title><h1>" +
-                    html.escape(self.title) +
-                    "</h1><p>No compatible result has been published yet.</p>")
+                    html.escape(self.title) + "</h1>"
+                    "<button type=\"button\" id=\"theme\" class=\"theme-toggle\" "
+                    "title=\"Change color theme\" aria-label=\"Change color theme\">"
+                    "◐ Auto</button><p>No compatible result has been published yet.</p>")
 
             with open(os.path.join(self.site_dir, "index.html"), "w",
                       encoding="utf-8") as stream:

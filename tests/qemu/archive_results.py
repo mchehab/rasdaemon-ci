@@ -27,6 +27,20 @@ ARCHIVE_NAME = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[0-9]+$")
 AGGREGATE_FAILURES = {"feature-coverage"}
 
 
+def write_theme_assets(directory: str) -> None:
+    """Install the shared theme stylesheet and controller beside a page."""
+    os.makedirs(directory, exist_ok=True)
+    for filename in ("results.css", "results.js"):
+        shutil.copyfile(os.path.join(os.path.dirname(__file__), filename),
+                        os.path.join(directory, filename))
+
+
+def theme_controls() -> str:
+    """Return the shared theme switch control."""
+    return ('<button type="button" id="theme" class="theme-toggle" '
+            'title="Change color theme" aria-label="Change color theme">◐ Auto</button>')
+
+
 def read_run(path: str) -> dict:
     """Read the run URL, conclusion, timestamp and id saved by the publisher."""
     with open(path, encoding="utf-8") as stream:
@@ -62,8 +76,12 @@ def page_for_run(destination: str, metadata: dict, kind: str) -> None:
     title = html.escape(f"{kind} CI evidence: {metadata['timestamp']}")
     url = html.escape(metadata["url"], quote=True)
     status = html.escape(metadata["conclusion"])
+    write_theme_assets(destination)
     page = ["<!doctype html><html lang=\"en\"><meta charset=\"utf-8\">"]
+    page.append('<meta name="viewport" content="width=device-width,initial-scale=1">')
+    page.append('<link rel="stylesheet" href="results.css"><script src="results.js" defer></script>')
     page.append(f"<title>{title}</title><h1>{title}</h1>")
+    page.append(theme_controls())
     page.append(f"<p>Run result: {status}. <a href=\"{url}\">GitHub Actions run</a></p>")
     page.append("<h2>Evidence files</h2><ul>" + "".join(links) + "</ul>")
     with open(os.path.join(destination, "index.html"), "w", encoding="utf-8") as stream:
@@ -108,8 +126,11 @@ def archive_index(retained: list[tuple[str, dict]]) -> str:
         tables.append(table)
 
     page = ["<!doctype html><html lang=\"en\"><meta charset=\"utf-8\">"]
+    page.append('<meta name="viewport" content="width=device-width,initial-scale=1">')
+    page.append('<link rel="stylesheet" href="results.css"><script src="results.js" defer></script>')
     page.append("<title>rasdaemon CI evidence archive</title>")
     page.append("<h1>rasdaemon CI evidence archive</h1>")
+    page.append(theme_controls())
     page.append("<p>Failed runs are retained indefinitely. Successful runs are retained for 30 days.</p>")
     page.extend(tables)
     return "\n".join(page) + "\n"
@@ -302,6 +323,7 @@ def failure_page(destination: str, metadata: dict, kind: str, label: str,
     slug = re.sub(r"[^a-zA-Z0-9_-]+", "-", name).strip("-") or "failure"
     directory = os.path.join(destination, run_name, kind, label)
     os.makedirs(directory, exist_ok=True)
+    write_theme_assets(directory)
     filename = f"{slug}.html"
     title = html.escape(name)
     escaped_reason = html.escape(reason or "No failure reason was recorded.")
@@ -309,17 +331,10 @@ def failure_page(destination: str, metadata: dict, kind: str, label: str,
     run_url = html.escape(metadata["url"], quote=True)
     page = ["<!doctype html><html lang=\"en\"><meta charset=\"utf-8\">"]
     page.append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">")
-    page.append("<style>body{font:16px system-ui,sans-serif;line-height:1.5;"
-                "max-width:80rem;margin:2rem auto;padding:0 1rem}"
-                "a{color:#0969da}.evidence-fields{display:grid;"
-                "grid-template-columns:minmax(10rem,auto) 1fr;gap:.4rem 1rem}"
-                ".evidence-fields dt{font-weight:600;color:#59636e}"
-                ".evidence-fields dd{margin:0;min-width:0}"
-                ".evidence-text{background:#f6f8fa;border:1px solid #d0d7de;"
-                "border-radius:.25rem;padding:.8rem;max-height:34rem;overflow:auto;"
-                "white-space:pre-wrap;overflow-wrap:anywhere}"
-                "code{overflow-wrap:anywhere}</style>")
+    page.append('<link rel="stylesheet" href="results.css">')
+    page.append('<script src="results.js" defer></script>')
     page.append(f"<title>Failed test: {title}</title><h1>Failed test: {title}</h1>")
+    page.append(theme_controls())
     page.append(f"<p>{html.escape(metadata['timestamp'])} · {html.escape(kind)} · "
                 f"{html.escape(label)}</p>")
     page.append(f"<p><strong>Reason:</strong> {escaped_reason}</p>")
@@ -504,7 +519,7 @@ def archive(store: str, site: str, inputs: list[str], now: datetime.datetime) ->
 
     archive_site = os.path.join(site, "archive")
     shutil.rmtree(archive_site, ignore_errors=True)
-    os.makedirs(archive_site)
+    write_theme_assets(archive_site)
     for name, metadata in retained:
         site_run = os.path.join(site, name)
         os.makedirs(site_run, exist_ok=True)
@@ -521,6 +536,7 @@ def archive(store: str, site: str, inputs: list[str], now: datetime.datetime) ->
     failures_site = os.path.join(site, "failures")
     shutil.rmtree(failures_site, ignore_errors=True)
     os.makedirs(failures_site)
+    write_theme_assets(failures_site)
     failures = collect_failures(store, retained, failures_site)
 
     # Link failed checks in both the live summary and that run's archived page.
@@ -574,8 +590,12 @@ def archive(store: str, site: str, inputs: list[str], now: datetime.datetime) ->
             f'<td><a href="{report}">Full run report</a></td></tr>')
 
     failure_page_html = ["<!doctype html><html lang=\"en\"><meta charset=\"utf-8\">"]
+    failure_page_html.append('<meta name="viewport" content="width=device-width,initial-scale=1">')
+    failure_page_html.append('<link rel="stylesheet" href="results.css">'
+                             '<script src="results.js" defer></script>')
     failure_page_html.append("<title>Failed rasdaemon CI tests</title>")
     failure_page_html.append("<h1>Failed rasdaemon CI tests</h1>")
+    failure_page_html.append(theme_controls())
     failure_page_html.append("<p>Each failed test links to its captured evidence.</p>")
     if failure_rows:
         failure_page_html.append(

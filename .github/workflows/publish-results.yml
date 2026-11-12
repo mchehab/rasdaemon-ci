@@ -255,9 +255,11 @@ jobs:
             "${weekly_results[@]}"
 
           cat > build/pages/index.html <<'EOF'
-          <!doctype html><meta charset="utf-8"><title>rasdaemon media CI</title>
-          <style>body{font:16px sans-serif;margin:2em;max-width:70em}li{margin:.8em}</style>
-          <h1>rasdaemon media CI</h1>
+          <!doctype html><html lang="en"><meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <link rel="stylesheet" href="results.css"><script src="results.js" defer></script>
+          <title>rasdaemon media CI</title><h1>rasdaemon media CI</h1>
+          <button type="button" id="theme" class="theme-toggle" title="Change color theme" aria-label="Change color theme">◐ Auto</button>
           <p>Latest published kernel and rasdaemon test results:</p>
           <ul><li><a href="daily/">Daily functional tests</a></li>
           <li><a href="weekly/">Weekly fuzz tests</a></li>
@@ -265,6 +267,7 @@ jobs:
           <li><a href="failures/">Failed tests and individual evidence</a></li>
           <li><a href="https://github.com/mchehab/rasdaemon-ci/actions/workflows/publish-results.yml">Manually preserve a CI run</a></li></ul>
           EOF
+          cp tests/qemu/results.css tests/qemu/results.js build/pages/
 
       - name: Preserve timestamped run evidence
         if: steps.results.outputs.ready == 'true'

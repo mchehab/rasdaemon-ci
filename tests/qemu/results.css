@@ -97,6 +97,7 @@ th { background: var(--panel); }
 code, pre { background: var(--panel); border-radius: .25rem; }
 code { overflow-wrap: anywhere; padding: .1rem .25rem; }
 pre { margin: .25rem 0; max-height: 30rem; overflow: auto; padding: .75rem; white-space: pre-wrap; }
+.evidence-text { background: var(--panel); border: 1px solid var(--border); border-radius: .25rem; overflow-wrap: anywhere; }
 .binary { font-family: ui-monospace, monospace; word-break: break-all; }
 dialog { background: var(--background); color: var(--foreground); max-height: 85vh; max-width: 90vw; width: 75rem; }
 dialog::backdrop { background: rgb(0 0 0 / 65%); }
