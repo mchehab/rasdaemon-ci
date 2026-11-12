@@ -125,6 +125,10 @@ class ResultSite:  # pylint: disable=R0903
         self.conclusion = conclusion
         self.results = results
 
+    def _is_fuzz_report(self) -> bool:
+        return bool(self.results) and all(
+            result.label in ("random", "zero", "boundaries") for result in self.results)
+
     @staticmethod
     def _infrastructure_failure(result: PublishedResult) -> str:
         reason = result.data.get("infrastructure_failure", "")
@@ -272,7 +276,7 @@ class ResultSite:  # pylint: disable=R0903
         source_url = html.escape(f"{repository}/commit/{result.revision}",
                                  quote=True)
         finished = html.escape(result.data.get("finished_at", "unknown"))
-        prefix = "../" if len(self.results) > 1 else ""
+        prefix = "../" if len(self.results) > 1 or self._is_fuzz_report() else ""
         versions = "".join(
             f'<td><a href="{prefix}{component}-{result.label}.html">'
             f'<img src="{prefix}badge-{component}-{result.label}.svg" '
@@ -290,6 +294,9 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
 
     def _publish_detail(self, result: PublishedResult, directory: str) -> None:
         shutil.copytree(result.directory, directory)
+        for asset in ("results.css", "results.js"):
+            shutil.copyfile(os.path.join(os.path.dirname(__file__), asset),
+                            os.path.join(directory, asset))
         report_path = os.path.join(result.directory, "results.html")
 
         with open(report_path, encoding="utf-8") as stream:
@@ -382,6 +389,43 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
         failed_cell = status_cell(totals["failed"], "FAIL" if totals["failed"] else None)
         na_cell = status_cell(feature_counts["N/A"], "NA" if feature_counts["N/A"] else None)
         x86_status = totals["vm_status"]["x86_64"]
+        if self._is_fuzz_report():
+            component_rows = []
+            component_names = {"kernel": "Kernel checks", "rasdaemon": "rasdaemon checks"}
+            component_states = (("passed", "PASS"), ("failed", "FAIL"),
+                                ("skipped", "SKIP"), ("not_applicable", "NA"))
+            for component, label in component_names.items():
+                cells = "".join(
+                    status_cell(totals["components"][component][state],
+                                css_class if totals["components"][component][state] else None)
+                    for state, css_class in component_states)
+                component_rows.append(f"<tr><th>{label}</th>{cells}</tr>")
+            board = ('<h2>Fuzz test summary</h2><table><thead><tr>'
+                     '<th>Component</th><th>PASS</th><th>FAIL</th><th>SKIP</th>'
+                     '<th>N/A</th></tr></thead><tbody>' +
+                     "".join(component_rows) + '</tbody></table>')
+            vm_board = ('<h2>VM health</h2><table><thead><tr><th>Architecture</th>'
+                        '<th>Status</th></tr></thead><tbody><tr><th>x86_64</th>'
+                        f'{status_cell(x86_status, vm_classes[x86_status])}'
+                        '</tr></tbody></table>')
+            missing = sorted({"random", "zero", "boundaries"} -
+                             {result.label for result in self.results})
+            coverage = ("<p>Modes without published results: " +
+                        ", ".join(missing) + ". Counts cover available modes only.</p>"
+                        if missing else "")
+            report_sections = board + coverage + vm_board
+        else:
+            run_status = ('<h2>Run status</h2><table><thead><tr>'
+                          '<th>Features PASS</th><th>Features FAIL</th>'
+                          '<th>Features not tested</th><th>x86 VM</th>'
+                          '<th>ARM64 VM</th></tr></thead><tbody><tr>' +
+                          passed_cell + failed_cell + na_cell +
+                          status_cell(totals["vm_status"]["x86_64"],
+                                      vm_classes[totals["vm_status"]["x86_64"]]) +
+                          status_cell(totals["vm_status"]["aarch64"],
+                                      vm_classes[totals["vm_status"]["aarch64"]]) +
+                          '</tr></tbody></table>')
+            report_sections = feature_summary + run_status + feature_table + other_table
         page = f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(self.title)}</title><link rel="stylesheet" href="{assets}/results.css">
@@ -391,15 +435,7 @@ See the <a href="{run_url}">GitHub Actions run</a> for the workflow log and arti
 <h1>{html.escape(self.title)}</h1><p>Latest published result. See the
 <a href="{run_url}">GitHub Actions run</a> for the complete workflow log.</p>
 {version_table}
-{feature_summary}
-<h2>Run status</h2><table><thead><tr><th>Features PASS</th><th>Features FAIL</th>
-<th>Features not tested</th><th>x86 VM</th></tr></thead><tbody><tr>
-{passed_cell}{failed_cell}{na_cell}
-{status_cell(x86_status, vm_classes[x86_status])}</tr></tbody></table>
-<p>VM status is completed, partial, failed, or unavailable. Unexecuted features
-are not counted as regressions.</p>
-{feature_table}
-{other_table}
+{report_sections}
 <h2>Reports</h2><ul>{reports}</ul>
 </body></html>'''
 
@@ -429,7 +465,7 @@ are not counted as regressions.</p>
 
             return
 
-        if len(self.results) == 1:
+        if len(self.results) == 1 and not self._is_fuzz_report():
             result = self.results[0]
             shutil.rmtree(self.site_dir)
             self._publish_detail(result, self.site_dir)

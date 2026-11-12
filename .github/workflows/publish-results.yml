@@ -166,7 +166,7 @@ jobs:
                   revision=$(cat "$destination/rasdaemon-source-revision" \
                     2>/dev/null || true)
                   if ! [[ "$revision" =~ ^[0-9a-f]{40}$ ]] ||
-                     ! jq -e '.component_totals and .features' "$destination/result.json" \
+                     ! jq -e '.component_totals' "$destination/result.json" \
                        >/dev/null; then
                     rm -rf "$destination"
                     continue

@@ -70,11 +70,18 @@ class ResultSiteTest(unittest.TestCase):
                 self._write_result(directory, "a" * 40, vm_status=status)
                 results.append(PublishedResult(mode, directory))
             for selected, expected in ((results, "failed"), (results[::-1], "failed"),
-                                       (results[1:], "partial")):
+                                       (results[1:], "partial"), (results[:1], "failed")):
                 site = ResultSite("Weekly", os.path.join(temporary, "site"),
                                   "https://example.test/run", "https://example.test/source",
                                   "failure", selected)
                 site.write()
+                with open(os.path.join(site.site_dir, "index.html"), encoding="utf-8") as stream:
+                    self.assertIn("Fuzz test summary", stream.read())
+                for result in selected:
+                    detail = os.path.join(site.site_dir, result.label)
+                    self.assertTrue(os.path.isfile(os.path.join(detail, "results.css")))
+                    with open(os.path.join(detail, "index.html"), encoding="utf-8") as stream:
+                        self.assertIn("../badge-qemu-", stream.read())
                 with open(os.path.join(site.site_dir, "badge-x86-vm-fail.svg"),
                           encoding="utf-8") as stream:
                     self.assertIn("x86 VM: " + expected, stream.read())
@@ -196,7 +203,7 @@ class ResultSiteTest(unittest.TestCase):
             zero_dir = os.path.join(temporary, "zero")
             site_dir = os.path.join(temporary, "site")
             self._write_result(random_dir, "b" * 40)
-            self._write_result(zero_dir, "b" * 40, failed=1, arch="aarch64",
+            self._write_result(zero_dir, "b" * 40, failed=1,
                                vm_status="partial")
             results = [PublishedResult("random", random_dir),
                        PublishedResult("zero", zero_dir)]
@@ -208,7 +215,7 @@ class ResultSiteTest(unittest.TestCase):
             with open(os.path.join(site_dir, "index.html"), encoding="utf-8") as stream:
                 page = stream.read()
 
-            self.assertLess(page.index("Tested versions"), page.index("Feature status summary"))
+            self.assertLess(page.index("Tested versions"), page.index("Fuzz test summary"))
             self.assertIn("badge-qemu-random.svg", page)
 
             with open(os.path.join(site_dir, "badge-feature-fail.svg"),
@@ -217,24 +224,16 @@ class ResultSiteTest(unittest.TestCase):
 
         self.assertIn("random report", page)
         self.assertIn("zero report", page)
-        self.assertIn('<td class="PASS">1</td>', page)
+        self.assertIn('<td class="PASS">40</td>', page)
+        self.assertIn('<td class="PASS">36</td>', page)
         self.assertIn('<td class="FAIL">1</td>', page)
-        self.assertIn('<td class="PASS">completed</td>', page)
         self.assertIn('<td class="SKIP">partial</td>', page)
-        self.assertIn("<th>x86 VM</th>", page)
+        self.assertIn('<td class="NA">4</td>', page)
         self.assertNotIn("ARM64 VM", page)
-        self.assertIn('class="theme-toggle"', page)
+        self.assertNotIn("Feature coverage", page)
+        self.assertNotIn("Feature status summary", page)
+        self.assertIn("boundaries", page)
         self.assertIn('random/results.css', page)
-        self.assertIn('<td class="PASS">1</td><td class="FAIL">1</td>', page)
-        self.assertLess(page.index("<h2>Feature status summary</h2>"),
-                        page.index("<h2>Run status</h2>"))
-        self.assertLess(page.index("<h2>Run status</h2>"),
-                        page.index("<h2>Feature coverage</h2>"))
-        self.assertIn("<h2>Feature status summary</h2>", page)
-        self.assertIn('<td class="NA">2</td>', page)
-        self.assertIn("<th>Features not tested</th>", page)
-        self.assertIn('<td class="PASS">1</td><td class="FAIL">1</td>'
-                      '<td class="NA">2</td>', page)
         self.assertIn("features FAIL: 1", badge)
         self.assertIn("#d73a49", badge)
 
