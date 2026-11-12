@@ -71,48 +71,47 @@ def page_for_run(destination: str, metadata: dict, kind: str) -> None:
 
 
 def archive_index(retained: list[tuple[str, dict]]) -> str:
-    """Render one newest-first row per archived run, without a kind column."""
-    runs = {}
-    for name, metadata in retained:
-        run = runs.setdefault(name, {"items": [], "timestamp": metadata["timestamp"]})
-        run["items"].append(metadata)
-
-    ordered = sorted(
-        runs.items(),
-        key=lambda pair: max(datetime.datetime.fromisoformat(item["created_at"])
-                             for item in pair[1]["items"]),
-        reverse=True,
-    )
-    rows = []
-    for name, run in ordered:
-        items = run["items"]
-        kind = "daily" if any(item["kind"] == "daily" for item in items) else "weekly"
-        status = "success" if all(item["conclusion"] == "success" for item in items) else "failure"
-        timestamp = max(datetime.datetime.fromisoformat(item["created_at"])
-                        for item in items).astimezone(datetime.timezone.utc)
-        readable = timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
-        report = html.escape(f"../{name}/{kind}/index.html", quote=True)
-        evidence = html.escape(f"../{name}/", quote=True)
-        selected = next(item for item in items if item["kind"] == kind)
-        versions = selected.get("versions", {})
-        label = selected.get("version_label", "")
-        cells = ""
-        for component in ("qemu", "kernel", "rasdaemon"):
-            value = html.escape(versions.get(component, "—"))
-            if label and component in versions:
-                target = html.escape(f"../{name}/{kind}/{component}-{label}.html", quote=True)
-                value = f'<a href="{target}">{value}</a>'
-            cells += f"<td>{value}</td>"
-        rows.append(f'<tr><td><a href="{report}">{readable}</a></td>'
-                    f'<td><a href="{evidence}">{status}</a></td>{cells}</tr>')
+    """Render separate newest-first tables for functional and fuzz runs."""
+    tables = []
+    for kind, title in (("daily", "Functional tests"),
+                        ("weekly", "Fuzzy logic tests")):
+        items = sorted(
+            ((name, metadata) for name, metadata in retained
+             if metadata.get("kind") == kind),
+            key=lambda item: datetime.datetime.fromisoformat(item[1]["created_at"]),
+            reverse=True,
+        )
+        rows = []
+        for name, metadata in items:
+            timestamp = datetime.datetime.fromisoformat(
+                metadata["created_at"]).astimezone(datetime.timezone.utc)
+            readable = timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
+            report = html.escape(f"../{name}/{kind}/index.html", quote=True)
+            evidence = html.escape(f"../{name}/", quote=True)
+            conclusion = html.escape(metadata["conclusion"])
+            versions = metadata.get("versions", {})
+            label = metadata.get("version_label", "")
+            cells = ""
+            for component in ("qemu", "kernel", "rasdaemon"):
+                value = html.escape(versions.get(component, "N/A"))
+                if label and component in versions:
+                    target = html.escape(
+                        f"../{name}/{kind}/{component}-{label}.html", quote=True)
+                    value = f'<a href="{target}">{value}</a>'
+                cells += f"<td>{value}</td>"
+            rows.append(f'<tr><td><a href="{report}">{readable}</a></td>'
+                        f'<td><a href="{evidence}">{conclusion}</a></td>{cells}</tr>')
+        table = (f'<h2>{title}</h2><table><thead><tr>'
+                 '<th>Time (UTC)</th><th>Status</th><th>QEMU</th>'
+                 '<th>Linux kernel</th><th>rasdaemon</th></tr></thead><tbody>' +
+                 "".join(rows) + "</tbody></table>")
+        tables.append(table)
 
     page = ["<!doctype html><html lang=\"en\"><meta charset=\"utf-8\">"]
     page.append("<title>rasdaemon CI evidence archive</title>")
     page.append("<h1>rasdaemon CI evidence archive</h1>")
     page.append("<p>Failed runs are retained indefinitely. Successful runs are retained for 30 days.</p>")
-    page.append("<table><thead><tr><th>Time (UTC)</th><th>Status</th>"
-                "<th>QEMU</th><th>Linux kernel</th><th>rasdaemon</th></tr></thead><tbody>" +
-                "".join(rows) + "</tbody></table>")
+    page.extend(tables)
     return "\n".join(page) + "\n"
 
 
