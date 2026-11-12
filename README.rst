@@ -30,6 +30,7 @@ Each error is tested on a virtual machine (VM). Two VMs are supported: ARM64 and
   mechanisms can simulate a hardware error that will be detected either
   by a Linux driver or a driver core logic.
 
+Functional tests usually run daily; fuzzy tests usually run usually.
 
 Latest results
 --------------
@@ -78,40 +79,6 @@ Latest results
    :alt: rasdaemon aarch64 tested version
    :target: https://mchehab.github.io/rasdaemon-ci/daily/rasdaemon-aarch64.html
 
-.. list-table:: Daily functional results
-   :header-rows: 1
-
-   * - Scope
-     - PASS
-     - FAIL
-     - Version
-   * - Features
-     - |feature-pass|
-     - |feature-fail|
-     - N/A
-   * - QEMU
-     - N/A
-     - N/A
-     - |qemu-x86_64|
-   * - Kernel checks
-     - |kernel-pass|
-     - |kernel-fail|
-     - |kernel-x86_64|
-   * - rasdaemon checks
-     - |rasdaemon-pass|
-     - |rasdaemon-fail|
-     - |rasdaemon-x86_64|
-
-.. list-table:: VM health
-   :header-rows: 1
-
-   * - Architecture
-     - Status
-   * - x86_64
-     - |x86-vm|
-   * - ARM64
-     - |arm64-vm|
-
 .. |weekly-kernel-pass| image:: https://mchehab.github.io/rasdaemon-ci/weekly/badge-kernel-pass.svg
    :alt: Weekly kernel checks passed
    :target: https://mchehab.github.io/rasdaemon-ci/weekly/
@@ -134,44 +101,56 @@ Latest results
    :alt: Weekly x86_64 VM status
    :target: https://mchehab.github.io/rasdaemon-ci/weekly/
 
-.. list-table:: Weekly fuzz test results
+.. list-table::
    :header-rows: 1
 
    * - Scope
      - PASS
      - FAIL
-     - SKIP / N/A
-   * - Kernel checks
+     - Version
+   * - Features
+     - |feature-pass|
+     - |feature-fail|
+     - N/A
+   * - QEMU
+     - N/A
+     - N/A
+     - |qemu-x86_64|
+   * - Kernel functional tests
+     - |kernel-pass|
+     - |kernel-fail|
+     - |kernel-x86_64|
+   * - rasdaemon functional tests
+     - |rasdaemon-pass|
+     - |rasdaemon-fail|
+     - |rasdaemon-x86_64|
+   * - Kernel fuzzy tests
      - |weekly-kernel-pass|
      - |weekly-kernel-fail|
-     - |weekly-kernel-skip|
-   * - rasdaemon checks
+     -
+   * - rasdaemon fuzzy tests
      - |weekly-rasdaemon-pass|
      - |weekly-rasdaemon-fail|
-     - |weekly-rasdaemon-skip|
+     -
 
-.. list-table:: Weekly fuzz-test VM health
+
+.. list-table::
    :header-rows: 1
 
-   * - Architecture
+   * - VM health
      - Status
-   * - x86_64
+   * - Functional tests on x86_64
+     - |x86-vm|
+   * - Functional tests on ARM64
+     - |arm64-vm|
+   * - Fuzzy tests on x86_64
      - |weekly-x86-vm|
 
-Reports
--------
+.. list-table::
 
-* `Daily functional-test report
-  <https://mchehab.github.io/rasdaemon-ci/daily/>`_
-
-* `Weekly fuzz-test report
-  <https://mchehab.github.io/rasdaemon-ci/weekly/>`_
-
-* `Weekly fuzz-test workflow runs
-  <https://github.com/mchehab/rasdaemon-ci/actions/workflows/qemu-fuzz.yml>`_
-
-* `Past runs
-  <https://mchehab.github.io/rasdaemon-ci/archive/>`_
+  * - `Current functional test report <https://mchehab.github.io/rasdaemon-ci/daily/>`_ 
+    - `Current fuzz test report  <https://mchehab.github.io/rasdaemon-ci/weekly/>`_
+    - `Past runs <https://mchehab.github.io/rasdaemon-ci/archive/>`_
 
 Functional feature implementation
 ---------------------------------
