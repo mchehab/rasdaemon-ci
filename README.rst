@@ -30,6 +30,10 @@ Each error is tested on a virtual machine (VM). Two VMs are supported: ARM64 and
   mechanisms can simulate a hardware error that will be detected either
   by a Linux driver or a driver core logic.
 
+QEMU RAS functionality is tested by checking if the errors send via
+QMP interface are properly handled at EDK2 BIOS HEST table and are
+received at the kernel.
+
 Functional tests usually run daily; fuzzy tests usually run usually.
 
 Latest results
@@ -40,6 +44,15 @@ Latest results
    :target: https://mchehab.github.io/rasdaemon-ci/daily/
 .. |feature-fail| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-feature-fail.svg
    :alt: Features failed
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/
+.. |qemu-ghes-pass| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-qemu-ghes-pass.svg
+   :alt: QEMU to GHES checks passed
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/
+.. |qemu-ghes-fail| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-qemu-ghes-fail.svg
+   :alt: QEMU to GHES checks failed
+   :target: https://mchehab.github.io/rasdaemon-ci/daily/
+.. |qemu-ghes-rate| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-qemu-ghes-rate.svg
+   :alt: QEMU to GHES pass rate
    :target: https://mchehab.github.io/rasdaemon-ci/daily/
 .. |kernel-pass| image:: https://mchehab.github.io/rasdaemon-ci/daily/badge-kernel-pass.svg
    :alt: Kernel checks passed
@@ -106,7 +119,7 @@ Latest results
 +=============+============+===========================+===========================+======================+
 | Features    | Functional | |feature-pass|            | |feature-fail|            | N/A                  |
 +-------------+------------+---------------------------+---------------------------+----------------------+
-| QEMU        | [#qemu]_   | [#qemu]_                  | [#qemu]_                  | |qemu-x86_64|        |
+| QEMU        | RAS        | |qemu-ghes-pass|          | |qemu-ghes-fail|          | |qemu-x86_64|        |
 +-------------+------------+---------------------------+---------------------------+----------------------+
 | Kernel      | Functional | |kernel-pass|             | |kernel-fail|             | |kernel-x86_64|      |
 |             +------------+---------------------------+---------------------------+                      |
@@ -116,11 +129,6 @@ Latest results
 |             +------------+---------------------------+---------------------------+                      |
 |             | Fuzzy      | |weekly-rasdaemon-pass|   | |weekly-rasdaemon-fail|   |                      |
 +-------------+------------+---------------------------+---------------------------+----------------------+
-
-.. [#qemu]
-   QEMU, scripts/ghes_inject.py and EDK BIOS HEST tables are indirectly tested,
-   as if the fail, APEI tests will fail as well.
-   Currently, there are no separate counters for them.
 
 .. list-table::
    :header-rows: 1

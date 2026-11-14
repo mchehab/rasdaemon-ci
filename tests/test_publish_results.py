@@ -123,6 +123,75 @@ class ResultSiteTest(unittest.TestCase):
                       badges["x86-vm-fail"])
         self.assertIn('width="40" height="20"', badges["feature-pass"])
 
+    def test_ghes_badges_measure_kernel_delivery_across_vms(self) -> None:
+        """Daemon failures and unrelated kernel checks do not change delivery."""
+        with tempfile.TemporaryDirectory() as temporary:
+            results = []
+
+            for arch in ("x86_64", "aarch64"):
+                directory = os.path.join(temporary, arch)
+                self._write_result(directory, "a" * 40, arch=arch)
+                path = os.path.join(directory, "result.json")
+
+                with open(path, encoding="utf-8") as stream:
+                    data = json.load(stream)
+
+                data["tests"] = [
+                    {"name": "ghes-memory", "kernel": "PASS", "rasdaemon": "FAIL"},
+                    {"name": "vendor-ampere", "kernel": "PASS"},
+                    {"name": "ghes-pci-bus", "kernel": "FAIL"},
+                    {"name": "ghes-arm", "kernel": "SKIP"},
+                    {"name": "ghes-aer", "kernel": "N/A"},
+                    {"name": "ghes-memory-report", "kernel": "FAIL"},
+                    {"name": "consumer-arm-sel", "kernel": "FAIL"},
+                    {"name": "cxl-media", "kernel": "FAIL"},
+                ]
+
+                for test in data["tests"]:
+                    test["status"] = {"PASS": "passed", "FAIL": "failed"}.get(
+                        test["kernel"], "skipped")
+
+                with open(path, "w", encoding="utf-8") as stream:
+                    json.dump(data, stream)
+
+                results.append(PublishedResult(arch, directory))
+
+            site = ResultSite("Daily", os.path.join(temporary, "site"),
+                              "https://example.test/run", "https://example.test/source",
+                              "failure", results)
+            site.write()
+
+            for name, value in (("pass", "4"), ("fail", "2"), ("rate", "67%")):
+                path = os.path.join(site.site_dir, f"badge-qemu-ghes-{name}.svg")
+
+                with open(path, encoding="utf-8") as stream:
+                    badge = stream.read()
+
+                self.assertIn(f'>{value}</text>', badge)
+                self.assertIn("QEMU → GHES", badge)
+                self.assertIn("#2da44e" if name == "pass" else "#d73a49", badge)
+
+    def test_ghes_badges_without_measurements_are_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = os.path.join(temporary, "result")
+            self._write_result(directory, "a" * 40)
+            result = PublishedResult("x86_64", directory)
+
+            for results in ([], [result]):
+                site = ResultSite("Daily", os.path.join(temporary, "site"),
+                                  "https://example.test/run", "https://example.test/source",
+                                  "failure", results)
+                site.write()
+
+                for name in ("pass", "fail", "rate"):
+                    path = os.path.join(site.site_dir, f"badge-qemu-ghes-{name}.svg")
+
+                    with open(path, encoding="utf-8") as stream:
+                        badge = stream.read()
+
+                    self.assertIn('>N/A</text>', badge)
+                    self.assertIn("#6e7781", badge)
+
     def test_versions_link_to_the_tested_sources(self) -> None:
         """Version badges identify the image and the exact source commits."""
         with tempfile.TemporaryDirectory() as temporary:

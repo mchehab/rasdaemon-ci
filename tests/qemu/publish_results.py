@@ -156,7 +156,16 @@ class ResultSite:  # pylint: disable=R0903
         return "completed"
 
     def _totals(self) -> dict:
+        with open(os.path.join(os.path.dirname(__file__), "scenarios.json"),
+                  encoding="utf-8") as stream:
+            scenarios = json.load(stream)
+
+        ghes_checks = {scenario["name"] for scenario in scenarios
+                       if not scenario["name"].startswith("consumer-") and
+                       ("cper" in scenario or "helper" in scenario or
+                        scenario.get("producer", "").startswith("ghes-"))}
         totals = {"passed": 0, "failed": 0,
+                  "qemu_ghes": {"PASS": 0, "FAIL": 0},
                   "infrastructure": {"x86_64": 0, "aarch64": 0},
                   "vm_status": {"x86_64": "unavailable", "aarch64": "unavailable"},
                   "components": {component: {state: 0 for state in
@@ -164,6 +173,11 @@ class ResultSite:  # pylint: disable=R0903
                                for component in ("kernel", "rasdaemon")}}
         health_priority = {"unavailable": -1, "completed": 0, "partial": 1, "failed": 2}
         for result in self.results:
+            for test in result.data.get("tests", []):
+                verdict = test.get("kernel")
+                if test.get("name") in ghes_checks and verdict in totals["qemu_ghes"]:
+                    totals["qemu_ghes"][verdict] += 1
+
             arch = result.data.get("architecture", result.label)
             if arch in totals["vm_status"]:
                 status = self._vm_status(result)
@@ -225,6 +239,16 @@ class ResultSite:  # pylint: disable=R0903
             "feature-pass": ("features PASS", totals["passed"] if totals else "N/A"),
             "feature-fail": ("features FAIL", totals["failed"] if totals else "N/A"),
         }
+        ghes = totals["qemu_ghes"] if totals else {"PASS": 0, "FAIL": 0}
+        measured = ghes["PASS"] + ghes["FAIL"]
+
+        for state in ("PASS", "FAIL"):
+            values[f"qemu-ghes-{state.lower()}"] = (
+                "QEMU → GHES " + state, ghes[state] if measured else "N/A")
+
+        rate = f'{100 * ghes["PASS"] / measured:.0f}%' if measured else "N/A"
+        values["qemu-ghes-rate"] = ("QEMU → GHES pass rate", rate)
+
         if totals:
             for component in ("kernel", "rasdaemon"):
                 label = component + " "
@@ -241,8 +265,10 @@ class ResultSite:  # pylint: disable=R0903
                 for state in ("pass", "fail", "skip"):
                     values[f"{component}-{state}"] = (component + " " + state.upper(), "N/A")
         for filename, (label, value) in values.items():
-            color = "#6e7781" if totals is None else (
-                "#d73a49" if filename.endswith("fail") and value else "#2da44e")
+            failed = (filename.endswith("fail") and value) or (
+                filename == "qemu-ghes-rate" and ghes["FAIL"])
+            color = "#6e7781" if value == "N/A" else (
+                "#d73a49" if failed else "#2da44e")
             self._write_badge(os.path.join(self.site_dir, f"badge-{filename}.svg"),
                               label, value, color)
         for filename, label, arch in (("x86-vm-fail", "x86 VM", "x86_64"),
