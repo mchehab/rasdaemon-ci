@@ -101,38 +101,26 @@ Latest results
    :alt: Weekly x86_64 VM status
    :target: https://mchehab.github.io/rasdaemon-ci/weekly/
 
-.. list-table::
-   :header-rows: 1
++-------------+------------+---------------------------+---------------------------+----------------------+
+| Component   | Test       | PASS                      | FAIL                      | Version              |
++=============+============+===========================+===========================+======================+
+| Features    | Functional | |feature-pass|            | |feature-fail|            | N/A                  |
++-------------+------------+---------------------------+---------------------------+----------------------+
+| QEMU        | [#qemu]_   | [#qemu]_                  | [#qemu]_                  | |qemu-x86_64|        |
++-------------+------------+---------------------------+---------------------------+----------------------+
+| Kernel      | Functional | |kernel-pass|             | |kernel-fail|             | |kernel-x86_64|      |
+|             +------------+---------------------------+---------------------------+                      |
+|             | Fuzzy      | |weekly-kernel-pass|      | |weekly-kernel-fail|      |                      |
++-------------+------------+---------------------------+---------------------------+----------------------+
+| rasdaemon   | Functional | |rasdaemon-pass|          | |rasdaemon-fail|          | |rasdaemon-x86_64|   |
+|             +------------+---------------------------+---------------------------+                      |
+|             | Fuzzy      | |weekly-rasdaemon-pass|   | |weekly-rasdaemon-fail|   |                      |
++-------------+------------+---------------------------+---------------------------+----------------------+
 
-   * - Scope
-     - PASS
-     - FAIL
-     - Version
-   * - Features
-     - |feature-pass|
-     - |feature-fail|
-     - N/A
-   * - QEMU
-     - N/A
-     - N/A
-     - |qemu-x86_64|
-   * - Kernel functional tests
-     - |kernel-pass|
-     - |kernel-fail|
-     - |kernel-x86_64|
-   * - rasdaemon functional tests
-     - |rasdaemon-pass|
-     - |rasdaemon-fail|
-     - |rasdaemon-x86_64|
-   * - Kernel fuzzy tests
-     - |weekly-kernel-pass|
-     - |weekly-kernel-fail|
-     -
-   * - rasdaemon fuzzy tests
-     - |weekly-rasdaemon-pass|
-     - |weekly-rasdaemon-fail|
-     -
-
+.. [#qemu]
+   QEMU, scripts/ghes_inject.py and EDK BIOS HEST tables are indirectly tested,
+   as if the fail, APEI tests will fail as well.
+   Currently, there are no separate counters for them.
 
 .. list-table::
    :header-rows: 1
