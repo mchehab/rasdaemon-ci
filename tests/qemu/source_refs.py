@@ -108,7 +108,8 @@ def describe_commit(repository: str, commit: str) -> dict:
         raise SourceError("invalid source commit")
     with tempfile.TemporaryDirectory(prefix="ras-ci-describe-") as directory:
         run(["git", "init", "-q", directory])
-        run(["git", "-C", directory, "-c", "protocol.version=2", "fetch", "-q",
+        run(["git", "-C", directory, "-c", "gc.auto=0", "-c",
+             "maintenance.auto=false", "-c", "protocol.version=2", "fetch", "-q",
              "--filter=tree:0", "--no-recurse-submodules", repository, commit,
              "+refs/tags/*:refs/tags/*"])
         result = subprocess.run(["git", "-C", directory, "describe", commit],
